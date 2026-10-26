@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Milk, Users, FileText, AlertCircle, CheckCircle, Info, X } from 'lucide-react';
+import { Milk, Users, FileText, MessageSquare, AlertCircle, CheckCircle, Info, X } from 'lucide-react';
 import Navbar from './components/Navbar';
 import LandingPage from './components/LandingPage';
 import AuthModal from './components/AuthModal';
@@ -7,6 +7,7 @@ import ProfileModal from './components/ProfileModal';
 import DailyChecklist from './components/DailyChecklist';
 import CustomersView from './components/CustomersView';
 import LedgerBillingView from './components/LedgerBillingView';
+import VendorInboxView from './components/VendorInboxView';
 import CustomerPortal from './components/CustomerPortal';
 import { AuthState } from './types';
 import { validateSessionApi } from './services/api';
@@ -51,7 +52,7 @@ function MainApp() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalRole, setAuthModalRole] = useState<'vendor' | 'customer'>('vendor');
   const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const [vendorTab, setVendorTab] = useState<'DAILY' | 'CUSTOMERS' | 'LEDGER'>('DAILY');
+  const [vendorTab, setVendorTab] = useState<'DAILY' | 'CUSTOMERS' | 'LEDGER' | 'INBOX'>('DAILY');
   const [notice, setNotice] = useState<Notice | null>(null);
 
   const lastActivityUpdateRef = useRef<number>(Date.now());
@@ -285,10 +286,11 @@ function MainApp() {
             {vendorTab === 'DAILY' && <DailyChecklist />}
             {vendorTab === 'CUSTOMERS' && <CustomersView />}
             {vendorTab === 'LEDGER' && <LedgerBillingView />}
+            {vendorTab === 'INBOX' && <VendorInboxView />}
 
             {/* Bottom Mobile Navigation for Milkman */}
             <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 shadow-2xl">
-              <div className="max-w-2xl mx-auto grid grid-cols-3 h-16">
+              <div className="max-w-2xl mx-auto grid grid-cols-4 h-16">
                 <button
                   onClick={() => setVendorTab('DAILY')}
                   className={`flex flex-col items-center justify-center transition active:scale-95 ${
@@ -300,7 +302,7 @@ function MainApp() {
                   <div className={`p-1 rounded-xl ${vendorTab === 'DAILY' ? 'bg-blue-100' : ''}`}>
                     <Milk className="w-5 h-5" />
                   </div>
-                  <span className="text-[11px] mt-0.5">{t('navDaily')}</span>
+                  <span className="text-[10px] mt-0.5">{t('navDaily')}</span>
                 </button>
 
                 <button
@@ -314,7 +316,7 @@ function MainApp() {
                   <div className={`p-1 rounded-xl ${vendorTab === 'CUSTOMERS' ? 'bg-blue-100' : ''}`}>
                     <Users className="w-5 h-5" />
                   </div>
-                  <span className="text-[11px] mt-0.5">{t('navCustomers')}</span>
+                  <span className="text-[10px] mt-0.5">{t('navCustomers')}</span>
                 </button>
 
                 <button
@@ -328,7 +330,21 @@ function MainApp() {
                   <div className={`p-1 rounded-xl ${vendorTab === 'LEDGER' ? 'bg-blue-100' : ''}`}>
                     <FileText className="w-5 h-5" />
                   </div>
-                  <span className="text-[11px] mt-0.5">{t('navLedger')}</span>
+                  <span className="text-[10px] mt-0.5">{t('navLedger')}</span>
+                </button>
+
+                <button
+                  onClick={() => setVendorTab('INBOX')}
+                  className={`flex flex-col items-center justify-center transition active:scale-95 ${
+                    vendorTab === 'INBOX' 
+                      ? 'text-blue-700 font-black' 
+                      : 'text-slate-500 font-medium hover:text-slate-800'
+                  }`}
+                >
+                  <div className={`p-1 rounded-xl ${vendorTab === 'INBOX' ? 'bg-blue-100' : ''}`}>
+                    <MessageSquare className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] mt-0.5">{t('navInbox')}</span>
                 </button>
               </div>
             </nav>

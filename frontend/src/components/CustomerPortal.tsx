@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { 
   Milk, Calendar, IndianRupee, MessageCircle, Send, 
   Users, UserPlus, CheckCircle2, XCircle, Clock, 
-  Phone, ArrowUpRight, Sparkles, AlertCircle 
+  Phone, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle,
+  CalendarOff, X, Check, HelpCircle
 } from 'lucide-react';
 import { 
   fetchCustomerDashboard, fetchSubUsers, addSubUserApi, 
-  fetchMessages, sendMessageApi 
+  fetchMessages, sendMessageApi, raiseDisputeApi, skipMilkDateApi
 } from '../services/api';
 import { Customer, CustomerDashboardData, SubUser, CustomerMessage } from '../types';
 import { useLanguage } from '../context/LanguageContext';
@@ -36,6 +37,26 @@ export default function CustomerPortal({ customer, onLogout }: CustomerPortalPro
   // Message input state
   const [newMsgText, setNewMsgText] = useState('');
   const [sendingMsg, setSendingMsg] = useState(false);
+
+  // Dispute state (DIS-01)
+  const [disputingLog, setDisputingLog] = useState<{ id: number; date: string; quantity: number } | null>(null);
+  const [disputeReason, setDisputeReason] = useState('');
+  const [submittingDispute, setSubmittingDispute] = useState(false);
+
+  // Skip Milk state (SKP-01, SKP-02)
+  const [isSkipModalOpen, setIsSkipModalOpen] = useState(false);
+  const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  const [skipDate, setSkipDate] = useState(tomorrowStr);
+  const [skipReason, setSkipReason] = useState('');
+  const [skipError, setSkipError] = useState('');
+  const [submittingSkip, setSubmittingSkip] = useState(false);
+
+  const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const showFeedback = (type: 'success' | 'error', text: string) => {
+    setFeedbackMsg({ type, text });
+    setTimeout(() => setFeedbackMsg(null), 4500);
+  };
 
   useEffect(() => {
     loadAll();
@@ -100,6 +121,52 @@ export default function CustomerPortal({ customer, onLogout }: CustomerPortalPro
       alert("संदेश भेजने में त्रुटि: " + err.message);
     } finally {
       setSendingMsg(false);
+    }
+  };
+
+  // DIS-01: Raise Dispute on Entry
+  const handleDisputeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!disputingLog || !disputeReason.trim()) return;
+
+    setSubmittingDispute(true);
+    try {
+      await raiseDisputeApi(customer.id, disputingLog.id, disputeReason.trim());
+      setDisputingLog(null);
+      setDisputeReason('');
+      showFeedback('success', lang === 'hi' ? 'आपकी आपत्ति सफलतापूर्वक दूधिया को भेज दी गई है!' : 'Query submitted to vendor successfully!');
+      const updated = await fetchCustomerDashboard(customer.id);
+      setData(updated);
+    } catch (err: any) {
+      showFeedback('error', err.message || 'Error submitting query');
+    } finally {
+      setSubmittingDispute(false);
+    }
+  };
+
+  // SKP-01 & SKP-02: Skip Milk for Future Date
+  const handleSkipSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSkipError('');
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (skipDate <= todayStr) {
+      setSkipError(t('sameDaySkipError'));
+      return;
+    }
+
+    setSubmittingSkip(true);
+    try {
+      await skipMilkDateApi(customer.id, skipDate, skipReason.trim() || undefined);
+      setIsSkipModalOpen(false);
+      setSkipReason('');
+      showFeedback('success', t('skipSuccess'));
+      const updated = await fetchCustomerDashboard(customer.id);
+      setData(updated);
+    } catch (err: any) {
+      setSkipError(err.message || 'Error scheduling skip');
+    } finally {
+      setSubmittingSkip(false);
     }
   };
 
@@ -263,6 +330,25 @@ export default function CustomerPortal({ customer, onLogout }: CustomerPortalPro
             </div>
           )}
 
+          {/* Delivery Actions: Pre-schedule Skip Milk (SKP-01, SKP-02) */}
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-3xl p-4 border border-amber-200 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-black shrink-0 shadow-xs">
+                <CalendarOff className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-black text-amber-950">{t('skipMilkTitle')}</h4>
+                <p className="text-xs text-amber-800 font-medium">{t('skipMilkSub')}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => { setSkipError(''); setIsSkipModalOpen(true); }}
+              className="bg-amber-500 hover:bg-amber-600 text-white px-3.5 py-2 rounded-xl text-xs font-black shadow-xs transition active:scale-95 shrink-0"
+            >
+              {lang === 'hi' ? 'छुट्टी तय करें' : 'Schedule Off'}
+            </button>
+          </div>
+
           {/* Delivery History List */}
           <div className="bg-white rounded-3xl p-5 shadow-xs border border-slate-200">
             <h4 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-3">
@@ -276,20 +362,50 @@ export default function CustomerPortal({ customer, onLogout }: CustomerPortalPro
             ) : (
               <div className="divide-y divide-slate-100">
                 {recent_logs.map(log => (
-                  <div key={log.id} className="py-3 flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-bold text-slate-900">{log.date}</p>
-                      <p className="text-xs text-slate-500 font-medium">
-                        {log.notes || (log.quantity === 0 ? (lang === 'hi' ? "छुट्टी / बंद" : "Skipped / Off") : (lang === 'hi' ? "नियमित सप्लाई" : "Regular Supply"))}
+                  <div key={log.id} className="py-3 flex items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold text-slate-900">{log.date}</p>
+                        {log.dispute_status === 'Pending' && (
+                          <span className="bg-rose-100 text-rose-800 text-[10px] font-black px-2 py-0.5 rounded-full">
+                            {t('disputedBadge')}
+                          </span>
+                        )}
+                        {log.dispute_status === 'Resolved' && (
+                          <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded-full">
+                            {t('resolvedBadge')}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 font-medium truncate">
+                        {log.dispute_status === 'Pending' && log.dispute_reason ? (
+                          <span className="text-rose-700 font-bold">आपत्ति: "{log.dispute_reason}"</span>
+                        ) : (
+                          log.notes || (log.quantity === 0 ? (lang === 'hi' ? "छुट्टी / बंद" : "Skipped / Off") : (lang === 'hi' ? "नियमित सप्लाई" : "Regular Supply"))
+                        )}
                       </p>
                     </div>
 
-                    <div className="text-right">
+                    <div className="flex items-center gap-2 shrink-0">
                       <span className={`px-2.5 py-1 rounded-xl text-xs font-black ${
                         log.quantity === 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-900'
                       }`}>
                         {log.quantity} {lang === 'hi' ? 'लीटर' : 'L'}
                       </span>
+
+                      {/* DIS-01: Raise Query action for delivered days */}
+                      {log.quantity > 0 && log.dispute_status !== 'Pending' && (
+                        <button
+                          onClick={() => {
+                            setDisputingLog({ id: log.id, date: log.date, quantity: log.quantity });
+                            setDisputeReason('');
+                          }}
+                          title={t('raiseDispute')}
+                          className="p-1.5 rounded-xl border border-slate-200 text-slate-500 hover:text-rose-600 hover:border-rose-300 hover:bg-rose-50 transition"
+                        >
+                          <HelpCircle className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -480,6 +596,162 @@ export default function CustomerPortal({ customer, onLogout }: CustomerPortalPro
                 <Send className="w-4 h-4" />
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* DIS-01: Raise Dispute Modal */}
+      {disputingLog && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="bg-rose-600 px-6 py-4 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-white" />
+                <div>
+                  <h4 className="font-black text-base">{t('disputeModalTitle')}</h4>
+                  <p className="text-xs text-rose-100">{disputingLog.date} • {disputingLog.quantity}L</p>
+                </div>
+              </div>
+              <button onClick={() => setDisputingLog(null)} className="p-1 rounded-full hover:bg-white/20 text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleDisputeSubmit} className="p-5 space-y-4">
+              <p className="text-xs text-slate-600 font-medium">
+                {t('disputeModalSub')}
+              </p>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  {t('disputeReasonLabel')}
+                </label>
+                <textarea 
+                  required
+                  rows={3}
+                  value={disputeReason}
+                  onChange={(e) => setDisputeReason(e.target.value)}
+                  placeholder={t('disputeReasonPlaceholder')}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDisputingLog(null)}
+                  className="flex-1 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  {lang === 'hi' ? 'रद्द करें' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingDispute || !disputeReason.trim()}
+                  className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs rounded-xl shadow-xs transition active:scale-95 disabled:opacity-50"
+                >
+                  {submittingDispute ? (lang === 'hi' ? 'भेजा जा रहा है...' : 'Submitting...') : t('submitDispute')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* SKP-01 & SKP-02: Schedule Skip Milk Modal */}
+      {isSkipModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="bg-amber-500 px-6 py-4 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CalendarOff className="w-5 h-5 text-white" />
+                <div>
+                  <h4 className="font-black text-base">{t('skipMilkTitle')}</h4>
+                  <p className="text-xs text-amber-100">{t('skipMilkSub')}</p>
+                </div>
+              </div>
+              <button onClick={() => setIsSkipModalOpen(false)} className="p-1 rounded-full hover:bg-white/20 text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSkipSubmit} className="p-5 space-y-4">
+              {skipError && (
+                <div className="p-3 bg-rose-50 border border-rose-300 text-rose-900 rounded-2xl text-xs font-bold flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <span>{skipError}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  {t('selectSkipDate')}
+                </label>
+                <input 
+                  type="date"
+                  required
+                  value={skipDate}
+                  onChange={(e) => {
+                    setSkipDate(e.target.value);
+                    setSkipError('');
+                  }}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  {lang === 'hi' ? '⚠️ नियम: आज की तारीख की छुट्टी ऐप से नहीं होगी, केवल कल या आगे की तारीख चुनें।' : '⚠️ Rule: Only tomorrow or future dates can be scheduled.'}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  {t('skipReasonOptional')}
+                </label>
+                <input 
+                  type="text"
+                  value={skipReason}
+                  onChange={(e) => setSkipReason(e.target.value)}
+                  placeholder={t('skipReasonPlaceholder')}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsSkipModalOpen(false)}
+                  className="flex-1 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  {lang === 'hi' ? 'रद्द करें' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingSkip}
+                  className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs rounded-xl shadow-xs transition active:scale-95 disabled:opacity-50"
+                >
+                  {submittingSkip ? (lang === 'hi' ? 'सहेज रहे हैं...' : 'Scheduling...') : t('confirmSkipBtn')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Feedback Banner */}
+      {feedbackMsg && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm animate-in slide-in-from-bottom duration-200">
+          <div className={`p-4 rounded-2xl shadow-xl border flex items-center gap-3 ${
+            feedbackMsg.type === 'success' 
+              ? 'bg-emerald-50 border-emerald-300 text-emerald-950' 
+              : 'bg-rose-50 border-rose-300 text-rose-950'
+          }`}>
+            {feedbackMsg.type === 'success' ? (
+              <Check className="w-5 h-5 text-emerald-600 shrink-0" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+            )}
+            <p className="text-xs font-bold flex-1">{feedbackMsg.text}</p>
+            <button onClick={() => setFeedbackMsg(null)} className="p-1 text-slate-500">
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}

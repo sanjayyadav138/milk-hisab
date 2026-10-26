@@ -70,8 +70,10 @@ class DailyLog(Base):
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False, index=True)
     date = Column(Date, nullable=False, index=True)
     quantity_delivered = Column(Float, default=0.0)  # 0 if skipped, or actual liters
-    status = Column(String(20), default="Delivered")  # "Delivered", "Skipped", "Extra"
+    status = Column(String(20), default="Delivered")  # "Delivered", "Skipped", "Extra", "Disputed", "Resolved"
     notes = Column(String(255), nullable=True)
+    dispute_status = Column(String(20), default="None")  # "None", "Pending", "Resolved"
+    dispute_reason = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     customer = relationship("Customer", back_populates="daily_logs")

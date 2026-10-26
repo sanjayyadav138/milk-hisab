@@ -53,7 +53,25 @@ class RegisterCustomerRequest(BaseModel):
     default_quantity: float = 1.0
     milk_type: str = "Cow"
     price_per_liter: float = 60.0
+    vendor_id: Optional[int] = None
     pin: Optional[str] = "1234"
+
+class DisputeCreateRequest(BaseModel):
+    log_id: int
+    reason: str
+
+class ResolveDisputeRequest(BaseModel):
+    log_id: int
+    resolved_quantity: float
+    resolution_note: Optional[str] = None
+
+class SkipDateRequest(BaseModel):
+    date: str  # YYYY-MM-DD
+    reason: Optional[str] = None
+
+class VendorReplyMessageRequest(BaseModel):
+    customer_id: int
+    message: str
 
 class SubUserCreate(BaseModel):
     name: str
@@ -268,8 +286,12 @@ def register_vendor(req: RegisterVendorRequest, db: Session = Depends(get_db)):
 
 @router.post("/auth/register-customer")
 def register_customer(req: RegisterCustomerRequest, db: Session = Depends(get_db)):
-    default_vendor = db.query(User).first()
-    vendor_id = default_vendor.id if default_vendor else 1
+    if req.vendor_id:
+        vendor = db.query(User).filter(User.id == req.vendor_id).first()
+        vendor_id = vendor.id if vendor else 1
+    else:
+        default_vendor = db.query(User).first()
+        vendor_id = default_vendor.id if default_vendor else 1
 
     cust = Customer(
         vendor_id=vendor_id,
@@ -285,6 +307,11 @@ def register_customer(req: RegisterCustomerRequest, db: Session = Depends(get_db
     db.commit()
     db.refresh(cust)
     return {"message": "Customer registered successfully", "id": cust.id}
+
+@router.get("/vendors-list")
+def get_vendors_list(db: Session = Depends(get_db)):
+    vendors = db.query(User).all()
+    return [{"id": v.id, "name": v.name, "business_name": v.business_name, "phone": v.phone} for v in vendors]
 
 @router.get("/customer/{customer_id}/dashboard")
 def get_customer_dashboard(customer_id: int, month_year: Optional[str] = None, db: Session = Depends(get_db)):
@@ -360,6 +387,8 @@ def get_customer_dashboard(customer_id: int, month_year: Optional[str] = None, d
                 "date": l.date.isoformat(),
                 "quantity": l.quantity_delivered,
                 "status": l.status,
+                "dispute_status": getattr(l, 'dispute_status', 'None') or 'None',
+                "dispute_reason": getattr(l, 'dispute_reason', None),
                 "notes": l.notes
             } for l in logs
         ]
@@ -406,3 +435,170 @@ def send_message(customer_id: int, req: MessageCreate, db: Session = Depends(get
     db.commit()
     db.refresh(msg)
     return msg
+
+# --- Module 4: Dispute & Query Endpoints (DIS-01, DIS-02) ---
+@router.post("/customer/{customer_id}/raise-dispute")
+def raise_dispute(customer_id: int, req: DisputeCreateRequest, db: Session = Depends(get_db)):
+    log = db.query(DailyLog).filter(DailyLog.id == req.log_id, DailyLog.customer_id == customer_id).first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Delivery log entry not found")
+
+    log.dispute_status = "Pending"
+    log.dispute_reason = req.reason.strip()
+    log.status = "Disputed"
+    db.commit()
+    db.refresh(log)
+    return {
+        "message": "Dispute query raised successfully",
+        "log": {
+            "id": log.id,
+            "date": log.date.isoformat(),
+            "quantity": log.quantity_delivered,
+            "status": log.status,
+            "dispute_status": log.dispute_status,
+            "dispute_reason": log.dispute_reason,
+            "notes": log.notes
+        }
+    }
+
+@router.put("/vendor/resolve-dispute")
+def resolve_dispute(req: ResolveDisputeRequest, db: Session = Depends(get_db)):
+    log = db.query(DailyLog).filter(DailyLog.id == req.log_id).first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Delivery log entry not found")
+
+    log.quantity_delivered = req.resolved_quantity
+    log.dispute_status = "Resolved"
+    log.status = "Resolved" if req.resolved_quantity > 0 else "Skipped"
+    if req.resolution_note:
+        log.notes = f"Resolved: {req.resolution_note.strip()}"
+    db.commit()
+    db.refresh(log)
+    return {
+        "message": "Dispute resolved successfully",
+        "log": {
+            "id": log.id,
+            "date": log.date.isoformat(),
+            "quantity": log.quantity_delivered,
+            "status": log.status,
+            "dispute_status": log.dispute_status,
+            "notes": log.notes
+        }
+    }
+
+@router.get("/vendor/disputes")
+def get_vendor_disputes(db: Session = Depends(get_db)):
+    logs = db.query(DailyLog).filter(DailyLog.dispute_status == "Pending").order_by(DailyLog.date.desc()).all()
+    results = []
+    for l in logs:
+        cust = db.query(Customer).filter(Customer.id == l.customer_id).first()
+        results.append({
+            "log_id": l.id,
+            "customer_id": l.customer_id,
+            "customer_name": cust.name if cust else "Unknown Customer",
+            "customer_phone": cust.phone if cust else "",
+            "date": l.date.isoformat(),
+            "quantity": l.quantity_delivered,
+            "status": l.status,
+            "dispute_reason": l.dispute_reason,
+            "notes": l.notes
+        })
+    return results
+
+# --- Module 6: Delivery Pause / Skip Feature (SKP-01, SKP-02) ---
+@router.post("/customer/{customer_id}/skip-date")
+def customer_skip_date(customer_id: int, req: SkipDateRequest, db: Session = Depends(get_db)):
+    customer = db.query(Customer).filter(Customer.id == customer_id).first()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
+    try:
+        skip_date = datetime.date.fromisoformat(req.date.strip())
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+
+    today = datetime.date.today()
+    if skip_date <= today:
+        raise HTTPException(
+            status_code=400,
+            detail="आज के दिन या पुरानी तारीख की छुट्टी ऐप से नहीं हो सकती क्योंकि सप्लाई शुरू हो चुकी है। कृपया सीधे दूधिया से संपर्क करें।"
+        )
+
+    # Check if a log entry already exists for this future date
+    existing_log = db.query(DailyLog).filter(
+        DailyLog.customer_id == customer_id,
+        DailyLog.date == skip_date
+    ).first()
+
+    skip_note = req.reason.strip() if req.reason else "ग्राहक द्वारा पूर्व सूचना: छुट्टी (Skipped)"
+
+    if existing_log:
+        existing_log.quantity_delivered = 0.0
+        existing_log.status = "Skipped"
+        existing_log.notes = skip_note
+    else:
+        new_log = DailyLog(
+            customer_id=customer_id,
+            date=skip_date,
+            quantity_delivered=0.0,
+            status="Skipped",
+            notes=skip_note
+        )
+        db.add(new_log)
+
+    db.commit()
+    return {"message": "Milk skip scheduled successfully", "date": skip_date.isoformat()}
+
+# --- Module 5: Vendor Messaging (MSG-02) ---
+@router.get("/vendor/all-messages")
+def get_vendor_messages(db: Session = Depends(get_db)):
+    customers = db.query(Customer).all()
+    threads = []
+    for c in customers:
+        msgs = db.query(CustomerMessage).filter(CustomerMessage.customer_id == c.id).order_by(CustomerMessage.created_at.asc()).all()
+        if msgs:
+            threads.append({
+                "customer_id": c.id,
+                "customer_name": c.name,
+                "customer_phone": c.phone or "",
+                "address": c.address or "",
+                "last_message": msgs[-1].message,
+                "last_time": msgs[-1].created_at.isoformat(),
+                "messages": [
+                    {
+                        "id": m.id,
+                        "sender_name": m.sender_name,
+                        "sender_role": m.sender_role,
+                        "message": m.message,
+                        "created_at": m.created_at.isoformat()
+                    } for m in msgs
+                ]
+            })
+    return threads
+
+@router.post("/vendor/send-message")
+def vendor_send_message(req: VendorReplyMessageRequest, db: Session = Depends(get_db)):
+    customer = db.query(Customer).filter(Customer.id == req.customer_id).first()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
+    vendor = db.query(User).filter(User.id == customer.vendor_id).first()
+    vendor_name = vendor.name if vendor else "दूधिया"
+
+    msg = CustomerMessage(
+        customer_id=req.customer_id,
+        sender_name=vendor_name,
+        sender_role="vendor",
+        message=req.message.strip()
+    )
+    db.add(msg)
+    db.commit()
+    db.refresh(msg)
+    return {
+        "id": msg.id,
+        "customer_id": msg.customer_id,
+        "sender_name": msg.sender_name,
+        "sender_role": msg.sender_role,
+        "message": msg.message,
+        "created_at": msg.created_at.isoformat()
+    }

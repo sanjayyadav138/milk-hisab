@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, User, Store, ShieldCheck, ArrowRight, KeyRound } from 'lucide-react';
-import { loginApi, registerVendorApi, registerCustomerApi } from '../services/api';
-import { AuthState } from '../types';
+import { loginApi, registerVendorApi, registerCustomerApi, fetchVendorsList } from '../services/api';
+import { AuthState, VendorInfo } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 
 interface AuthModalProps {
@@ -31,9 +31,20 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialRole = 'v
   const [custQty, setCustQty] = useState('1.5');
   const [custType, setCustType] = useState('Cow');
   const [custPrice, setCustPrice] = useState('60');
+  const [vendorsList, setVendorsList] = useState<VendorInfo[]>([]);
+  const [selectedVendorId, setSelectedVendorId] = useState<number | undefined>(undefined);
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    fetchVendorsList()
+      .then((list) => {
+        setVendorsList(list);
+        if (list.length > 0) setSelectedVendorId(list[0].id);
+      })
+      .catch((e) => console.warn('Could not load vendors list', e));
+  }, []);
 
   if (!isOpen) return null;
 
@@ -110,6 +121,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialRole = 'v
           default_quantity: parseFloat(custQty) || 1.0,
           milk_type: custType,
           price_per_liter: parseFloat(custPrice) || 60.0,
+          vendor_id: selectedVendorId,
           pin
         });
         const data = await loginApi(phone, 'customer', pin);
@@ -329,6 +341,23 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialRole = 'v
                 </>
               ) : (
                 <>
+                  {vendorsList.length > 0 && (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">{t('selectVendor')}</label>
+                      <select
+                        value={selectedVendorId}
+                        onChange={(e) => setSelectedVendorId(Number(e.target.value))}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:border-blue-600 focus:outline-none bg-white"
+                      >
+                        {vendorsList.map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {v.name} - {v.business_name} ({v.phone})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase mb-1">{t('custNameLabel')}</label>
                     <input

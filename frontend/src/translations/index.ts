@@ -200,6 +200,43 @@ export const translations = {
     editProfile: "प्रोफ़ाइल बदलें",
     activeSession: "सक्रिय सत्र",
     viewDashboard: "डैशबोर्ड खोलें",
+
+    // Dispute & Query (DIS-01, DIS-02)
+    raiseDispute: "आपत्ति दर्ज करें",
+    disputeModalTitle: "डिलीवरी पर आपत्ति / शिकायत",
+    disputeModalSub: "यदि आपको कम दूध मिला या गलत प्रविष्टि है, तो यहाँ दर्ज करें",
+    disputeReasonLabel: "समस्या का विवरण *",
+    disputeReasonPlaceholder: "उदा. मैंने केवल 500ml लिया था, 1L नहीं",
+    submitDispute: "आपत्ति दर्ज करें",
+    disputedBadge: "आपत्ति दर्ज ⚠️",
+    resolvedBadge: "हल किया गया ✓",
+    resolveDisputeTitle: "आपत्ति का समाधान (Resolve Query)",
+    resolvedQtyLabel: "सही मात्रा (लीटर) *",
+    resolutionNoteLabel: "समाधान टिप्पणी (वैकल्पिक)",
+    confirmResolve: "समाधान सुरक्षित करें",
+
+    // Skip Milk (SKP-01, SKP-02)
+    skipMilkTitle: "दूध की छुट्टी रखें (Pause Delivery)",
+    skipMilkSub: "भविष्य की तारीखों के लिए पहले से सूचना दें",
+    selectSkipDate: "छुट्टी की तारीख चुनें *",
+    skipReasonOptional: "कारण (वैकल्पिक)",
+    skipReasonPlaceholder: "उदा. बाहर जा रहे हैं, कोई घर पर नहीं है",
+    confirmSkipBtn: "छुट्टी शेड्यूल करें",
+    sameDaySkipError: "आज के दिन या पुरानी तारीख की छुट्टी ऐप से नहीं हो सकती क्योंकि सप्लाई शुरू हो चुकी है। कृपया सीधे दूधिया से संपर्क करें।",
+    skipSuccess: "दूध की छुट्टी सफलतापूर्वक शेड्यूल हो गई!",
+
+    // Vendor Inbox & Replies (MSG-02)
+    navInbox: "संदेश व शिकायतें",
+    inboxTitle: "ग्राहक संदेश एवं आपत्तियां",
+    inboxSub: "ग्राहकों के सवालों और आपत्तियों का तुरंत समाधान करें",
+    disputeQueriesTab: "आपत्तियां (Queries)",
+    chatThreadsTab: "चैट व संदेश (Chats)",
+    noDisputes: "कोई लंबित आपत्ति नहीं है। सब ठीक है!",
+    noMessages: "कोई संदेश थ्रेड उपलब्ध नहीं है।",
+    typeReplyPlaceholder: "यहाँ उत्तर लिखें (उदा. ठीक है, कल ध्यान रखेंगे)...",
+    sendReply: "उत्तर भेजें",
+    selectCustomer: "ग्राहक चुनें",
+    selectVendor: "अपने दूधिया का चयन करें *",
   },
 
   en: {
@@ -401,5 +438,42 @@ export const translations = {
     editProfile: "Edit Profile",
     activeSession: "Active Session",
     viewDashboard: "Open Dashboard",
+
+    // Dispute & Query (DIS-01, DIS-02)
+    raiseDispute: "Raise Query",
+    disputeModalTitle: "Raise Delivery Query",
+    disputeModalSub: "Report incorrect quantity or delivery issue for this entry",
+    disputeReasonLabel: "Issue Description *",
+    disputeReasonPlaceholder: "e.g. I received only 500ml, not 1L",
+    submitDispute: "Submit Query",
+    disputedBadge: "Query Pending ⚠️",
+    resolvedBadge: "Resolved ✓",
+    resolveDisputeTitle: "Resolve Customer Query",
+    resolvedQtyLabel: "Correct Quantity (Liters) *",
+    resolutionNoteLabel: "Resolution Note (Optional)",
+    confirmResolve: "Confirm Resolution",
+
+    // Skip Milk (SKP-01, SKP-02)
+    skipMilkTitle: "Schedule Skip Milk (Pause Delivery)",
+    skipMilkSub: "Pre-schedule delivery off for future dates",
+    selectSkipDate: "Select Date to Skip *",
+    skipReasonOptional: "Reason (Optional)",
+    skipReasonPlaceholder: "e.g. Out of town, fasting, etc.",
+    confirmSkipBtn: "Schedule Skip",
+    sameDaySkipError: "Cannot skip delivery for today or past dates as delivery is already in progress. Please contact your milkman directly.",
+    skipSuccess: "Delivery skip scheduled successfully!",
+
+    // Vendor Inbox & Replies (MSG-02)
+    navInbox: "Inbox & Queries",
+    inboxTitle: "Customer Messages & Queries",
+    inboxSub: "Resolve active customer queries and reply to delivery chats",
+    disputeQueriesTab: "Queries & Disputes",
+    chatThreadsTab: "Direct Chats",
+    noDisputes: "No active queries or disputes.",
+    noMessages: "No customer conversations yet.",
+    typeReplyPlaceholder: "Type reply here (e.g. Noted, adjusted)...",
+    sendReply: "Send Reply",
+    selectCustomer: "Select Customer",
+    selectVendor: "Select Your Dairy Vendor *",
   }
 };

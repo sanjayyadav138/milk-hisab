@@ -1,6 +1,7 @@
 import { 
   Customer, DailyLogItem, MonthlyBill, 
-  CustomerDashboardData, SubUser, CustomerMessage 
+  CustomerDashboardData, SubUser, CustomerMessage,
+  VendorDisputeItem, VendorMessageThread, VendorInfo
 } from '../types';
 
 const API_BASE = "http://localhost:8000/api";
@@ -102,6 +103,7 @@ export async function registerCustomerApi(payload: {
   default_quantity: number;
   milk_type: string;
   price_per_liter: number;
+  vendor_id?: number;
   pin?: string;
 }) {
   const res = await fetch(`${API_BASE}/portal/auth/register-customer`, {
@@ -230,5 +232,79 @@ export async function recordPayment(paymentData: {
     body: JSON.stringify(paymentData),
   });
   if (!res.ok) throw new Error("पेमेंट दर्ज करने में त्रुटि आई");
+  return res.json();
+}
+
+// --- Module 1: Vendors List (AUT-03) ---
+export async function fetchVendorsList(): Promise<VendorInfo[]> {
+  const res = await fetch(`${API_BASE}/portal/vendors-list`);
+  if (!res.ok) throw new Error("दूधिया सूची लोड नहीं हो सकी");
+  return res.json();
+}
+
+// --- Module 4: Dispute & Query Resolution (DIS-01, DIS-02) ---
+export async function raiseDisputeApi(customerId: number, logId: number, reason: string) {
+  const res = await fetch(`${API_BASE}/portal/customer/${customerId}/raise-dispute`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ log_id: logId, reason })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "आपत्ति दर्ज नहीं हो सकी" }));
+    throw new Error(err.detail || "आपत्ति दर्ज नहीं हो सकी");
+  }
+  return res.json();
+}
+
+export async function fetchVendorDisputesApi(): Promise<VendorDisputeItem[]> {
+  const res = await fetch(`${API_BASE}/portal/vendor/disputes`);
+  if (!res.ok) throw new Error("आपत्ति सूची लोड नहीं हो सकी");
+  return res.json();
+}
+
+export async function resolveDisputeApi(logId: number, resolvedQuantity: number, resolutionNote?: string) {
+  const res = await fetch(`${API_BASE}/portal/vendor/resolve-dispute`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ log_id: logId, resolved_quantity: resolvedQuantity, resolution_note: resolutionNote })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "आपत्ति का निवारण नहीं हो सका" }));
+    throw new Error(err.detail || "आपत्ति का निवारण नहीं हो सका");
+  }
+  return res.json();
+}
+
+// --- Module 6: Delivery Pause / Skip Feature (SKP-01, SKP-02) ---
+export async function skipMilkDateApi(customerId: number, date: string, reason?: string) {
+  const res = await fetch(`${API_BASE}/portal/customer/${customerId}/skip-date`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ date, reason })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "छुट्टी दर्ज नहीं हो सकी" }));
+    throw new Error(err.detail || "छुट्टी दर्ज नहीं हो सकी");
+  }
+  return res.json();
+}
+
+// --- Module 5: Vendor Message Management (MSG-02) ---
+export async function fetchVendorMessageThreadsApi(): Promise<VendorMessageThread[]> {
+  const res = await fetch(`${API_BASE}/portal/vendor/all-messages`);
+  if (!res.ok) throw new Error("संदेश लोड नहीं हो सके");
+  return res.json();
+}
+
+export async function vendorReplyMessageApi(customerId: number, message: string) {
+  const res = await fetch(`${API_BASE}/portal/vendor/send-message`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ customer_id: customerId, message })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "उत्तर भेजने में त्रुटि आई" }));
+    throw new Error(err.detail || "उत्तर भेजने में त्रुटि आई");
+  }
   return res.json();
 }

@@ -98,8 +98,45 @@ export interface CustomerDashboardData {
     date: string;
     quantity: number;
     status: string;
+    dispute_status?: string;
+    dispute_reason?: string;
     notes?: string;
   }>;
+}
+
+export interface VendorDisputeItem {
+  log_id: number;
+  customer_id: number;
+  customer_name: string;
+  customer_phone: string;
+  date: string;
+  quantity: number;
+  status: string;
+  dispute_reason?: string;
+  notes?: string;
+}
+
+export interface VendorMessageThread {
+  customer_id: number;
+  customer_name: string;
+  customer_phone: string;
+  address: string;
+  last_message: string;
+  last_time: string;
+  messages: Array<{
+    id: number;
+    sender_name: string;
+    sender_role: 'customer' | 'vendor';
+    message: string;
+    created_at: string;
+  }>;
+}
+
+export interface VendorInfo {
+  id: number;
+  name: string;
+  business_name: string;
+  phone: string;
 }
 
 export type AuthRole = 'vendor' | 'customer' | null;

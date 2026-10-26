@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@theme {
+  --color-dairy-blue: #2563eb;
+  --color-dairy-blue-hover: #1d4ed8;
+  --color-dairy-navy: #1e3a8a;
+  --color-dairy-light: #eff6ff;
+
+  --color-milky-canvas: #f9fafb;
+  --color-milky-white: #ffffff;
+  --color-milky-cream: #fbfbfa;
+
+  --color-ledger-green: #10b981;
+  --color-ledger-green-dark: #059669;
+  --color-ledger-light: #ecfdf5;
+
+  --color-alert-amber: #f59e0b;
+  --color-alert-amber-dark: #d97706;
+  --color-alert-light: #fffbeb;
+}
+
+@layer base {
+  body {
+    background-color: #f9fafb;
+    color: #1e293b;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+}

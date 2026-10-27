@@ -55,6 +55,11 @@ function MainApp() {
   const [vendorTab, setVendorTab] = useState<'DAILY' | 'CUSTOMERS' | 'LEDGER' | 'INBOX'>('DAILY');
   const [notice, setNotice] = useState<Notice | null>(null);
 
+  const authRef = useRef<AuthState>(auth);
+  useEffect(() => {
+    authRef.current = auth;
+  }, [auth]);
+
   const lastActivityUpdateRef = useRef<number>(Date.now());
 
   // Show notice helper
@@ -80,7 +85,9 @@ function MainApp() {
 
   // SES-03: Logout flow
   const handleLogout = useCallback((isExpired = false) => {
-    setAuth({ role: null, user: null, customer: null, token: null, expires_at: null, last_active_at: null });
+    const emptyAuth: AuthState = { role: null, user: null, customer: null, token: null, expires_at: null, last_active_at: null };
+    authRef.current = emptyAuth;
+    setAuth(emptyAuth);
     localStorage.removeItem(AUTH_STORAGE_KEY);
     window.location.hash = '#/';
     if (isExpired) {
@@ -151,8 +158,9 @@ function MainApp() {
   useEffect(() => {
     const handleRouteGuard = () => {
       const hash = window.location.hash || '#/';
+      const currentRole = authRef.current?.role;
 
-      if (auth.role === 'vendor') {
+      if (currentRole === 'vendor') {
         // Customer route unauthorized protection (DSH-03)
         if (hash.startsWith('#/customer')) {
           showNotice('warning', t('unauthorizedCustomerNotice'));
@@ -160,7 +168,7 @@ function MainApp() {
         } else if (hash === '#/' || hash === '') {
           window.location.hash = '#/vendor/dashboard';
         }
-      } else if (auth.role === 'customer') {
+      } else if (currentRole === 'customer') {
         // Vendor route unauthorized protection (DSH-03)
         if (hash.startsWith('#/vendor')) {
           showNotice('warning', t('unauthorizedVendorNotice'));
@@ -196,8 +204,11 @@ function MainApp() {
       expires_at: newAuth.expires_at || Date.now() + 30 * 24 * 60 * 60 * 1000,
       last_active_at: Date.now(),
     };
+    // Synchronously update authRef before triggering hashchange
+    authRef.current = enrichedAuth;
     setAuth(enrichedAuth);
     setAuthModalOpen(false);
+
     if (enrichedAuth.role === 'vendor') {
       window.location.hash = '#/vendor/dashboard';
     } else if (enrichedAuth.role === 'customer') {

@@ -70,8 +70,12 @@ function MainApp() {
 
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalRole, setAuthModalRole] = useState<'vendor' | 'customer'>('vendor');
-  const [isProfilePage, setIsProfilePage] = useState(false);
-  const [isFindMilkmanPage, setIsFindMilkmanPage] = useState(false);
+  const [isProfilePage, setIsProfilePage] = useState<boolean>(() => {
+    return window.location.hash.replace(/^#\/?/, '').toLowerCase().startsWith('profile');
+  });
+  const [isFindMilkmanPage, setIsFindMilkmanPage] = useState<boolean>(() => {
+    return window.location.hash.replace(/^#\/?/, '').toLowerCase().startsWith('find-milkman');
+  });
   const [changePinModalOpen, setChangePinModalOpen] = useState(false);
   const [changePinTarget, setChangePinTarget] = useState<{ role: 'vendor' | 'customer'; id: number; name?: string } | null>(null);
 
@@ -87,19 +91,39 @@ function MainApp() {
   };
   const [vendorTab, setVendorTab] = useState<'DAILY' | 'CUSTOMERS' | 'LEDGER' | 'INBOX'>('DAILY');
   const [notice, setNotice] = useState<Notice | null>(null);
-  const [findMilkmanQuery, setFindMilkmanQuery] = useState('');
+  const [findMilkmanQuery, setFindMilkmanQuery] = useState(() => {
+    try {
+      const parts = window.location.hash.split('?');
+      if (parts[1]) {
+        const p = new URLSearchParams(parts[1]);
+        return p.get('q') || '';
+      }
+    } catch {
+      // ignore
+    }
+    return '';
+  });
 
   const handleOpenFindMilkman = (q = '') => {
     setFindMilkmanQuery(q);
-    setIsFindMilkmanPage(true);
-    setIsProfilePage(false);
-    setActivePublicPage(null);
+    const targetHash = q ? `#/find-milkman?q=${encodeURIComponent(q)}` : '#/find-milkman';
+    if (window.location.hash === targetHash) {
+      setIsFindMilkmanPage(true);
+      setIsProfilePage(false);
+      setActivePublicPage(null);
+    } else {
+      window.location.hash = targetHash;
+    }
   };
 
   const handleOpenProfile = () => {
-    setIsProfilePage(true);
-    setIsFindMilkmanPage(false);
-    setActivePublicPage(null);
+    if (window.location.hash === '#/profile') {
+      setIsProfilePage(true);
+      setIsFindMilkmanPage(false);
+      setActivePublicPage(null);
+    } else {
+      window.location.hash = '#/profile';
+    }
   };
 
   const authRef = useRef<AuthState>(auth);
@@ -204,36 +228,72 @@ function MainApp() {
   // Module 9: Role-Based Dashboard Routing & Protection (DSH-01, DSH-02, DSH-03)
   useEffect(() => {
     const handleRouteGuard = () => {
-      const hash = window.location.hash || '#/';
+      const rawHash = window.location.hash || '#/';
+      const [hashPath, queryString] = rawHash.split('?');
+      const cleanPath = hashPath.replace(/^#\/?/, '').toLowerCase();
       const currentRole = authRef.current?.role;
-      const pubPage = getPublicPageFromHash(hash);
-      
-      setActivePublicPage(pubPage);
 
-      // If user is on a public informational page (About, Contact, Terms, Privacy), allow access freely
+      // 1. Check if user is navigating to Find Milkman
+      if (cleanPath === 'find-milkman') {
+        const queryParams = new URLSearchParams(queryString || '');
+        const q = queryParams.get('q') || '';
+        setFindMilkmanQuery(q);
+        setIsFindMilkmanPage(true);
+        setIsProfilePage(false);
+        setActivePublicPage(null);
+        return;
+      }
+
+      // 2. Check if user is navigating to Profile
+      if (cleanPath === 'profile') {
+        if (currentRole === 'vendor' || currentRole === 'customer') {
+          setIsProfilePage(true);
+          setIsFindMilkmanPage(false);
+          setActivePublicPage(null);
+          return;
+        } else {
+          // Unauthenticated visitor trying to view profile
+          setIsProfilePage(false);
+          setIsFindMilkmanPage(false);
+          window.location.hash = '#/';
+          showNotice('info', t('sessionExpiredNotice'));
+          setAuthModalRole('vendor');
+          setAuthModalOpen(true);
+          return;
+        }
+      }
+
+      // 3. Reset full page states for all standard routes
+      setIsFindMilkmanPage(false);
+      setIsProfilePage(false);
+
+      // 4. Public informational pages (About, Contact, Terms, Privacy)
+      const pubPage = getPublicPageFromHash(hashPath);
+      setActivePublicPage(pubPage);
       if (pubPage) {
         return;
       }
 
+      // 5. Dashboard routes & role guards
       if (currentRole === 'vendor') {
         // Customer route unauthorized protection (DSH-03)
-        if (hash.startsWith('#/customer')) {
+        if (rawHash.startsWith('#/customer')) {
           showNotice('warning', t('unauthorizedCustomerNotice'));
           window.location.hash = '#/vendor/dashboard';
-        } else if (hash === '#/' || hash === '') {
+        } else if (rawHash === '#/' || rawHash === '') {
           window.location.hash = '#/vendor/dashboard';
         }
       } else if (currentRole === 'customer') {
         // Vendor route unauthorized protection (DSH-03)
-        if (hash.startsWith('#/vendor')) {
+        if (rawHash.startsWith('#/vendor')) {
           showNotice('warning', t('unauthorizedVendorNotice'));
           window.location.hash = '#/customer/dashboard';
-        } else if (hash === '#/' || hash === '') {
+        } else if (rawHash === '#/' || rawHash === '') {
           window.location.hash = '#/customer/dashboard';
         }
       } else {
         // Unauthenticated visitor trying to access protected routes (DSH-03)
-        if (hash.startsWith('#/vendor') || hash.startsWith('#/customer')) {
+        if (rawHash.startsWith('#/vendor') || rawHash.startsWith('#/customer')) {
           window.location.hash = '#/';
           showNotice('info', t('sessionExpiredNotice'));
           setAuthModalRole('vendor');
@@ -277,15 +337,33 @@ function MainApp() {
   };
 
   const handleNavigateDashboard = () => {
+    setIsFindMilkmanPage(false);
+    setIsProfilePage(false);
+    setActivePublicPage(null);
     if (auth.role === 'vendor') {
       setVendorTab('DAILY');
       window.location.hash = '#/vendor/dashboard';
     } else if (auth.role === 'customer') {
       window.location.hash = '#/customer/dashboard';
+    } else {
+      window.location.hash = '#/';
     }
   };
 
-  const handleBackFromPublic = () => {
+  const handleGoHome = () => {
+    setIsFindMilkmanPage(false);
+    setIsProfilePage(false);
+    setActivePublicPage(null);
+    if (!auth.role) {
+      window.location.hash = '#/';
+    } else {
+      handleNavigateDashboard();
+    }
+  };
+
+  const handleBackFromDedicatedPage = () => {
+    setIsFindMilkmanPage(false);
+    setIsProfilePage(false);
     if (auth.role === 'vendor') {
       window.location.hash = '#/vendor/dashboard';
     } else if (auth.role === 'customer') {
@@ -296,6 +374,8 @@ function MainApp() {
   };
 
   const handleNavigatePage = (page: PublicPageType) => {
+    setIsFindMilkmanPage(false);
+    setIsProfilePage(false);
     const routes: Record<PublicPageType, string> = {
       ABOUT: '#/about',
       CONTACT: '#/contact',
@@ -312,14 +392,8 @@ function MainApp() {
         auth={auth} 
         onLogout={() => handleLogout(false)} 
         onOpenAuth={handleOpenAuth}
-        onGoHome={() => {
-          if (!auth.role) {
-            window.location.hash = '#/';
-          } else {
-            handleNavigateDashboard();
-          }
-        }}
-        onOpenProfile={() => setProfileModalOpen(true)}
+        onGoHome={handleGoHome}
+        onOpenProfile={handleOpenProfile}
         onNavigateDashboard={handleNavigateDashboard}
         onOpenFindMilkman={() => handleOpenFindMilkman('')}
         onNavigatePage={handleNavigatePage}
@@ -366,13 +440,13 @@ function MainApp() {
               handleProfileUpdated(updated);
               showNotice('success', 'प्रोफ़ाइल सफलतापूर्वक अपडेट हो गई!');
             }}
-            onBack={() => setIsProfilePage(false)} 
+            onBack={handleBackFromDedicatedPage} 
           />
         ) : isFindMilkmanPage ? (
           <FindMilkmanView 
             initialQuery={findMilkmanQuery} 
             auth={auth} 
-            onBack={() => setIsFindMilkmanPage(false)} 
+            onBack={handleBackFromDedicatedPage} 
           />
         ) : activePublicPage === 'ABOUT' ? (
           <AboutUsView />

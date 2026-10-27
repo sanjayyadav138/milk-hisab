@@ -181,13 +181,36 @@ export default function DailyChecklist() {
             </div>
           </div>
 
-          <button
-            onClick={() => setIsVoiceOpen(true)}
-            className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-3.5 py-2.5 rounded-2xl shadow-md font-bold text-xs sm:text-sm active:scale-95 transition"
-          >
-            <Sparkles className="w-4 h-4 text-emerald-200 animate-pulse" />
-            <span>{t('voiceFill')}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleSaveAll}
+              disabled={saving}
+              className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-2xl font-bold text-xs sm:text-sm shadow-sm transition active:scale-95 ${
+                saveSuccess 
+                  ? 'bg-emerald-600 text-white' 
+                  : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'
+              }`}
+            >
+              {saving ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : saveSuccess ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              <span>{saveSuccess ? (lang === 'hi' ? 'सेव हो गया!' : 'Saved!') : (lang === 'hi' ? 'सेव करें' : 'Save')}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsVoiceOpen(true)}
+              className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-3 sm:px-3.5 py-2.5 rounded-2xl shadow-sm font-bold text-xs sm:text-sm active:scale-95 transition"
+            >
+              <Sparkles className="w-4 h-4 text-emerald-200 animate-pulse" />
+              <span>{t('voiceFill')}</span>
+            </button>
+          </div>
         </div>
 
         {/* Bilateral Inward vs Outward Stats Dashboard */}
@@ -455,28 +478,32 @@ export default function DailyChecklist() {
         </div>
       )}
 
-      {/* Floating Save Button */}
-      <div className="fixed bottom-20 left-0 right-0 max-w-2xl mx-auto px-4 pointer-events-none z-30">
+      {/* Floating Modern Save Action Pill */}
+      <div className="fixed bottom-20 left-0 right-0 flex justify-center px-4 pointer-events-none z-30">
         <button
+          type="button"
           onClick={handleSaveAll}
           disabled={saving}
-          className={`pointer-events-auto w-full py-3.5 px-6 rounded-2xl font-black text-sm sm:text-base shadow-xl flex items-center justify-center gap-2 transition-all transform active:scale-95 ${
+          className={`pointer-events-auto px-6 py-3.5 rounded-full font-bold text-xs sm:text-sm shadow-2xl flex items-center gap-2.5 transition-all transform active:scale-95 border ${
             saveSuccess 
-              ? 'bg-emerald-600 text-white' 
-              : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/30'
+              ? 'bg-emerald-600 text-white border-emerald-500 shadow-emerald-600/30 ring-4 ring-emerald-500/10' 
+              : 'bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 hover:from-blue-900 hover:to-slate-900 text-white border-slate-700/80 shadow-slate-900/40 ring-4 ring-blue-500/10'
           }`}
         >
           {saving ? (
-            <span>{lang === 'hi' ? 'सेव हो रहा है...' : 'Saving...'}</span>
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <span>{lang === 'hi' ? 'हिसाब सुरक्षित हो रहा है...' : 'Saving Daily Ledger...'}</span>
+            </>
           ) : saveSuccess ? (
             <>
-              <CheckCircle2 className="w-5 h-5 text-emerald-200" />
-              <span>{lang === 'hi' ? 'पूरा हिसाब सुरक्षित हो गया! ✓' : 'Daily entries saved! ✓'}</span>
+              <CheckCircle2 className="w-5 h-5 text-emerald-300" />
+              <span>{lang === 'hi' ? 'आज का पूरा हिसाब सुरक्षित हो गया! ✓' : 'Daily entries saved successfully! ✓'}</span>
             </>
           ) : (
             <>
-              <Save className="w-5 h-5" />
-              <span>{lang === 'hi' ? 'आज का हिसाब सुरक्षित करें (Save)' : 'Save Daily Ledger'}</span>
+              <Save className="w-4 h-4 text-blue-400" />
+              <span>{lang === 'hi' ? `आज का हिसाब सुरक्षित करें (${checklist.length} एंट्रीज)` : `Save Daily Ledger (${checklist.length} entries)`}</span>
             </>
           )}
         </button>

@@ -3,8 +3,8 @@ import { Milk, Users, FileText, MessageSquare, AlertCircle, CheckCircle, Info, X
 import Navbar, { PublicPageType } from './components/Navbar';
 import LandingPage from './components/LandingPage';
 import AuthModal from './components/AuthModal';
-import FindMilkmanModal from './components/FindMilkmanModal';
-import ProfileModal from './components/ProfileModal';
+import FindMilkmanView from './components/FindMilkmanView';
+import ProfileView from './components/ProfileView';
 import ChangePinModal from './components/ChangePinModal';
 import DailyChecklist from './components/DailyChecklist';
 import CustomersView from './components/CustomersView';
@@ -70,7 +70,8 @@ function MainApp() {
 
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalRole, setAuthModalRole] = useState<'vendor' | 'customer'>('vendor');
-  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [isProfilePage, setIsProfilePage] = useState(false);
+  const [isFindMilkmanPage, setIsFindMilkmanPage] = useState(false);
   const [changePinModalOpen, setChangePinModalOpen] = useState(false);
   const [changePinTarget, setChangePinTarget] = useState<{ role: 'vendor' | 'customer'; id: number; name?: string } | null>(null);
 
@@ -86,12 +87,19 @@ function MainApp() {
   };
   const [vendorTab, setVendorTab] = useState<'DAILY' | 'CUSTOMERS' | 'LEDGER' | 'INBOX'>('DAILY');
   const [notice, setNotice] = useState<Notice | null>(null);
-  const [findMilkmanOpen, setFindMilkmanOpen] = useState(false);
   const [findMilkmanQuery, setFindMilkmanQuery] = useState('');
 
   const handleOpenFindMilkman = (q = '') => {
     setFindMilkmanQuery(q);
-    setFindMilkmanOpen(true);
+    setIsFindMilkmanPage(true);
+    setIsProfilePage(false);
+    setActivePublicPage(null);
+  };
+
+  const handleOpenProfile = () => {
+    setIsProfilePage(true);
+    setIsFindMilkmanPage(false);
+    setActivePublicPage(null);
   };
 
   const authRef = useRef<AuthState>(auth);
@@ -350,22 +358,31 @@ function MainApp() {
       {/* Main View Router */}
       <main className="flex-1">
         
-        {/* Dedicated Public Informational Views */}
-        {activePublicPage === 'ABOUT' && (
+        {/* Dedicated Full Pages: Profile & Find Milkman */}
+        {isProfilePage ? (
+          <ProfileView 
+            auth={auth} 
+            onProfileUpdated={(updated) => {
+              handleProfileUpdated(updated);
+              showNotice('success', 'प्रोफ़ाइल सफलतापूर्वक अपडेट हो गई!');
+            }}
+            onBack={() => setIsProfilePage(false)} 
+          />
+        ) : isFindMilkmanPage ? (
+          <FindMilkmanView 
+            initialQuery={findMilkmanQuery} 
+            auth={auth} 
+            onBack={() => setIsFindMilkmanPage(false)} 
+          />
+        ) : activePublicPage === 'ABOUT' ? (
           <AboutUsView />
-        )}
-        {activePublicPage === 'CONTACT' && (
+        ) : activePublicPage === 'CONTACT' ? (
           <ContactUsView />
-        )}
-        {activePublicPage === 'TERMS' && (
+        ) : activePublicPage === 'TERMS' ? (
           <TermsConditionsView />
-        )}
-        {activePublicPage === 'PRIVACY' && (
+        ) : activePublicPage === 'PRIVACY' ? (
           <PrivacyPolicyView />
-        )}
-
-        {/* Regular Role-Based App Views when not on a public subpage */}
-        {!activePublicPage && (
+        ) : (
           <>
             {/* Landing Page for Unauthenticated Visitors */}
             {!auth.role && (
@@ -460,21 +477,7 @@ function MainApp() {
         )}
       </main>
 
-      {/* Profile Details Modal (PRF-03, PRF-04) */}
-      <ProfileModal
-        isOpen={profileModalOpen}
-        onClose={() => setProfileModalOpen(false)}
-        auth={auth}
-        onProfileUpdated={handleProfileUpdated}
-      />
 
-      {/* Location-Based Find Milkman Modal */}
-      <FindMilkmanModal
-        isOpen={findMilkmanOpen}
-        onClose={() => setFindMilkmanOpen(false)}
-        initialQuery={findMilkmanQuery}
-        auth={auth}
-      />
 
       {/* Authentication Modal */}
       <AuthModal 

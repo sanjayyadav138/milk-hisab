@@ -37,6 +37,21 @@ export async function validateSessionApi(role: 'vendor' | 'customer', id: number
   return res.json();
 }
 
+
+export async function uploadAvatarApi(file: File): Promise<{ url: string; filename: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(`${API_BASE}/portal/upload/avatar`, {
+    method: "POST",
+    body: formData
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "फोटो अपलोड करने में त्रुटि आई" }));
+    throw new Error(err.detail || "फोटो अपलोड करने में त्रुटि आई");
+  }
+  return res.json();
+}
+
 export async function updateVendorProfileApi(payload: {
   id: number;
   name: string;

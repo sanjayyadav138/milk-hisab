@@ -258,6 +258,11 @@ app.include_router(dailylogs.router)
 app.include_router(billing.router)
 app.include_router(portal.router)
 
+# Ensure persistent uploads directory exists and is mounted
+uploads_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "uploads"))
+os.makedirs(uploads_dir, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
+
 # Production SPA / Frontend Static Serving
 frontend_dist = os.getenv(
     "FRONTEND_DIST_DIR",
@@ -271,8 +276,8 @@ if os.path.exists(frontend_dist) and os.path.exists(os.path.join(frontend_dist, 
 
     @app.get("/{full_path:path}", include_in_schema=False)
     async def serve_spa(full_path: str = ""):
-        # Avoid intercepting API or docs routes
-        if full_path.startswith("api") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
+        # Avoid intercepting API, uploads, or docs routes
+        if full_path.startswith("api") or full_path.startswith("docs") or full_path.startswith("openapi.json") or full_path.startswith("uploads"):
             from fastapi import HTTPException
             raise HTTPException(status_code=404, detail="Not Found")
         target_file = os.path.join(frontend_dist, full_path)

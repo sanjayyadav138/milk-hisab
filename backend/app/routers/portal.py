@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
+import os
+import shutil
+import uuid
 from sqlalchemy.orm import Session
 from sqlalchemy import extract, func
 from pydantic import BaseModel
@@ -250,6 +253,23 @@ def validate_session(req: SessionValidateRequest, db: Session = Depends(get_db))
             }
         }
     raise HTTPException(status_code=400, detail="Invalid role specified")
+
+
+@router.post("/upload/avatar")
+async def upload_avatar(file: UploadFile = File(...)):
+    ext = file.filename.split(".")[-1].lower() if file.filename and "." in file.filename else "jpg"
+    if ext not in ["jpg", "jpeg", "png", "webp", "gif"]:
+        raise HTTPException(status_code=400, detail="Only image files (JPG, PNG, WebP) are allowed")
+
+    unique_name = f"avatar_{uuid.uuid4().hex[:12]}.{ext}"
+    uploads_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "uploads"))
+    os.makedirs(uploads_dir, exist_ok=True)
+    target_path = os.path.join(uploads_dir, unique_name)
+
+    with open(target_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    return {"url": f"/uploads/{unique_name}", "filename": unique_name}
 
 @router.put("/profile/vendor")
 def update_vendor_profile(req: UpdateVendorProfileRequest, db: Session = Depends(get_db)):

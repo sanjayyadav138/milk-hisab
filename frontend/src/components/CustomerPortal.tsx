@@ -271,16 +271,7 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin, on
             )}
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onOpenChangePin}
-              className="text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 shadow-sm active:scale-95"
-              title={lang === 'hi' ? 'सुरक्षा पिन बदलें' : 'Change PIN'}
-            >
-              <KeyRound className="w-3.5 h-3.5" />
-              <span>{lang === 'hi' ? 'पिन बदलें' : 'Change PIN'}</span>
-            </button>
+          <div>
             <button
               type="button"
               onClick={onLogout}

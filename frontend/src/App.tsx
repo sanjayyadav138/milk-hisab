@@ -5,6 +5,7 @@ import LandingPage from './components/LandingPage';
 import AuthModal from './components/AuthModal';
 import FindMilkmanModal from './components/FindMilkmanModal';
 import ProfileModal from './components/ProfileModal';
+import ChangePinModal from './components/ChangePinModal';
 import DailyChecklist from './components/DailyChecklist';
 import CustomersView from './components/CustomersView';
 import LedgerBillingView from './components/LedgerBillingView';
@@ -70,6 +71,19 @@ function MainApp() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalRole, setAuthModalRole] = useState<'vendor' | 'customer'>('vendor');
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [changePinModalOpen, setChangePinModalOpen] = useState(false);
+  const [changePinTarget, setChangePinTarget] = useState<{ role: 'vendor' | 'customer'; id: number; name?: string } | null>(null);
+
+  const handleOpenChangePin = (targetRole?: 'vendor' | 'customer', targetId?: number, targetName?: string) => {
+    if (targetRole && targetId) {
+      setChangePinTarget({ role: targetRole, id: targetId, name: targetName });
+    } else if (auth.role === 'vendor' && auth.user) {
+      setChangePinTarget({ role: 'vendor', id: auth.user.id, name: auth.user.name });
+    } else if (auth.role === 'customer' && auth.customer) {
+      setChangePinTarget({ role: 'customer', id: auth.customer.id, name: auth.customer.name });
+    }
+    setChangePinModalOpen(true);
+  };
   const [vendorTab, setVendorTab] = useState<'DAILY' | 'CUSTOMERS' | 'LEDGER' | 'INBOX'>('DAILY');
   const [notice, setNotice] = useState<Notice | null>(null);
   const [findMilkmanOpen, setFindMilkmanOpen] = useState(false);
@@ -301,6 +315,7 @@ function MainApp() {
         onNavigateDashboard={handleNavigateDashboard}
         onOpenFindMilkman={() => handleOpenFindMilkman('')}
         onNavigatePage={handleNavigatePage}
+        onOpenChangePin={() => handleOpenChangePin()}
       />
 
       {/* Floating System Notice / Alert Banner */}
@@ -366,6 +381,7 @@ function MainApp() {
               <CustomerPortal 
                 customer={auth.customer} 
                 onLogout={() => handleLogout(false)} 
+                onOpenChangePin={() => handleOpenChangePin()}
               />
             )}
 
@@ -373,7 +389,7 @@ function MainApp() {
             {auth.role === 'vendor' && auth.user && (
               <div className="pb-20 sm:pb-8">
                 {vendorTab === 'DAILY' && <DailyChecklist />}
-                {vendorTab === 'CUSTOMERS' && <CustomersView />}
+                {vendorTab === 'CUSTOMERS' && <CustomersView onResetCustomerPin={(id, name) => handleOpenChangePin('customer', id, name)} />}
                 {vendorTab === 'LEDGER' && <LedgerBillingView />}
                 {vendorTab === 'INBOX' && <VendorInboxView />}
 
@@ -466,6 +482,18 @@ function MainApp() {
         onSuccess={handleAuthSuccess}
         initialRole={authModalRole}
       />
+
+      {/* Change Security PIN Modal */}
+      {changePinTarget && (
+        <ChangePinModal
+          isOpen={changePinModalOpen}
+          onClose={() => setChangePinModalOpen(false)}
+          role={changePinTarget.role}
+          userId={changePinTarget.id}
+          userName={changePinTarget.name}
+          onSuccess={() => showNotice('success', 'पिन बदल दिया गया है! (PIN updated successfully)')}
+        />
+      )}
     </div>
   );
 }

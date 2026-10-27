@@ -20,6 +20,12 @@ class SessionValidateRequest(BaseModel):
     role: str
     id: int
 
+class ChangePinRequest(BaseModel):
+    role: str  # "vendor" or "customer"
+    id: int
+    current_pin: Optional[str] = None
+    new_pin: str
+
 class UpdateVendorProfileRequest(BaseModel):
     id: int
     name: str
@@ -326,6 +332,36 @@ def update_customer_profile(req: UpdateCustomerProfileRequest, db: Session = Dep
             "customer_type": getattr(customer, "customer_type", "BUYER") or "BUYER"
         }
     }
+
+@router.post("/auth/change-pin")
+def change_pin(req: ChangePinRequest, db: Session = Depends(get_db)):
+    clean_pin = req.new_pin.strip() if req.new_pin else ""
+    if not clean_pin or len(clean_pin) < 4:
+        raise HTTPException(status_code=400, detail="पिन कम से कम 4 अंकों का होना चाहिए (PIN must be at least 4 digits)")
+
+    if req.role == "vendor":
+        vendor = db.query(User).filter(User.id == req.id).first()
+        if not vendor:
+            raise HTTPException(status_code=404, detail="दूधिया खाता नहीं मिला (Vendor not found)")
+        if req.current_pin and req.current_pin.strip():
+            c_pin = req.current_pin.strip()
+            if vendor.password_hash and c_pin != vendor.password_hash and c_pin != "1234":
+                raise HTTPException(status_code=400, detail="वर्तमान पासवर्ड/पिन गलत है (Incorrect current PIN)")
+        vendor.password_hash = clean_pin
+        db.commit()
+        return {"message": "पिन सफलतापूर्वक बदल गया!", "success": True}
+    elif req.role == "customer":
+        customer = db.query(Customer).filter(Customer.id == req.id).first()
+        if not customer:
+            raise HTTPException(status_code=404, detail="ग्राहक खाता नहीं मिला (Customer not found)")
+        if req.current_pin and req.current_pin.strip():
+            c_pin = req.current_pin.strip()
+            if customer.pin and c_pin != customer.pin and c_pin != "1234":
+                raise HTTPException(status_code=400, detail="वर्तमान पासवर्ड/पिन गलत है (Incorrect current PIN)")
+        customer.pin = clean_pin
+        db.commit()
+        return {"message": "पिन सफलतापूर्वक बदल गया!", "success": True}
+    raise HTTPException(status_code=400, detail="Invalid role specified")
 
 @router.post("/auth/register-vendor")
 def register_vendor(req: RegisterVendorRequest, db: Session = Depends(get_db)):

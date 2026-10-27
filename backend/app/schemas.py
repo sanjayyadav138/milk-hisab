@@ -27,6 +27,7 @@ class CustomerUpdate(BaseModel):
     avatar_url: Optional[str] = None
     customer_type: Optional[str] = None
     is_active: Optional[bool] = None
+    pin: Optional[str] = None
 
 class CustomerResponse(CustomerBase):
     id: int

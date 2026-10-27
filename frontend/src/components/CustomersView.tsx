@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Search, Phone, MapPin, Milk, X, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
+import { UserPlus, Search, Phone, MapPin, Milk, X, ArrowDownCircle, ArrowUpCircle, KeyRound } from 'lucide-react';
 import { fetchCustomers, createCustomer } from '../services/api';
 import { Customer } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 
-export default function CustomersView() {
+interface CustomersViewProps {
+  onResetCustomerPin?: (customerId: number, customerName: string) => void;
+}
+
+export default function CustomersView({ onResetCustomerPin }: CustomersViewProps = {}) {
   const { t, lang } = useLanguage();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState('');
@@ -392,6 +396,17 @@ export default function CustomersView() {
                     <p className="text-xs font-black text-slate-700 mt-1">
                       ₹{c.price_per_liter} / L
                     </p>
+                    {onResetCustomerPin && (
+                      <button
+                        type="button"
+                        onClick={() => onResetCustomerPin(c.id, c.name)}
+                        className="mt-2 text-[11px] font-bold text-slate-600 hover:text-amber-700 flex items-center gap-1 bg-slate-100 hover:bg-amber-50 px-2 py-1 rounded-lg transition ml-auto"
+                        title={lang === 'hi' ? 'ग्राहक का पिन बदलें' : 'Change/Reset Customer PIN'}
+                      >
+                        <KeyRound className="w-3 h-3 text-amber-500" />
+                        <span>{lang === 'hi' ? 'पिन बदलें' : 'PIN'}</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

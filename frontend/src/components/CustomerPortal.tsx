@@ -3,7 +3,7 @@ import {
   Milk, Calendar, IndianRupee, MessageCircle, Send, 
   Users, UserPlus, CheckCircle2, XCircle, Clock, 
   Phone, ArrowUpRight, Sparkles, AlertCircle, AlertTriangle,
-  CalendarOff, X, Check, HelpCircle
+  CalendarOff, X, Check, HelpCircle, KeyRound
 } from 'lucide-react';
 import { 
   fetchCustomerDashboard, fetchSubUsers, addSubUserApi, 
@@ -15,9 +15,10 @@ import { useLanguage } from '../context/LanguageContext';
 interface CustomerPortalProps {
   customer: Customer;
   onLogout: () => void;
+  onOpenChangePin?: () => void;
 }
 
-export default function CustomerPortal({ customer, onLogout }: CustomerPortalProps) {
+export default function CustomerPortal({ customer, onLogout, onOpenChangePin }: CustomerPortalProps) {
   const { lang, t } = useLanguage();
   const [data, setData] = useState<CustomerDashboardData | null>(null);
   const [subusers, setSubusers] = useState<SubUser[]>([]);
@@ -202,12 +203,24 @@ export default function CustomerPortal({ customer, onLogout }: CustomerPortalPro
             </p>
           </div>
 
-          <button
-            onClick={onLogout}
-            className="text-xs font-bold bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-xl transition"
-          >
-            {t('logout')}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onOpenChangePin}
+              className="text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 shadow-sm active:scale-95"
+              title={lang === 'hi' ? 'सुरक्षा पिन बदलें' : 'Change PIN'}
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              <span>{lang === 'hi' ? 'पिन बदलें' : 'Change PIN'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={onLogout}
+              className="text-xs font-bold bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-xl transition"
+            >
+              {t('logout')}
+            </button>
+          </div>
         </div>
 
         {/* Financial Snapshot */}

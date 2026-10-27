@@ -81,6 +81,25 @@ export async function updateCustomerProfileApi(payload: {
   return res.json();
 }
 
+
+export async function changePinApi(payload: {
+  role: 'vendor' | 'customer';
+  id: number;
+  current_pin?: string;
+  new_pin: string;
+}) {
+  const res = await fetch(`${API_BASE}/portal/auth/change-pin`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'पिन बदलने में त्रुटि आई' }));
+    throw new Error(err.detail || 'पिन बदलने में त्रुटि आई');
+  }
+  return res.json();
+}
+
 export async function registerVendorApi(payload: {
   name: string;
   phone: string;

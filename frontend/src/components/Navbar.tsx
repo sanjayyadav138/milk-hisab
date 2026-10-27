@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   LogOut, ArrowRight, Globe, ChevronDown, 
   LayoutDashboard, UserCircle, ShieldCheck, Check, Search,
-  Menu, X, FileText, PhoneCall, Info, Lock
+  Menu, X, FileText, PhoneCall, Info, Lock, KeyRound
 } from 'lucide-react';
 import { AuthState } from '../types';
 import { useLanguage } from '../context/LanguageContext';
@@ -17,6 +17,7 @@ interface NavbarProps {
   onOpenProfile: () => void;
   onNavigateDashboard: () => void;
   onOpenFindMilkman?: () => void;
+  onOpenChangePin?: () => void;
   onNavigatePage?: (page: PublicPageType) => void;
 }
 
@@ -28,7 +29,8 @@ export default function Navbar({
   onOpenProfile, 
   onNavigateDashboard,
   onOpenFindMilkman,
-  onNavigatePage
+  onNavigatePage,
+  onOpenChangePin
 }: NavbarProps) {
   const { lang, setLang, t } = useLanguage();
   
@@ -366,6 +368,24 @@ export default function Navbar({
                       <div className="text-left flex-1">
                         <p className="text-xs font-bold">{t('profileTitle')}</p>
                         <p className="text-[10px] text-slate-400 font-normal">{t('editProfile')}</p>
+                      </div>
+                    </button>
+
+                    {/* Change PIN Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileDropdownOpen(false);
+                        if (onOpenChangePin) onOpenChangePin();
+                      }}
+                      className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-bold text-slate-700 hover:text-amber-700 hover:bg-amber-50 transition active:scale-98"
+                    >
+                      <div className="w-7 h-7 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                        <KeyRound className="w-4 h-4" />
+                      </div>
+                      <div className="text-left flex-1">
+                        <p className="text-xs font-bold">{lang === 'hi' ? 'पिन बदलें (Change PIN)' : 'Change Security PIN'}</p>
+                        <p className="text-[10px] text-slate-400 font-normal">{lang === 'hi' ? 'सुरक्षा पासवर्ड सेट करें' : 'Secret 4-digit PIN'}</p>
                       </div>
                     </button>
                   </div>

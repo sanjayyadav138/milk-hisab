@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, Zap, Users, Star, Award, 
   MapPin, Phone, MessageCircle, ArrowRight, Headphones,
-  ShieldCheck, HelpCircle, FileText, CheckCircle
+  ShieldCheck, HelpCircle, FileText, CheckCircle,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { PublicPageType } from './Navbar';
@@ -20,6 +21,7 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
 
   const banners = [
     {
+      image: '/banners/banner-1.jpg',
       badge: lang === 'hi' ? "🥛 भारत का नंबर 1 डिजिटल दूध बहीखाता" : "🥛 India's #1 Digital Milk Diary",
       title: lang === 'hi' ? "कागजी डायरी छोड़िए, फोन पर 1-क्लिक में दूध का हिसाब रखिए!" : "Ditch Paper Diaries. Track Milk Delivery & Billing in 1-Click!",
       desc: lang === 'hi' 
@@ -27,6 +29,7 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
         : "Super simple for milk vendors & households. Voice-powered logging, automated monthly ledger, and instant WhatsApp bill sharing with UPI.",
     },
     {
+      image: '/banners/banner-2.jpg',
       badge: lang === 'hi' ? "🎙️ बोलकर एंट्री (Voice Assistant)" : "🎙️ Voice-Powered Logging (Natural Speech)",
       title: lang === 'hi' ? "'राकेश को 2 लीटर दूध और शर्मा जी की छुट्टी दर्ज करो'" : "'Add 2 Liters for Rakesh and Skip Sharma Ji Today'",
       desc: lang === 'hi'
@@ -34,6 +37,7 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
         : "Tap the mic and speak naturally. The app extracts customer names and updates daily quantities automatically.",
     },
     {
+      image: '/banners/banner-3.jpg',
       badge: lang === 'hi' ? "📲 1-क्लिक WhatsApp बिलिंग व UPI" : "📲 1-Click WhatsApp Bills & UPI QR",
       title: lang === 'hi' ? "महीने के अंत में हिसाब का झंझट खत्म!" : "No More Month-End Billing Headaches!",
       desc: lang === 'hi'
@@ -41,6 +45,22 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
         : "Send itemized bills straight to customer WhatsApp chats with Google Pay & PhonePe UPI QR links.",
     }
   ];
+
+  // Auto-advance banner every 6.5 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveBanner((prev) => (prev + 1) % banners.length);
+    }, 6500);
+    return () => clearInterval(timer);
+  }, [banners.length]);
+
+  const handlePrevBanner = () => {
+    setActiveBanner((prev) => (prev - 1 + banners.length) % banners.length);
+  };
+
+  const handleNextBanner = () => {
+    setActiveBanner((prev) => (prev + 1) % banners.length);
+  };
 
   const handleNav = (page: PublicPageType) => {
     if (onNavigatePage) {
@@ -63,19 +83,63 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
         {t('announcement')}
       </div>
 
-      {/* Hero Interactive Banner Carousel */}
-      <section className="relative overflow-hidden py-12 md:py-20 px-4 bg-gradient-to-b from-slate-950 via-blue-950 to-slate-900 text-white">
-        <div className="max-w-5xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold mb-6">
-            <Sparkles className="w-3.5 h-3.5" />
+      {/* Hero Interactive Banner Carousel with Photographic Backgrounds */}
+      <section className="relative overflow-hidden py-16 sm:py-24 md:py-28 px-4 text-white min-h-[520px] sm:min-h-[580px] md:min-h-[640px] flex items-center justify-center bg-slate-950">
+        
+        {/* Photographic Background Images with Smooth Crossfade Transition */}
+        {banners.map((b, i) => (
+          <div
+            key={i}
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+              activeBanner === i ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+          >
+            <img
+              src={b.image}
+              alt={b.title}
+              className="w-full h-full object-cover object-center"
+            />
+            {/* Cinematic Gradient Overlays for Guaranteed Text Legibility & Contrast */}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/75 to-slate-950/80" />
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/60 to-slate-950/40" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-slate-950/35 to-slate-950/80" />
+          </div>
+        ))}
+
+        {/* Decorative Grid Light */}
+        <div className="absolute inset-0 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:28px_28px] opacity-15 pointer-events-none z-10" />
+
+        {/* Previous / Next Arrow Controls */}
+        <button
+          type="button"
+          onClick={handlePrevBanner}
+          className="hidden sm:flex absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-20 w-11 h-11 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white items-center justify-center transition active:scale-90 shadow-lg shadow-black/40"
+          aria-label="Previous banner"
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleNextBanner}
+          className="hidden sm:flex absolute right-4 md:right-8 top-1/2 -translate-y-1/2 z-20 w-11 h-11 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white items-center justify-center transition active:scale-90 shadow-lg shadow-black/40"
+          aria-label="Next banner"
+        >
+          <ChevronRight className="w-6 h-6" />
+        </button>
+
+        {/* Slide Content */}
+        <div className="max-w-4xl mx-auto text-center relative z-20">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/25 border border-blue-400/40 text-blue-200 text-xs sm:text-sm font-black mb-6 shadow-md backdrop-blur-md">
+            <Sparkles className="w-4 h-4 text-amber-300" />
             <span>{banners[activeBanner].badge}</span>
           </div>
 
-          <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight leading-tight max-w-4xl mx-auto">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight leading-tight max-w-4xl mx-auto drop-shadow-md">
             {banners[activeBanner].title}
           </h1>
 
-          <p className="mt-5 text-sm sm:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
+          <p className="mt-5 text-sm sm:text-lg text-slate-200 max-w-2xl mx-auto leading-relaxed drop-shadow-sm font-medium">
             {banners[activeBanner].desc}
           </p>
 
@@ -83,7 +147,7 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <button
               onClick={() => onOpenAuth('vendor', 'LOGIN')}
-              className="bg-blue-600 hover:bg-blue-500 text-white font-black px-6 py-3.5 rounded-2xl shadow-xl shadow-blue-600/30 text-sm sm:text-base active:scale-95 transition flex items-center gap-2"
+              className="bg-blue-600 hover:bg-blue-500 text-white font-black px-6 py-3.5 rounded-2xl shadow-xl shadow-blue-600/40 text-sm sm:text-base active:scale-95 transition flex items-center gap-2"
             >
               <span>{t('ctaVendor')}</span>
               <ArrowRight className="w-4 h-4" />
@@ -91,28 +155,28 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
 
             <button
               onClick={() => onOpenAuth('customer', 'LOGIN')}
-              className="bg-white/10 hover:bg-white/20 text-white font-bold px-6 py-3.5 rounded-2xl backdrop-blur-md border border-white/20 text-sm sm:text-base active:scale-95 transition"
+              className="bg-white/10 hover:bg-white/20 text-white font-bold px-6 py-3.5 rounded-2xl backdrop-blur-md border border-white/25 text-sm sm:text-base active:scale-95 transition shadow-lg shadow-black/20"
             >
               {t('ctaCustomer')}
             </button>
           </div>
 
           {/* Banner Selector Dots */}
-          <div className="flex justify-center gap-2 mt-8">
+          <div className="flex justify-center items-center gap-2.5 mt-10">
             {banners.map((_, i) => (
               <button
                 key={i}
                 onClick={() => setActiveBanner(i)}
-                className={`h-2 rounded-full transition-all ${
-                  activeBanner === i ? 'w-8 bg-blue-400' : 'w-2 bg-white/30'
+                className={`h-2.5 rounded-full transition-all duration-300 ${
+                  activeBanner === i 
+                    ? 'w-10 bg-blue-400 shadow-md shadow-blue-400/50' 
+                    : 'w-2.5 bg-white/40 hover:bg-white/70'
                 }`}
+                aria-label={`Go to banner ${i + 1}`}
               />
             ))}
           </div>
         </div>
-
-        {/* Decorative Grid Light */}
-        <div className="absolute inset-0 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none"></div>
       </section>
 
       {/* Location-Based Milkman Discovery Bar */}

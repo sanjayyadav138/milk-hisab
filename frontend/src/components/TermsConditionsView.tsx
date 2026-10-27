@@ -1,49 +1,26 @@
 import React from 'react';
-import { FileText, ArrowLeft, Shield, Scale, AlertCircle } from 'lucide-react';
+import { Scale, AlertCircle } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
-interface TermsConditionsViewProps {
-  onBack?: () => void;
-}
-
-export default function TermsConditionsView({ onBack }: TermsConditionsViewProps) {
+export default function TermsConditionsView() {
   const { lang } = useLanguage();
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-800 pb-24 font-sans">
       
-      {/* Top Breadcrumb / Back Bar */}
-      <div className="bg-white border-b border-slate-200 sticky top-16 z-30">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <button
-            onClick={() => {
-              if (onBack) onBack();
-              else window.location.hash = '#/';
-            }}
-            className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-blue-700 transition active:scale-95"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>{lang === 'hi' ? 'मुख्य पृष्ठ पर वापस जाएं' : 'Back to Home'}</span>
-          </button>
-          <span className="text-xs font-bold text-slate-500">
-            {lang === 'hi' ? 'अंतिम अपडेट: अक्टूबर 2026' : 'Last Updated: October 2026'}
-          </span>
-        </div>
-      </div>
-
       {/* Hero Header */}
-      <div className="bg-gradient-to-b from-blue-950 via-slate-900 to-blue-900 text-white py-12 px-4">
+      <div className="bg-gradient-to-b from-blue-950 via-slate-900 to-blue-900 text-white py-14 px-4">
         <div className="max-w-3xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold mb-4">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-semibold mb-4">
             <Scale className="w-4 h-4" />
             <span>{lang === 'hi' ? 'कानूनी नियम' : 'Legal Terms'}</span>
           </div>
 
-          <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
+          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight">
             {lang === 'hi' ? 'नियम एवं शर्तें (Terms and Conditions)' : 'Terms & Conditions'}
           </h1>
 
-          <p className="mt-3 text-xs sm:text-sm text-slate-300 max-w-xl mx-auto leading-relaxed">
+          <p className="mt-3 text-xs sm:text-sm text-slate-300 max-w-xl mx-auto leading-relaxed font-normal">
             {lang === 'hi'
               ? 'Milk Hisab प्लेटफ़ॉर्म (वेबसाइट, मोबाइल ऐप्लिकेशन व एपीआई) का उपयोग करने से पहले कृपया इन नियमों को ध्यानपूर्वक पढ़ें।'
               : 'Please read these terms and conditions carefully before using the Milk Hisab digital platform and services.'}
@@ -53,11 +30,11 @@ export default function TermsConditionsView({ onBack }: TermsConditionsViewProps
 
       <div className="max-w-4xl mx-auto px-4 -mt-6">
         
-        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200 space-y-8 text-xs sm:text-sm text-slate-700 leading-relaxed">
+        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200 space-y-8 text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">
           
           {/* Section 1 */}
           <section className="space-y-2">
-            <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
               <span className="text-blue-600 font-bold">1.</span>
               <span>{lang === 'hi' ? 'नियमों की स्वीकृति (Acceptance of Terms)' : 'Acceptance of Terms'}</span>
             </h3>
@@ -70,7 +47,7 @@ export default function TermsConditionsView({ onBack }: TermsConditionsViewProps
 
           {/* Section 2 */}
           <section className="space-y-2">
-            <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
               <span className="text-blue-600 font-bold">2.</span>
               <span>{lang === 'hi' ? 'सेवाओं का विवरण (Description of Services)' : 'Description of Services'}</span>
             </h3>
@@ -83,7 +60,7 @@ export default function TermsConditionsView({ onBack }: TermsConditionsViewProps
 
           {/* Section 3 */}
           <section className="space-y-2">
-            <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
               <span className="text-blue-600 font-bold">3.</span>
               <span>{lang === 'hi' ? 'वित्तीय लेनदेन एवं देयता अस्वीकरण (Financial Disclaimer)' : 'Financial Disclaimer & Payments'}</span>
             </h3>
@@ -101,7 +78,7 @@ export default function TermsConditionsView({ onBack }: TermsConditionsViewProps
 
           {/* Section 4 */}
           <section className="space-y-2">
-            <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
               <span className="text-blue-600 font-bold">4.</span>
               <span>{lang === 'hi' ? 'उपयोगकर्ता खाता एवं पिन सुरक्षा (User Accounts & PIN)' : 'User Accounts & Security'}</span>
             </h3>
@@ -114,7 +91,7 @@ export default function TermsConditionsView({ onBack }: TermsConditionsViewProps
 
           {/* Section 5 */}
           <section className="space-y-2">
-            <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
               <span className="text-blue-600 font-bold">5.</span>
               <span>{lang === 'hi' ? 'डेटा की शुद्धता एवं आपत्तियां (Data Accuracy & Disputes)' : 'Data Accuracy & Query Resolutions'}</span>
             </h3>
@@ -127,7 +104,7 @@ export default function TermsConditionsView({ onBack }: TermsConditionsViewProps
 
           {/* Section 6 */}
           <section className="space-y-2">
-            <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
               <span className="text-blue-600 font-bold">6.</span>
               <span>{lang === 'hi' ? 'बौद्धिक संपदा अधिकार (Intellectual Property)' : 'Intellectual Property Rights'}</span>
             </h3>
@@ -140,7 +117,7 @@ export default function TermsConditionsView({ onBack }: TermsConditionsViewProps
 
           {/* Section 7 */}
           <section className="space-y-2">
-            <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
               <span className="text-blue-600 font-bold">7.</span>
               <span>{lang === 'hi' ? 'लागू कानून एवं अधिकार क्षेत्र (Governing Law & Jurisdiction)' : 'Governing Law & Jurisdiction'}</span>
             </h3>

@@ -1,49 +1,26 @@
 import React from 'react';
-import { ShieldCheck, ArrowLeft, Lock, EyeOff, Server, UserCheck } from 'lucide-react';
+import { Lock, EyeOff } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
-interface PrivacyPolicyViewProps {
-  onBack?: () => void;
-}
-
-export default function PrivacyPolicyView({ onBack }: PrivacyPolicyViewProps) {
+export default function PrivacyPolicyView() {
   const { lang } = useLanguage();
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-800 pb-24 font-sans">
       
-      {/* Top Breadcrumb / Back Bar */}
-      <div className="bg-white border-b border-slate-200 sticky top-16 z-30">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <button
-            onClick={() => {
-              if (onBack) onBack();
-              else window.location.hash = '#/';
-            }}
-            className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-blue-700 transition active:scale-95"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>{lang === 'hi' ? 'मुख्य पृष्ठ पर वापस जाएं' : 'Back to Home'}</span>
-          </button>
-          <span className="text-xs font-bold text-slate-500">
-            {lang === 'hi' ? 'DPDP Act 2023 अनुरूप' : 'DPDP Act 2023 Compliant'}
-          </span>
-        </div>
-      </div>
-
       {/* Hero Header */}
-      <div className="bg-gradient-to-b from-blue-950 via-slate-900 to-blue-900 text-white py-12 px-4">
+      <div className="bg-gradient-to-b from-blue-950 via-slate-900 to-blue-900 text-white py-14 px-4">
         <div className="max-w-3xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold mb-4">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-semibold mb-4">
             <Lock className="w-4 h-4" />
             <span>{lang === 'hi' ? 'डेटा गोपनीयता' : 'Data Privacy'}</span>
           </div>
 
-          <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
+          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight">
             {lang === 'hi' ? 'गोपनीयता नीति (Privacy Policy)' : 'Privacy Policy'}
           </h1>
 
-          <p className="mt-3 text-xs sm:text-sm text-slate-300 max-w-xl mx-auto leading-relaxed">
+          <p className="mt-3 text-xs sm:text-sm text-slate-300 max-w-xl mx-auto leading-relaxed font-normal">
             {lang === 'hi'
               ? 'Milk Hisab में हम आपकी व्यक्तिगत जानकारी और दैनिक दूध बहीखाते की पूर्ण गोपनीयता और सुरक्षा के प्रति 100% प्रतिबद्ध हैं।'
               : 'At Milk Hisab, we prioritize the confidentiality, integrity, and security of your daily milk ledger data.'}
@@ -53,11 +30,11 @@ export default function PrivacyPolicyView({ onBack }: PrivacyPolicyViewProps) {
 
       <div className="max-w-4xl mx-auto px-4 -mt-6">
         
-        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200 space-y-8 text-xs sm:text-sm text-slate-700 leading-relaxed">
+        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200 space-y-8 text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">
           
           {/* Section 1: Introduction */}
           <section className="space-y-2">
-            <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
               <span className="text-blue-600 font-bold">1.</span>
               <span>{lang === 'hi' ? 'प्रस्तावना व प्रतिबद्धता (Introduction)' : 'Introduction & Scope'}</span>
             </h3>
@@ -70,7 +47,7 @@ export default function PrivacyPolicyView({ onBack }: PrivacyPolicyViewProps) {
 
           {/* Section 2: What we collect */}
           <section className="space-y-2">
-            <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
               <span className="text-blue-600 font-bold">2.</span>
               <span>{lang === 'hi' ? 'हम कौन-सी जानकारी एकत्र करते हैं (Information We Collect)' : 'Information We Collect'}</span>
             </h3>
@@ -89,7 +66,7 @@ export default function PrivacyPolicyView({ onBack }: PrivacyPolicyViewProps) {
 
           {/* Section 3: How we use */}
           <section className="space-y-2">
-            <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
               <span className="text-blue-600 font-bold">3.</span>
               <span>{lang === 'hi' ? 'जानकारी का उपयोग (How We Use Information)' : 'How We Use Information'}</span>
             </h3>
@@ -103,7 +80,7 @@ export default function PrivacyPolicyView({ onBack }: PrivacyPolicyViewProps) {
 
           {/* Section 4: Absolute Non-Sale */}
           <section className="space-y-2">
-            <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
               <span className="text-blue-600 font-bold">4.</span>
               <span>{lang === 'hi' ? 'डेटा की बिक्री पर पूर्ण प्रतिबंध (Strict Non-Disclosure)' : 'Absolute Non-Sale Policy'}</span>
             </h3>
@@ -121,7 +98,7 @@ export default function PrivacyPolicyView({ onBack }: PrivacyPolicyViewProps) {
 
           {/* Section 5: Security */}
           <section className="space-y-2">
-            <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
               <span className="text-blue-600 font-bold">5.</span>
               <span>{lang === 'hi' ? 'डेटा सुरक्षा एवं भंडारण (Data Security & Cloud Storage)' : 'Data Security & Storage'}</span>
             </h3>
@@ -134,7 +111,7 @@ export default function PrivacyPolicyView({ onBack }: PrivacyPolicyViewProps) {
 
           {/* Section 6: User Rights */}
           <section className="space-y-2">
-            <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
               <span className="text-blue-600 font-bold">6.</span>
               <span>{lang === 'hi' ? 'आपके अधिकार (Your Rights & Control)' : 'Your Rights & Data Control'}</span>
             </h3>
@@ -147,7 +124,7 @@ export default function PrivacyPolicyView({ onBack }: PrivacyPolicyViewProps) {
 
           {/* Section 7: Grievance Officer */}
           <section className="space-y-2 pt-2 border-t border-slate-100">
-            <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
               <span className="text-blue-600 font-bold">7.</span>
               <span>{lang === 'hi' ? 'शिकायत अधिकारी (Grievance Officer)' : 'Grievance Redressal Officer'}</span>
             </h3>
@@ -156,10 +133,10 @@ export default function PrivacyPolicyView({ onBack }: PrivacyPolicyViewProps) {
                 ? 'डेटा संरक्षण या गोपनीयता संबंधी किसी भी चिंता हेतु आप हमारे नोडल शिकायत अधिकारी से संपर्क कर सकते हैं:'
                 : 'In accordance with the Indian Information Technology Rules, the contact details of the Grievance Officer are:'}
             </p>
-            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 mt-2 space-y-1 text-xs">
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 mt-2 space-y-1 text-xs font-normal">
               <p><strong>{lang === 'hi' ? 'पद:' : 'Designation:'}</strong> Grievance & Compliance Officer</p>
               <p><strong>{lang === 'hi' ? 'ईमेल:' : 'Email:'}</strong> support@milkhisab.in / grievance@milkhisab.in</p>
-              <p><strong>{lang === 'hi' ? 'पता:' : 'Address:'}</strong> Milk Hisab HQ, Sector 48, Sohna Road, Gurugram, Haryana - 122018</p>
+              <p><strong>{lang === 'hi' ? 'पता:' : 'Address:'}</strong> Near Post Office , Jamalpur, Gurgaon Haryana 122503</p>
             </div>
           </section>
 

@@ -16,9 +16,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialRole = 'v
   const [tab, setTab] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
   const [role, setRole] = useState<'vendor' | 'customer'>(initialRole);
   
-  // Login fields with 1234 default dummy credentials
-  const [phone, setPhone] = useState('1234');
-  const [pin, setPin] = useState('1234');
+  // Login fields (clean and blank by default)
+  const [phone, setPhone] = useState('');
+  const [pin, setPin] = useState('');
 
   // Vendor register fields
   const [vendorName, setVendorName] = useState('');
@@ -152,7 +152,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialRole = 'v
               <ShieldCheck className="w-5 h-5 text-white" />
             </span>
             <div>
-              <h3 className="font-black text-lg">{t('modalTitle')}</h3>
+              <h3 className="font-bold text-lg">{t('modalTitle')}</h3>
               <p className="text-xs text-blue-100 font-medium">{t('modalSub')}</p>
             </div>
           </div>
@@ -169,7 +169,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialRole = 'v
           <div className="flex bg-slate-100 p-1 rounded-2xl mb-4">
             <button
               onClick={() => { setTab('LOGIN'); setErrorMsg(''); }}
-              className={`flex-1 py-2 text-xs font-black rounded-xl transition ${
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition ${
                 tab === 'LOGIN' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
@@ -177,7 +177,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialRole = 'v
             </button>
             <button
               onClick={() => { setTab('REGISTER'); setErrorMsg(''); }}
-              className={`flex-1 py-2 text-xs font-black rounded-xl transition ${
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition ${
                 tab === 'REGISTER' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
@@ -250,36 +250,36 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialRole = 'v
           {tab === 'LOGIN' ? (
             <form onSubmit={handleLogin} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
                   {t('usernameLabel')}
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="1234"
+                  placeholder=""
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-blue-600 bg-slate-50/50"
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-600 bg-slate-50/50"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
                   {t('passwordLabel')}
                 </label>
                 <input
                   type="password"
-                  placeholder="1234"
+                  placeholder=""
                   value={pin}
                   onChange={(e) => setPin(e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-blue-600 bg-slate-50/50"
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-600 bg-slate-50/50"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-sm rounded-xl shadow-md shadow-blue-600/20 transition active:scale-98 flex items-center justify-center gap-2 mt-2"
+                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-md shadow-blue-600/20 transition active:scale-98 flex items-center justify-center gap-2 mt-2"
               >
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -297,42 +297,42 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialRole = 'v
               {role === 'vendor' ? (
                 <>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">{t('vendorNameLabel')}</label>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">{t('vendorNameLabel')}</label>
                     <input
                       type="text"
                       required
-                      placeholder={t('vendorNamePlaceholder')}
+                      placeholder=""
                       value={vendorName}
                       onChange={(e) => setVendorName(e.target.value)}
                       className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:border-blue-600 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">{t('vendorBusinessLabel')}</label>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">{t('vendorBusinessLabel')}</label>
                     <input
                       type="text"
-                      placeholder={t('vendorBusinessPlaceholder')}
+                      placeholder=""
                       value={vendorBusiness}
                       onChange={(e) => setVendorBusiness(e.target.value)}
                       className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:border-blue-600 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">{t('mobileLabel')}</label>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">{t('mobileLabel')}</label>
                     <input
                       type="tel"
                       required
-                      placeholder="9876543210"
+                      placeholder=""
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:border-blue-600 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">{t('vendorUpiLabel')}</label>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">{t('vendorUpiLabel')}</label>
                     <input
                       type="text"
-                      placeholder={t('vendorUpiPlaceholder')}
+                      placeholder=""
                       value={vendorUpi}
                       onChange={(e) => setVendorUpi(e.target.value)}
                       className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:border-blue-600 focus:outline-none"
@@ -341,50 +341,33 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialRole = 'v
                 </>
               ) : (
                 <>
-                  {vendorsList.length > 0 && (
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">{t('selectVendor')}</label>
-                      <select
-                        value={selectedVendorId}
-                        onChange={(e) => setSelectedVendorId(Number(e.target.value))}
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:border-blue-600 focus:outline-none bg-white"
-                      >
-                        {vendorsList.map((v) => (
-                          <option key={v.id} value={v.id}>
-                            {v.name} - {v.business_name} ({v.phone})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">{t('custNameLabel')}</label>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">{t('custNameLabel')}</label>
                     <input
                       type="text"
                       required
-                      placeholder={t('custNamePlaceholder')}
+                      placeholder=""
                       value={custName}
                       onChange={(e) => setCustName(e.target.value)}
                       className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:border-blue-600 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">{t('mobileLabel')}</label>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">{t('mobileLabel')}</label>
                     <input
                       type="tel"
                       required
-                      placeholder="9811122233"
+                      placeholder=""
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:border-blue-600 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">{t('custAddressLabel')}</label>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">{t('custAddressLabel')}</label>
                     <input
                       type="text"
-                      placeholder={t('custAddressPlaceholder')}
+                      placeholder=""
                       value={custAddress}
                       onChange={(e) => setCustAddress(e.target.value)}
                       className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:border-blue-600 focus:outline-none"
@@ -392,7 +375,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialRole = 'v
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">{t('qtyLabel')}</label>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">{t('qtyLabel')}</label>
                       <input
                         type="number"
                         step="0.5"
@@ -402,7 +385,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialRole = 'v
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">{t('milkTypeLabel')}</label>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">{t('milkTypeLabel')}</label>
                       <select
                         value={custType}
                         onChange={(e) => setCustType(e.target.value)}
@@ -420,7 +403,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialRole = 'v
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-sm rounded-xl shadow-md shadow-blue-600/20 transition active:scale-98 flex items-center justify-center gap-2 mt-2"
+                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-md shadow-blue-600/20 transition active:scale-98 flex items-center justify-center gap-2 mt-2"
               >
                 {loading ? t('registeringLoading') : t('btnRegisterSubmit')}
               </button>

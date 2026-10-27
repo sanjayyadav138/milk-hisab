@@ -4,16 +4,17 @@ import {
   X, CheckCircle, ArrowRight, ShieldCheck, Send 
 } from 'lucide-react';
 import { searchVendorsApi, createMilkRequestApi } from '../services/api';
-import { VendorSearchResult } from '../types';
+import { VendorSearchResult, AuthState } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 
 interface FindMilkmanModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialQuery?: string;
+  auth?: AuthState;
 }
 
-export default function FindMilkmanModal({ isOpen, onClose, initialQuery = '' }: FindMilkmanModalProps) {
+export default function FindMilkmanModal({ isOpen, onClose, initialQuery = '', auth }: FindMilkmanModalProps) {
   const { t, lang } = useLanguage();
   const [query, setQuery] = useState(initialQuery);
   const [vendors, setVendors] = useState<VendorSearchResult[]>([]);
@@ -56,8 +57,37 @@ export default function FindMilkmanModal({ isOpen, onClose, initialQuery = '' }:
     }
   };
 
-  const handleOpenRequest = (vendor: VendorSearchResult) => {
+  const handleOpenRequest = async (vendor: VendorSearchResult) => {
     setSelectedVendor(vendor);
+
+    // Requirement 3: If logged in as customer, send request directly with customer details!
+    if (auth?.role === 'customer' && auth.customer) {
+      setSubmitting(true);
+      try {
+        const cust = auth.customer;
+        await createMilkRequestApi(vendor.id, {
+          customer_name: cust.name,
+          customer_phone: cust.phone || '',
+          address: cust.address || '',
+          locality: vendor.area || vendor.city || '',
+          city: vendor.city,
+          pincode: vendor.pincode,
+          milk_type: cust.milk_type || 'Cow',
+          quantity: cust.default_quantity || 1.5,
+          delivery_time: 'Morning',
+          start_date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+          notes: ''
+        });
+        setRequestSubmitted(true);
+      } catch (err: any) {
+        alert(lang === 'hi' ? 'अनुरोध भेजने में त्रुटि: ' + err.message : 'Error sending request: ' + err.message);
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // Otherwise, show form for unauthenticated visitors
     setRequestSubmitted(false);
     setReqForm(prev => ({
       ...prev,
@@ -252,7 +282,8 @@ export default function FindMilkmanModal({ isOpen, onClose, initialQuery = '' }:
                       <div className="sm:self-center shrink-0">
                         <button
                           onClick={() => handleOpenRequest(vendor)}
-                          className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black px-4 py-2.5 rounded-2xl shadow-md text-xs sm:text-sm active:scale-95 transition flex items-center justify-center gap-1.5"
+                          disabled={submitting}
+                          className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold px-4 py-2.5 rounded-2xl shadow-md text-xs sm:text-sm active:scale-95 transition flex items-center justify-center gap-1.5"
                         >
                           <span>{t('requestMilk')}</span>
                           <ArrowRight className="w-4 h-4" />
@@ -276,11 +307,11 @@ export default function FindMilkmanModal({ isOpen, onClose, initialQuery = '' }:
               </button>
 
               <div className="bg-blue-50/70 rounded-2xl p-3.5 border border-blue-200 mb-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white font-black flex items-center justify-center text-sm">
+                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white font-bold flex items-center justify-center text-sm">
                   🥛
                 </div>
                 <div>
-                  <h4 className="font-black text-slate-900 text-sm">
+                  <h4 className="font-bold text-slate-900 text-sm">
                     {selectedVendor.name} ({selectedVendor.business_name})
                   </h4>
                   <p className="text-xs text-slate-600">
@@ -292,57 +323,57 @@ export default function FindMilkmanModal({ isOpen, onClose, initialQuery = '' }:
               <form onSubmit={handleSubmitRequest} className="space-y-3.5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
                       {lang === 'hi' ? 'आपका नाम *' : 'Your Name *'}
                     </label>
                     <input 
                       type="text"
                       required
-                      placeholder={lang === 'hi' ? 'उदा. राजेश शर्मा' : 'e.g. Rajesh Sharma'}
+                      placeholder=""
                       value={reqForm.customer_name}
                       onChange={(e) => setReqForm({ ...reqForm, customer_name: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:border-blue-500"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-blue-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
                       {lang === 'hi' ? 'फ़ोन नंबर (WhatsApp) *' : 'Phone Number *'}
                     </label>
                     <input 
                       type="tel"
                       required
-                      placeholder="98XXXXXXXX"
+                      placeholder=""
                       value={reqForm.customer_phone}
                       onChange={(e) => setReqForm({ ...reqForm, customer_phone: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:border-blue-500"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-blue-500"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     {lang === 'hi' ? 'घर का पूरा पता (मकान नं., गली, लैंडमार्क) *' : 'Full House Address *'}
                   </label>
                   <input 
                     type="text"
                     required
-                    placeholder={lang === 'hi' ? 'उदा. मकान नं 24, गली नं 2, नियर शिव मंदिर' : 'e.g. H.No 24, Street 2, Near Shiv Mandir'}
+                    placeholder=""
                     value={reqForm.address}
                     onChange={(e) => setReqForm({ ...reqForm, address: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:border-blue-500"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
                       {lang === 'hi' ? 'दूध प्रकार' : 'Milk Type'}
                     </label>
                     <select
                       value={reqForm.milk_type}
                       onChange={(e) => setReqForm({ ...reqForm, milk_type: e.target.value })}
-                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:border-blue-500"
+                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-blue-500"
                     >
                       <option value="Cow">{lang === 'hi' ? 'गाय (Cow)' : 'Cow'}</option>
                       <option value="Buffalo">{lang === 'hi' ? 'भैंस (Buffalo)' : 'Buffalo'}</option>
@@ -351,7 +382,7 @@ export default function FindMilkmanModal({ isOpen, onClose, initialQuery = '' }:
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
                       {lang === 'hi' ? 'दैनिक मात्रा (लीटर)' : 'Daily Qty (L)'}
                     </label>
                     <input 
@@ -361,18 +392,18 @@ export default function FindMilkmanModal({ isOpen, onClose, initialQuery = '' }:
                       max="20"
                       value={reqForm.quantity}
                       onChange={(e) => setReqForm({ ...reqForm, quantity: parseFloat(e.target.value) || 1.0 })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:border-blue-500"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-blue-500"
                     />
                   </div>
 
                   <div className="col-span-2 sm:col-span-1">
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
                       {t('preferredTime')}
                     </label>
                     <select
                       value={reqForm.delivery_time}
                       onChange={(e) => setReqForm({ ...reqForm, delivery_time: e.target.value })}
-                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:border-blue-500"
+                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-blue-500"
                     >
                       <option value="Morning">{t('morning')}</option>
                       <option value="Evening">{t('evening')}</option>
@@ -383,27 +414,27 @@ export default function FindMilkmanModal({ isOpen, onClose, initialQuery = '' }:
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
                       {t('startDate')}
                     </label>
                     <input 
                       type="date"
                       value={reqForm.start_date}
                       onChange={(e) => setReqForm({ ...reqForm, start_date: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:border-blue-500"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-blue-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
                       {t('specialNotes')}
                     </label>
                     <input 
                       type="text"
-                      placeholder={lang === 'hi' ? 'उदा. घंटी बजाएं, गेट पर रखें' : 'e.g. Ring doorbell'}
+                      placeholder=""
                       value={reqForm.notes}
                       onChange={(e) => setReqForm({ ...reqForm, notes: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:border-blue-500"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-blue-500"
                     />
                   </div>
                 </div>
@@ -411,7 +442,7 @@ export default function FindMilkmanModal({ isOpen, onClose, initialQuery = '' }:
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black py-3 rounded-2xl shadow-lg shadow-blue-500/20 text-sm active:scale-95 transition flex items-center justify-center gap-2"
+                  className="w-full mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 rounded-2xl shadow-lg shadow-blue-500/20 text-sm active:scale-95 transition flex items-center justify-center gap-2"
                 >
                   {submitting ? (
                     <span>{lang === 'hi' ? 'अनुरोध भेजा जा रहा है...' : 'Sending request...'}</span>
@@ -433,20 +464,20 @@ export default function FindMilkmanModal({ isOpen, onClose, initialQuery = '' }:
                 <CheckCircle className="w-8 h-8" />
               </div>
 
-              <h4 className="text-xl font-black text-slate-900">
+              <h4 className="text-xl font-bold text-slate-900">
                 {lang === 'hi' ? 'दूध अनुरोध सफलतापूर्वक भेजा गया!' : 'Milk Request Sent Successfully!'}
               </h4>
 
-              <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto mt-2 leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto mt-2 leading-relaxed font-normal">
                 {lang === 'hi'
-                  ? `आपका अनुरोध ${selectedVendor.name} (${selectedVendor.business_name}) को प्राप्त हो गया है। दूधिया द्वारा स्वीकार करते ही आपकी सप्लाई शुरू कर दी जाएगी और आप अपने फ़ोन नंबर से कभी भी हिसाब देख सकेंगे।`
-                  : `Your request has been received by ${selectedVendor.name}. Once accepted, your daily milk supply will start and you can track your daily delivery anytime using your phone number.`}
+                  ? `आपका अनुरोध ${selectedVendor.name} (${selectedVendor.business_name}) को प्राप्त हो गया है। दूधिया द्वारा स्वीकार करते ही आपकी सप्लाई शुरू कर दी जाएगी।`
+                  : `Your request has been received by ${selectedVendor.name}. Once accepted, your daily milk supply will start.`}
               </p>
 
               <div className="mt-6 flex justify-center gap-3">
                 <button
                   onClick={() => { setSelectedVendor(null); setRequestSubmitted(false); onClose(); }}
-                  className="bg-slate-900 hover:bg-slate-800 text-white font-bold px-6 py-2.5 rounded-xl text-xs sm:text-sm transition"
+                  className="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-6 py-2.5 rounded-xl text-xs sm:text-sm transition"
                 >
                   {lang === 'hi' ? 'बंद करें (Done)' : 'Close'}
                 </button>

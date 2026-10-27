@@ -173,7 +173,7 @@ export default function Navbar({
           <button
             type="button"
             onClick={onOpenFindMilkman}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-2xl text-xs font-black transition active:scale-95 shadow-2xs shrink-0"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-2xl text-xs font-bold transition active:scale-95 shadow-2xs shrink-0"
           >
             <Search className="w-3.5 h-3.5 text-blue-600 shrink-0" />
             <span className="hidden sm:inline">{t('findMilkman')}</span>
@@ -185,7 +185,7 @@ export default function Navbar({
             <button
               type="button"
               onClick={() => setLangDropdownOpen(!langDropdownOpen)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl border text-xs font-black transition-all active:scale-95 shadow-2xs ${
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl border text-xs font-bold transition-all active:scale-95 shadow-2xs ${
                 langDropdownOpen
                   ? 'bg-blue-50 border-blue-400 text-blue-900 ring-2 ring-blue-500/20'
                   : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
@@ -205,7 +205,7 @@ export default function Navbar({
             {/* Language Menu Dropdown */}
             {langDropdownOpen && (
               <div className="absolute right-0 mt-2 w-44 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 origin-top-right">
-                <div className="px-3 py-1.5 text-[10px] font-black uppercase text-slate-400 border-b border-slate-100">
+                <div className="px-3 py-1.5 text-[10px] font-bold uppercase text-slate-400 border-b border-slate-100">
                   भाषा चुनें (Language)
                 </div>
                 
@@ -269,7 +269,7 @@ export default function Navbar({
                 aria-label="User account menu"
               >
                 {/* Avatar Circle */}
-                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center font-black text-sm text-white shadow-xs shrink-0 overflow-hidden ${
+                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center font-bold text-sm text-white shadow-xs shrink-0 overflow-hidden ${
                   isVendor ? 'bg-gradient-to-br from-blue-600 to-blue-800' : 'bg-gradient-to-br from-emerald-600 to-teal-800'
                 }`}>
                   {avatarUrl ? (
@@ -286,10 +286,10 @@ export default function Navbar({
 
                 {/* User Info (Hidden on very narrow mobile) */}
                 <div className="text-left hidden sm:block max-w-[130px] md:max-w-[160px]">
-                  <p className="text-xs font-black text-slate-900 leading-tight truncate">
+                  <p className="text-xs font-bold text-slate-900 leading-tight truncate">
                     {displayName}
                   </p>
-                  <p className="text-[10px] text-slate-500 font-bold truncate">
+                  <p className="text-[10px] text-slate-500 font-semibold truncate">
                     {displaySubtitle}
                   </p>
                 </div>
@@ -303,7 +303,7 @@ export default function Navbar({
                 <div className="absolute right-0 mt-2 w-64 sm:w-72 bg-white rounded-3xl shadow-2xl border border-slate-200 py-2 z-50 animate-in fade-in zoom-in-95 duration-150 origin-top-right">
                   {/* Dropdown Header: User Details Card */}
                   <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-                    <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-base text-white shadow-xs shrink-0 overflow-hidden ${
+                    <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-base text-white shadow-xs shrink-0 overflow-hidden ${
                       isVendor ? 'bg-gradient-to-br from-blue-600 to-blue-800' : 'bg-gradient-to-br from-emerald-600 to-teal-800'
                     }`}>
                       {avatarUrl ? (
@@ -319,11 +319,11 @@ export default function Navbar({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <p className="text-sm font-black text-slate-900 truncate">{displayName}</p>
+                        <p className="text-sm font-bold text-slate-900 truncate">{displayName}</p>
                         <ShieldCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                       </div>
                       <p className="text-xs text-slate-500 truncate">{displayPhone}</p>
-                      <span className={`inline-block mt-0.5 text-[9px] font-black uppercase tracking-wider px-2 py-0.2 rounded-full ${
+                      <span className={`inline-block mt-0.5 text-[9px] font-bold uppercase tracking-wider px-2 py-0.2 rounded-full ${
                         isVendor ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'
                       }`}>
                         {isVendor ? t('vendorRole') : t('customerRole')}
@@ -396,7 +396,7 @@ export default function Navbar({
             /* Logged-Out Simple Login CTA */
             <button
               onClick={() => onOpenAuth('vendor', 'LOGIN')}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-black shadow-md shadow-blue-500/20 active:scale-95 transition flex items-center gap-1.5 shrink-0"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-blue-500/20 active:scale-95 transition flex items-center gap-1.5 shrink-0"
             >
               <span>{t('simpleLogin')}</span>
               <ArrowRight className="w-4 h-4" />

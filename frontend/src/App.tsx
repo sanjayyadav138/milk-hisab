@@ -337,16 +337,16 @@ function MainApp() {
         
         {/* Dedicated Public Informational Views */}
         {activePublicPage === 'ABOUT' && (
-          <AboutUsView onBack={handleBackFromPublic} />
+          <AboutUsView />
         )}
         {activePublicPage === 'CONTACT' && (
-          <ContactUsView onBack={handleBackFromPublic} />
+          <ContactUsView />
         )}
         {activePublicPage === 'TERMS' && (
-          <TermsConditionsView onBack={handleBackFromPublic} />
+          <TermsConditionsView />
         )}
         {activePublicPage === 'PRIVACY' && (
-          <PrivacyPolicyView onBack={handleBackFromPublic} />
+          <PrivacyPolicyView />
         )}
 
         {/* Regular Role-Based App Views when not on a public subpage */}
@@ -456,6 +456,7 @@ function MainApp() {
         isOpen={findMilkmanOpen}
         onClose={() => setFindMilkmanOpen(false)}
         initialQuery={findMilkmanQuery}
+        auth={auth}
       />
 
       {/* Authentication Modal */}

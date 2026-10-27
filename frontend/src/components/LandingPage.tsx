@@ -79,7 +79,7 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
   return (
     <div className="min-h-screen bg-[#f9fafb] text-slate-800 flex flex-col font-sans">
       {/* Top Banner Bar - Dairy Navy Trust Anchor */}
-      <div className="bg-blue-900 text-blue-100 text-xs py-2 px-4 text-center font-bold tracking-wide">
+      <div className="bg-blue-900 text-blue-100 text-xs py-2 px-4 text-center font-semibold tracking-wide">
         {t('announcement')}
       </div>
 
@@ -130,18 +130,18 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
           <div className="relative z-20 min-h-[460px] sm:min-h-[520px] md:min-h-[560px] flex flex-col justify-center px-6 sm:px-12 md:px-16 py-12 sm:py-16 max-w-2xl text-left">
             
             {/* Feature Badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-600/30 border border-blue-400/40 text-blue-200 text-xs sm:text-sm font-black mb-4 backdrop-blur-md w-fit shadow-md">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-600/30 border border-blue-400/40 text-blue-200 text-xs sm:text-sm font-semibold mb-4 backdrop-blur-md w-fit shadow-md">
               <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
               <span>{banners[activeBanner].badge}</span>
             </div>
 
             {/* Title */}
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight text-white drop-shadow-lg">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-tight text-white drop-shadow-lg">
               {banners[activeBanner].title}
             </h1>
 
             {/* Description */}
-            <p className="mt-4 text-xs sm:text-base text-slate-100 font-medium leading-relaxed drop-shadow-md max-w-xl">
+            <p className="mt-4 text-xs sm:text-base text-slate-100 font-normal leading-relaxed drop-shadow-md max-w-xl">
               {banners[activeBanner].desc}
             </p>
 
@@ -149,7 +149,7 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
             <div className="mt-6 sm:mt-8 flex flex-wrap items-center gap-3">
               <button
                 onClick={() => onOpenAuth('vendor', 'LOGIN')}
-                className="bg-blue-600 hover:bg-blue-500 text-white font-black px-5 sm:px-6 py-3 rounded-2xl shadow-xl shadow-blue-600/50 text-xs sm:text-sm active:scale-95 transition flex items-center gap-2"
+                className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 sm:px-6 py-3 rounded-2xl shadow-xl shadow-blue-600/50 text-xs sm:text-sm active:scale-95 transition flex items-center gap-2"
               >
                 <span>{t('ctaVendor')}</span>
                 <ArrowRight className="w-4 h-4" />
@@ -157,7 +157,7 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
 
               <button
                 onClick={() => onOpenAuth('customer', 'LOGIN')}
-                className="bg-white/15 hover:bg-white/25 text-white font-bold px-5 sm:px-6 py-3 rounded-2xl backdrop-blur-md border border-white/25 text-xs sm:text-sm active:scale-95 transition shadow-lg"
+                className="bg-white/15 hover:bg-white/25 text-white font-semibold px-5 sm:px-6 py-3 rounded-2xl backdrop-blur-md border border-white/25 text-xs sm:text-sm active:scale-95 transition shadow-lg"
               >
                 {t('ctaCustomer')}
               </button>
@@ -207,7 +207,7 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
             <button
               type="button"
               onClick={() => onOpenFindMilkman(localSearch)}
-              className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-black transition active:scale-95 shrink-0 shadow-xs"
+              className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-bold transition active:scale-95 shrink-0 shadow-xs"
             >
               {t('findMilkman')}
             </button>
@@ -219,20 +219,20 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
       <section className="py-8 bg-white border-b border-slate-200">
         <div className="max-w-5xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           <div>
-            <div className="text-2xl sm:text-3xl font-black text-blue-700">{t('metric1Val')}</div>
-            <div className="text-xs text-slate-500 font-bold mt-1">{t('metric1Desc')}</div>
+            <div className="text-2xl sm:text-3xl font-extrabold text-blue-700">{t('metric1Val')}</div>
+            <div className="text-xs text-slate-500 font-semibold mt-1">{t('metric1Desc')}</div>
           </div>
           <div>
-            <div className="text-2xl sm:text-3xl font-black text-blue-700">{t('metric2Val')}</div>
-            <div className="text-xs text-slate-500 font-bold mt-1">{t('metric2Desc')}</div>
+            <div className="text-2xl sm:text-3xl font-extrabold text-blue-700">{t('metric2Val')}</div>
+            <div className="text-xs text-slate-500 font-semibold mt-1">{t('metric2Desc')}</div>
           </div>
           <div>
-            <div className="text-2xl sm:text-3xl font-black text-blue-700">{t('metric3Val')}</div>
-            <div className="text-xs text-slate-500 font-bold mt-1">{t('metric3Desc')}</div>
+            <div className="text-2xl sm:text-3xl font-extrabold text-blue-700">{t('metric3Val')}</div>
+            <div className="text-xs text-slate-500 font-semibold mt-1">{t('metric3Desc')}</div>
           </div>
           <div>
-            <div className="text-2xl sm:text-3xl font-black text-blue-700">{t('metric4Val')}</div>
-            <div className="text-xs text-slate-500 font-bold mt-1">{t('metric4Desc')}</div>
+            <div className="text-2xl sm:text-3xl font-extrabold text-blue-700">{t('metric4Val')}</div>
+            <div className="text-xs text-slate-500 font-semibold mt-1">{t('metric4Desc')}</div>
           </div>
         </div>
       </section>
@@ -240,13 +240,13 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
       {/* Features Overview */}
       <section className="py-14 px-4 max-w-5xl mx-auto">
         <div className="text-center mb-10">
-          <span className="text-xs font-black uppercase text-blue-700 tracking-wider bg-blue-100 px-3 py-1 rounded-full">
+          <span className="text-xs font-semibold uppercase text-blue-700 tracking-wider bg-blue-100 px-3 py-1 rounded-full">
             {t('featuresBadge')}
           </span>
-          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mt-2">
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mt-2">
             {t('featuresHeading')}
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-xl mx-auto">
+          <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-xl mx-auto font-normal">
             {t('featuresSub')}
           </p>
         </div>
@@ -256,8 +256,8 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
             <div className="w-12 h-12 bg-blue-100 text-blue-800 rounded-2xl flex items-center justify-center mb-4">
               <Zap className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-black text-slate-900 mb-2">{t('feat1Title')}</h3>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            <h3 className="text-lg font-bold text-slate-900 mb-2">{t('feat1Title')}</h3>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
               {t('feat1Desc')}
             </p>
           </div>
@@ -266,8 +266,8 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
             <div className="w-12 h-12 bg-emerald-100 text-emerald-800 rounded-2xl flex items-center justify-center mb-4">
               <Sparkles className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-black text-slate-900 mb-2">{t('feat2Title')}</h3>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            <h3 className="text-lg font-bold text-slate-900 mb-2">{t('feat2Title')}</h3>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
               {t('feat2Desc')}
             </p>
           </div>
@@ -276,8 +276,8 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
             <div className="w-12 h-12 bg-indigo-100 text-indigo-800 rounded-2xl flex items-center justify-center mb-4">
               <Users className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-black text-slate-900 mb-2">{t('feat3Title')}</h3>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            <h3 className="text-lg font-bold text-slate-900 mb-2">{t('feat3Title')}</h3>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
               {t('feat3Desc')}
             </p>
           </div>
@@ -291,21 +291,21 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
             <div className="flex items-center justify-between gap-2 mb-3">
               <div className="flex items-center gap-2">
                 <Award className="w-5 h-5 text-blue-600" />
-                <span className="text-xs font-black uppercase text-blue-700 tracking-wider">
+                <span className="text-xs font-semibold uppercase text-blue-700 tracking-wider">
                   {t('aboutBadge')}
                 </span>
               </div>
-              <span className="text-[11px] font-bold text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
-                {lang === 'hi' ? 'स्थापना: 2024' : 'Est. 2024'}
+              <span className="text-[11px] font-semibold text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                {lang === 'hi' ? 'स्थापना: 2026' : 'Est. 2026'}
               </span>
             </div>
-            <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mb-4">
+            <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-4">
               {t('aboutHeading')}
             </h3>
-            <p className="text-sm text-slate-600 leading-relaxed mb-4">
+            <p className="text-sm text-slate-600 leading-relaxed mb-4 font-normal">
               {t('aboutP1')}
             </p>
-            <p className="text-sm text-slate-600 leading-relaxed">
+            <p className="text-sm text-slate-600 leading-relaxed font-normal">
               {t('aboutP2')}
             </p>
 
@@ -313,12 +313,12 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
               <button
                 type="button"
                 onClick={() => handleNav('ABOUT')}
-                className="inline-flex items-center gap-1.5 text-xs font-black text-blue-600 hover:text-blue-800 transition active:scale-95"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 transition active:scale-95"
               >
                 <span>{lang === 'hi' ? 'हमारे बारे में पूरी जानकारी पढ़ें' : 'Read Full About Us Details'}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-slate-400 font-normal">
                 {lang === 'hi' ? 'बिना किसी कागजी झंझट के संपूर्ण समाधान' : 'Modern SaaS Built for Dairy Supply'}
               </span>
             </div>
@@ -329,10 +329,10 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
       {/* Customer & Vendor Testimonials */}
       <section className="py-14 px-4 max-w-5xl mx-auto">
         <div className="text-center mb-10">
-          <span className="text-xs font-black uppercase text-blue-700 tracking-wider bg-blue-100 px-3 py-1 rounded-full">
+          <span className="text-xs font-bold uppercase text-blue-700 tracking-wider bg-blue-100 px-3 py-1 rounded-full">
             {t('testiBadge')}
           </span>
-          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mt-2">
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mt-2">
             {t('testiHeading')}
           </h2>
         </div>
@@ -348,7 +348,7 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
               "{t('testi1Quote')}"
             </p>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white flex items-center justify-center font-black text-xs shadow-xs">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white flex items-center justify-center font-bold text-xs shadow-xs">
                 DP
               </div>
               <div>
@@ -368,7 +368,7 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
               "{t('testi2Quote')}"
             </p>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center font-black text-xs shadow-xs">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center font-bold text-xs shadow-xs">
                 DH
               </div>
               <div>
@@ -384,10 +384,10 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
       <section className="bg-gradient-to-br from-blue-950 via-slate-900 to-blue-900 text-white py-14 px-4 border-t border-blue-900">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10">
-            <span className="text-xs font-black uppercase text-blue-300 tracking-wider bg-white/10 px-3 py-1 rounded-full">
+            <span className="text-xs font-bold uppercase text-blue-300 tracking-wider bg-white/10 px-3 py-1 rounded-full">
               {t('contactBadge')}
             </span>
-            <h2 className="text-2xl sm:text-3xl font-black mt-2">
+            <h2 className="text-2xl sm:text-3xl font-bold mt-2">
               {t('contactHeading')}
             </h2>
             <p className="text-xs sm:text-sm text-blue-100 mt-1 max-w-xl mx-auto">
@@ -419,7 +419,7 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
                 <h4 className="text-sm font-bold">{t('primaryPhoneTitle')}</h4>
                 <a 
                   href="tel:+919971880670" 
-                  className="text-sm font-black text-white hover:text-emerald-300 block mt-1 tracking-wide"
+                  className="text-sm font-bold text-white hover:text-emerald-300 block mt-1 tracking-wide"
                 >
                   +91 9971880670
                 </a>
@@ -442,7 +442,7 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
                 <h4 className="text-sm font-bold">{t('altPhoneTitle')}</h4>
                 <a 
                   href="tel:8053278764" 
-                  className="text-sm font-black text-white hover:text-amber-300 block mt-1 tracking-wide"
+                  className="text-sm font-bold text-white hover:text-amber-300 block mt-1 tracking-wide"
                 >
                   8053278764
                 </a>
@@ -475,13 +475,13 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
           
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
             <div>
-              <p className="text-base font-black text-white tracking-tight">
+              <p className="text-base font-bold text-white tracking-tight">
                 Milk Hisab • Digital Milk Ledger
               </p>
               <p className="text-xs text-slate-400 mt-1">
                 {lang === 'hi' 
-                  ? 'सन् 2024 में स्थापित • देश भर के दूधियों और परिवारों के लिए भरोसेमंद डिजिटल डायरी'
-                  : 'Established in 2024 • Trusted by dairy vendors & households across India'}
+                  ? 'सन् 2026 में स्थापित • देश भर के दूधियों और परिवारों के लिए भरोसेमंद डिजिटल डायरी'
+                  : 'Established in 2026 • Trusted by dairy vendors & households across India'}
               </p>
             </div>
 

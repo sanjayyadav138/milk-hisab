@@ -1,7 +1,8 @@
 import { 
   Customer, DailyLogItem, MonthlyBill, 
   CustomerDashboardData, SubUser, CustomerMessage,
-  VendorDisputeItem, VendorMessageThread, VendorInfo
+  VendorDisputeItem, VendorMessageThread, VendorInfo,
+  MilkRequest, VendorSearchResult
 } from '../types';
 
 // Production / Deployment configured API Base URL
@@ -308,6 +309,77 @@ export async function vendorReplyMessageApi(customerId: number, message: string)
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: "उत्तर भेजने में त्रुटि आई" }));
     throw new Error(err.detail || "उत्तर भेजने में त्रुटि आई");
+  }
+  return res.json();
+}
+
+
+// --- Module 10: Location-Based Discovery & Milk Requests ---
+export async function searchVendorsApi(query?: string, city?: string, pincode?: string): Promise<VendorSearchResult[]> {
+  const params = new URLSearchParams();
+  if (query) params.append('q', query);
+  if (city) params.append('city', city);
+  if (pincode) params.append('pincode', pincode);
+  
+  const res = await fetch(`${API_BASE}/portal/vendors/search?${params.toString()}`);
+  if (!res.ok) throw new Error("दूधिया सूची लोड नहीं हो सकी");
+  return res.json();
+}
+
+export async function createMilkRequestApi(vendorId: number, payload: {
+  customer_name: string;
+  customer_phone: string;
+  address: string;
+  locality?: string;
+  city?: string;
+  pincode?: string;
+  milk_type: string;
+  quantity: number;
+  delivery_time: string;
+  start_date?: string;
+  notes?: string;
+}): Promise<MilkRequest> {
+  const res = await fetch(`${API_BASE}/portal/vendors/${vendorId}/request`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "अनुरोध भेजने में त्रुटि आई" }));
+    throw new Error(err.detail || "अनुरोध भेजने में त्रुटि आई");
+  }
+  return res.json();
+}
+
+export async function fetchVendorRequestsApi(vendorId: number, statusFilter?: string): Promise<MilkRequest[]> {
+  const url = statusFilter 
+    ? `${API_BASE}/portal/vendors/${vendorId}/requests?status_filter=${statusFilter}`
+    : `${API_BASE}/portal/vendors/${vendorId}/requests`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("अनुरोध लोड नहीं हो सके");
+  return res.json();
+}
+
+export async function acceptMilkRequestApi(requestId: number): Promise<{ message: string; customer_id: number }> {
+  const res = await fetch(`${API_BASE}/portal/requests/${requestId}/accept`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" }
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "अनुरोध स्वीकार करने में त्रुटि आई" }));
+    throw new Error(err.detail || "अनुरोध स्वीकार करने में त्रुटि आई");
+  }
+  return res.json();
+}
+
+export async function rejectMilkRequestApi(requestId: number): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE}/portal/requests/${requestId}/reject`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" }
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "अनुरोध अस्वीकार करने में त्रुटि आई" }));
+    throw new Error(err.detail || "अनुरोध अस्वीकार करने में त्रुटि आई");
   }
   return res.json();
 }

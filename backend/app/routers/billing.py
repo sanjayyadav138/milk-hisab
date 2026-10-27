@@ -12,10 +12,10 @@ router = APIRouter(prefix="/api/billing", tags=["Billing & Ledger"])
 
 @router.get("/summary", response_model=List[CustomerMonthlyBill])
 def get_monthly_bills(
-    month_year: Optional[str] = Query(None, description="Format YYYY-MM, e.g. 2026-10"),
+    month_year: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    if not month_year:
+    if not month_year or not isinstance(month_year, str):
         month_year = datetime.today().strftime("%Y-%m")
         
     year, month = map(int, month_year.split("-"))
@@ -47,29 +47,51 @@ def get_monthly_bills(
         amount_paid = sum(p.amount_paid for p in payments)
         balance_due = round(total_amount - amount_paid, 2)
 
+        ctype = getattr(c, "customer_type", "BUYER") or "BUYER"
+        is_supplier = (ctype == "SUPPLIER")
+
         # UPI Intent Link
         upi_pay_link = f"upi://pay?pa={vendor_upi}&pn={urllib.parse.quote(business_name)}&am={balance_due}&cu=INR"
 
         # WhatsApp Message
-        wa_msg = (
-            f"🥛 *{business_name} - मासिक दूध बिल ({month_year})*\n\n"
-            f"आदरणीय {c.name} जी,\n"
-            f"आपके दूध का मासिक विवरण इस प्रकार है:\n"
-            f"━━━━━━━━━━━━━━━━━━\n"
-            f"• कुल दूध: *{total_liters:.1f} लीटर*\n"
-            f"• दूध प्रकार: *{c.milk_type}*\n"
-            f"• दर (Rate): *₹{c.price_per_liter:.0f} /लीटर*\n"
-            f"• कुल दिन सप्लाई: {delivered_days} दिन\n"
-            f"• छुट्टी / बंद दिन: {skipped_days} दिन\n"
-            f"━━━━━━━━━━━━━━━━━━\n"
-            f"• कुल रकम: *₹{total_amount:.0f}*\n"
-            f"• जमा राशि: ₹{amount_paid:.0f}\n"
-            f"• *कुल बकाया: ₹{balance_due:.0f}*\n"
-            f"━━━━━━━━━━━━━━━━━━\n"
-            f"📲 Google Pay / PhonePe / Paytm से भुगतान करें:\n"
-            f"UPI ID: `{vendor_upi}`\n\n"
-            f"धन्यवाद! 🙏"
-        )
+        if is_supplier:
+            wa_msg = (
+                f"🥛 *{business_name} - दूध संकलन / खरीद हिसाब ({month_year})*\n\n"
+                f"आदरणीय {c.name} जी,\n"
+                f"आपके घर / डेयरी से लिए गए दूध का मासिक विवरण:\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"• कुल संकलित दूध: *{total_liters:.1f} लीटर*\n"
+                f"• दूध प्रकार: *{c.milk_type}*\n"
+                f"• खरीद दर (Rate): *₹{c.price_per_liter:.0f} /लीटर*\n"
+                f"• कुल संकलन दिन: {delivered_days} दिन\n"
+                f"• गैर-सप्लाई दिन: {skipped_days} दिन\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"• कुल देय राशि (Payable): *₹{total_amount:.0f}*\n"
+                f"• आपको दी गई राशि: ₹{amount_paid:.0f}\n"
+                f"• *शेष भुगतान (Vendor to Pay): ₹{balance_due:.0f}*\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"धन्यवाद! 🙏"
+            )
+        else:
+            wa_msg = (
+                f"🥛 *{business_name} - मासिक दूध बिल ({month_year})*\n\n"
+                f"आदरणीय {c.name} जी,\n"
+                f"आपके दूध का मासिक विवरण इस प्रकार है:\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"• कुल दूध: *{total_liters:.1f} लीटर*\n"
+                f"• दूध प्रकार: *{c.milk_type}*\n"
+                f"• दर (Rate): *₹{c.price_per_liter:.0f} /लीटर*\n"
+                f"• कुल दिन सप्लाई: {delivered_days} दिन\n"
+                f"• छुट्टी / बंद दिन: {skipped_days} दिन\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"• कुल रकम: *₹{total_amount:.0f}*\n"
+                f"• जमा राशि: ₹{amount_paid:.0f}\n"
+                f"• *कुल बकाया: ₹{balance_due:.0f}*\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"📲 Google Pay / PhonePe / Paytm से भुगतान करें:\n"
+                f"UPI ID: `{vendor_upi}`\n\n"
+                f"धन्यवाद! 🙏"
+            )
 
         phone_num = c.phone.replace("+", "").replace(" ", "").replace("-", "") if c.phone else ""
         if phone_num and len(phone_num) == 10:
@@ -82,6 +104,7 @@ def get_monthly_bills(
             customer_name=c.name,
             phone=c.phone,
             month_year=month_year,
+            customer_type=ctype,
             total_liters=total_liters,
             price_per_liter=c.price_per_liter,
             total_amount=total_amount,

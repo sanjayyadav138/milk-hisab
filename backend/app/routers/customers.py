@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from ..database import get_db
 from ..models import Customer
 from ..schemas import CustomerCreate, CustomerUpdate, CustomerResponse
@@ -8,8 +8,16 @@ from ..schemas import CustomerCreate, CustomerUpdate, CustomerResponse
 router = APIRouter(prefix="/api/customers", tags=["Customers"])
 
 @router.get("/", response_model=List[CustomerResponse])
-def get_customers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return db.query(Customer).filter(Customer.is_active == True).offset(skip).limit(limit).all()
+def get_customers(
+    skip: int = 0, 
+    limit: int = 100, 
+    customer_type: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(Customer).filter(Customer.is_active == True)
+    if customer_type and isinstance(customer_type, str):
+        query = query.filter(Customer.customer_type == customer_type)
+    return query.offset(skip).limit(limit).all()
 
 @router.post("/", response_model=CustomerResponse, status_code=status.HTTP_201_CREATED)
 def create_customer(customer: CustomerCreate, db: Session = Depends(get_db)):

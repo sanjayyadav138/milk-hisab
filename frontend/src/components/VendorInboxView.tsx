@@ -1,18 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { 
   AlertTriangle, MessageSquare, CheckCircle, Send, 
-  Calendar, Phone, User, Check, RefreshCw, Sparkles 
+  Calendar, Phone, User, Check, RefreshCw, Sparkles, 
+  UserPlus, MapPin, Milk, X, Clock, CheckCircle2 
 } from 'lucide-react';
 import { 
   fetchVendorDisputesApi, resolveDisputeApi, 
-  fetchVendorMessageThreadsApi, vendorReplyMessageApi 
+  fetchVendorMessageThreadsApi, vendorReplyMessageApi,
+  fetchVendorRequestsApi, acceptMilkRequestApi, rejectMilkRequestApi 
 } from '../services/api';
-import { VendorDisputeItem, VendorMessageThread } from '../types';
+import { VendorDisputeItem, VendorMessageThread, MilkRequest } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function VendorInboxView() {
   const { t, lang } = useLanguage();
-  const [activeSubTab, setActiveSubTab] = useState<'DISPUTES' | 'CHATS'>('DISPUTES');
+  const [activeSubTab, setActiveSubTab] = useState<'REQUESTS' | 'DISPUTES' | 'CHATS'>('REQUESTS');
+
+  // Milk Requests State
+  const [requests, setRequests] = useState<MilkRequest[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [processingRequestId, setProcessingRequestId] = useState<number | null>(null);
 
   // Disputes State
   const [disputes, setDisputes] = useState<VendorDisputeItem[]>([]);
@@ -32,21 +39,32 @@ export default function VendorInboxView() {
   const [toastMsg, setToastMsg] = useState('');
 
   const loadData = async () => {
+    setLoadingRequests(true);
     setLoadingDisputes(true);
     setLoadingThreads(true);
     try {
-      const [dis, th] = await Promise.all([
+      const [reqs, dis, th] = await Promise.all([
+        fetchVendorRequestsApi(1), // Default vendor Sanjay Yadav
         fetchVendorDisputesApi(),
         fetchVendorMessageThreadsApi()
       ]);
+      setRequests(reqs);
       setDisputes(dis);
       setThreads(th);
       if (th.length > 0 && !selectedCustomerId) {
         setSelectedCustomerId(th[0].customer_id);
       }
+      // If there are pending requests, default to REQUESTS, else if disputes, default to DISPUTES
+      const pendingCount = reqs.filter(r => r.status === 'Pending').length;
+      if (pendingCount > 0) {
+        setActiveSubTab('REQUESTS');
+      } else if (dis.length > 0) {
+        setActiveSubTab('DISPUTES');
+      }
     } catch (err) {
       console.error(err);
     } finally {
+      setLoadingRequests(false);
       setLoadingDisputes(false);
       setLoadingThreads(false);
     }
@@ -55,6 +73,37 @@ export default function VendorInboxView() {
   useEffect(() => {
     loadData();
   }, []);
+
+  const handleAcceptRequest = async (requestId: number) => {
+    setProcessingRequestId(requestId);
+    try {
+      const res = await acceptMilkRequestApi(requestId);
+      setToastMsg(lang === 'hi' ? 'अनुरोध स्वीकार कर लिया गया! नया ग्राहक आपकी सूची में जुड़ गया।' : 'Request accepted! Customer added to your list.');
+      setTimeout(() => setToastMsg(''), 4500);
+      const updated = await fetchVendorRequestsApi(1);
+      setRequests(updated);
+    } catch (err: any) {
+      alert("स्वीकार करने में त्रुटि: " + err.message);
+    } finally {
+      setProcessingRequestId(null);
+    }
+  };
+
+  const handleRejectRequest = async (requestId: number) => {
+    if (!window.confirm(lang === 'hi' ? 'क्या आप इस अनुरोध को अस्वीकार करना चाहते हैं?' : 'Decline this milk request?')) return;
+    setProcessingRequestId(requestId);
+    try {
+      await rejectMilkRequestApi(requestId);
+      setToastMsg(lang === 'hi' ? 'अनुरोध अस्वीकार कर दिया गया' : 'Request declined');
+      setTimeout(() => setToastMsg(''), 3500);
+      const updated = await fetchVendorRequestsApi(1);
+      setRequests(updated);
+    } catch (err: any) {
+      alert("अस्वीकार करने में त्रुटि: " + err.message);
+    } finally {
+      setProcessingRequestId(null);
+    }
+  };
 
   const handleResolveSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,6 +140,7 @@ export default function VendorInboxView() {
     }
   };
 
+  const pendingRequests = requests.filter(r => r.status === 'Pending');
   const selectedThread = threads.find(t => t.customer_id === selectedCustomerId);
 
   return (
@@ -101,9 +151,9 @@ export default function VendorInboxView() {
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-xl sm:text-2xl font-black text-slate-900">{t('inboxTitle')}</h2>
-            {disputes.length > 0 && (
-              <span className="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse">
-                {disputes.length} {lang === 'hi' ? 'आपत्तियां' : 'Pending'}
+            {pendingRequests.length > 0 && (
+              <span className="bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse">
+                {pendingRequests.length} {t('requestsCount')}
               </span>
             )}
           </div>
@@ -111,10 +161,32 @@ export default function VendorInboxView() {
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200">
+        <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 overflow-x-auto text-xs font-black">
+          
+          {/* TAB 1: Milk Requests */}
+          <button
+            onClick={() => setActiveSubTab('REQUESTS')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition shrink-0 ${
+              activeSubTab === 'REQUESTS'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            <span>{t('requestsTab')}</span>
+            {pendingRequests.length > 0 && (
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                activeSubTab === 'REQUESTS' ? 'bg-white text-blue-700' : 'bg-blue-600 text-white'
+              }`}>
+                {pendingRequests.length}
+              </span>
+            )}
+          </button>
+
+          {/* TAB 2: Disputes */}
           <button
             onClick={() => setActiveSubTab('DISPUTES')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black transition ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition shrink-0 ${
               activeSubTab === 'DISPUTES'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -123,7 +195,7 @@ export default function VendorInboxView() {
             <AlertTriangle className="w-3.5 h-3.5" />
             <span>{t('disputeQueriesTab')}</span>
             {disputes.length > 0 && (
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
                 activeSubTab === 'DISPUTES' ? 'bg-white text-blue-700' : 'bg-rose-500 text-white'
               }`}>
                 {disputes.length}
@@ -131,9 +203,10 @@ export default function VendorInboxView() {
             )}
           </button>
 
+          {/* TAB 3: Direct Chats */}
           <button
             onClick={() => setActiveSubTab('CHATS')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black transition ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition shrink-0 ${
               activeSubTab === 'CHATS'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -142,7 +215,7 @@ export default function VendorInboxView() {
             <MessageSquare className="w-3.5 h-3.5" />
             <span>{t('chatThreadsTab')}</span>
             {threads.length > 0 && (
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
                 activeSubTab === 'CHATS' ? 'bg-white text-blue-700' : 'bg-slate-300 text-slate-700'
               }`}>
                 {threads.length}
@@ -159,7 +232,122 @@ export default function VendorInboxView() {
         </div>
       )}
 
-      {/* SUBTAB 1: DISPUTES & QUERIES (DIS-02) */}
+      {/* SUBTAB 1: MILK REQUESTS (Location-Based Leads) */}
+      {activeSubTab === 'REQUESTS' && (
+        <div className="space-y-3.5">
+          {loadingRequests ? (
+            <div className="bg-white rounded-3xl p-8 text-center border border-slate-200">
+              <RefreshCw className="w-6 h-6 animate-spin text-blue-600 mx-auto mb-2" />
+              <p className="text-xs text-slate-500 font-bold">{lang === 'hi' ? 'अनुरोध लोड हो रहे हैं...' : 'Loading requests...'}</p>
+            </div>
+          ) : requests.length === 0 ? (
+            <div className="bg-white rounded-3xl p-8 text-center border border-slate-200">
+              <Milk className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+              <h4 className="text-sm font-black text-slate-800">
+                {lang === 'hi' ? 'कोई नया दूध अनुरोध नहीं है' : 'No milk requests yet'}
+              </h4>
+              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                {lang === 'hi'
+                  ? 'जब ग्राहक आपके इलाके में ऑनलाइन दूधिया खोजेंगे और आपको अनुरोध भेजेंगे, तो वे यहाँ दिखाई देंगे।'
+                  : 'When customers find you via location search and request milk delivery, they will appear here.'}
+              </p>
+            </div>
+          ) : (
+            requests.map((req) => {
+              const isPending = req.status === 'Pending';
+              const isAccepted = req.status === 'Accepted';
+              const isProcessing = processingRequestId === req.id;
+
+              return (
+                <div
+                  key={req.id}
+                  className={`bg-white rounded-3xl p-4 sm:p-5 shadow-xs border transition ${
+                    isPending
+                      ? 'border-blue-300 bg-blue-50/20'
+                      : isAccepted
+                      ? 'border-emerald-200 bg-white opacity-85'
+                      : 'border-slate-200 bg-slate-50/50 opacity-60'
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-black text-slate-900 text-base">{req.customer_name}</h4>
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${
+                          isPending 
+                            ? 'bg-amber-100 text-amber-800' 
+                            : isAccepted 
+                            ? 'bg-emerald-100 text-emerald-800' 
+                            : 'bg-slate-200 text-slate-700'
+                        }`}>
+                          {req.status === 'Pending' ? (lang === 'hi' ? 'लंबित अनुरोध' : 'Pending') : req.status === 'Accepted' ? (lang === 'hi' ? 'स्वीकृत ✓' : 'Accepted ✓') : (lang === 'hi' ? 'अस्वीकृत' : 'Declined')}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-slate-600">
+                        <span className="flex items-center gap-1 font-bold text-slate-800">
+                          <Phone className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{req.customer_phone}</span>
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{req.address}</span>
+                        </span>
+                      </div>
+
+                      {/* Request Specifications */}
+                      <div className="flex flex-wrap items-center gap-2 mt-2.5 text-xs font-bold">
+                        <span className="bg-blue-100 text-blue-900 px-2.5 py-1 rounded-xl">
+                          🥛 {req.quantity} L ({req.milk_type})
+                        </span>
+                        <span className="bg-slate-100 text-slate-800 px-2.5 py-1 rounded-xl flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5 text-slate-500" />
+                          <span>{req.delivery_time === 'Morning' ? t('morning') : req.delivery_time === 'Evening' ? t('evening') : t('bothTimes')}</span>
+                        </span>
+                        {req.start_date && (
+                          <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-xl flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                            <span>{lang === 'hi' ? 'शुरुआत:' : 'Start:'} {req.start_date}</span>
+                          </span>
+                        )}
+                      </div>
+
+                      {req.notes && (
+                        <p className="text-xs text-slate-600 mt-2 bg-slate-100/70 p-2 rounded-xl italic">
+                          "{req.notes}"
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    {isPending && (
+                      <div className="flex sm:flex-col gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                        <button
+                          onClick={() => handleAcceptRequest(req.id)}
+                          disabled={isProcessing}
+                          className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-2 rounded-xl text-xs shadow-sm active:scale-95 transition flex items-center justify-center gap-1"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>{isProcessing ? '...' : t('acceptRequest')}</span>
+                        </button>
+                        <button
+                          onClick={() => handleRejectRequest(req.id)}
+                          disabled={isProcessing}
+                          className="flex-1 sm:flex-none bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold px-4 py-2 rounded-xl text-xs active:scale-95 transition"
+                        >
+                          {t('rejectRequest')}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {/* SUBTAB 2: DISPUTES & QUERIES */}
       {activeSubTab === 'DISPUTES' && (
         <div className="space-y-3">
           {loadingDisputes ? (
@@ -179,47 +367,65 @@ export default function VendorInboxView() {
             disputes.map((d) => (
               <div 
                 key={d.log_id} 
-                className="bg-white rounded-3xl p-4 sm:p-5 shadow-xs border border-rose-200 transition hover:border-rose-300"
+                className="bg-white rounded-3xl p-5 shadow-xs border border-rose-200 bg-rose-50/10"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3 mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center font-black">
-                      <AlertTriangle className="w-5 h-5" />
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-black text-slate-900 text-base">{d.customer_name}</h4>
+                      <span className="bg-rose-100 text-rose-800 text-[10px] font-black px-2 py-0.5 rounded-md flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3 text-rose-600" />
+                        {t('pendingBadge')}
+                      </span>
                     </div>
-                    <div>
-                      <h4 className="text-sm font-black text-slate-900">{d.customer_name}</h4>
-                      <p className="text-xs text-slate-500">{d.customer_phone}</p>
+
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-slate-600">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="font-semibold">{d.date}</span>
+                      </span>
+                      <span>•</span>
+                      <span>{t('recordedQty')}: <strong className="text-slate-900">{d.quantity} L</strong></span>
+                      {d.customer_phone && (
+                        <>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <Phone className="w-3.5 h-3.5 text-slate-400" />
+                            <span>{d.customer_phone}</span>
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="mt-3 p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-950 font-medium">
+                      <span className="font-bold text-rose-900">{t('reasonLabel')}:</span> "{d.dispute_reason}"
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs bg-slate-100 text-slate-700 font-bold px-2.5 py-1 rounded-xl flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                      <span>{d.date}</span>
-                    </span>
-                    <span className="text-xs bg-rose-100 text-rose-800 font-black px-2.5 py-1 rounded-xl">
-                      {d.quantity}L recorded
-                    </span>
+                  <div className="sm:self-center shrink-0">
+                    <button
+                      onClick={() => {
+                        setResolvingId(d.log_id);
+                        setResolvedQty(String(d.quantity));
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-xs active:scale-95 transition"
+                    >
+                      {t('actionResolve')}
+                    </button>
                   </div>
                 </div>
 
-                {/* Customer Dispute Reason */}
-                <div className="bg-rose-50/60 p-3 rounded-2xl border border-rose-100 mb-3 text-xs">
-                  <p className="font-black text-rose-900 mb-0.5">
-                    {lang === 'hi' ? 'ग्राहक द्वारा दर्ज आपत्ति / शिकायत:' : 'Customer Issue Note:'}
-                  </p>
-                  <p className="text-rose-800 font-medium text-sm">
-                    "{d.dispute_reason || (lang === 'hi' ? 'मात्रा में गलती है' : 'Quantity discrepancy')}"
-                  </p>
-                </div>
-
-                {/* Action button / resolve form */}
-                {resolvingId === d.log_id ? (
-                  <form onSubmit={handleResolveSubmit} className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
-                    <h5 className="text-xs font-black uppercase text-slate-700">{t('resolveDisputeTitle')}</h5>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Inline Resolve Form Modal */}
+                {resolvingId === d.log_id && (
+                  <form onSubmit={handleResolveSubmit} className="mt-4 pt-4 border-t border-slate-100 bg-slate-50 p-4 rounded-2xl animate-in fade-in duration-150">
+                    <h5 className="font-black text-xs text-slate-800 uppercase tracking-wider mb-2">
+                      {t('resolveDisputeTitle')}
+                    </h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                       <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">{t('resolvedQtyLabel')}</label>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                          {t('resolvedQtyLabel')}
+                        </label>
                         <input 
                           type="number"
                           step="0.5"
@@ -227,52 +433,39 @@ export default function VendorInboxView() {
                           required
                           value={resolvedQty}
                           onChange={(e) => setResolvedQty(e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">{t('resolutionNoteLabel')}</label>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                          {t('resolutionNoteLabel')}
+                        </label>
                         <input 
                           type="text"
+                          placeholder="उदा. ग्राहक की सहमति से 0.5L किया गया"
                           value={resolutionNote}
                           onChange={(e) => setResolutionNote(e.target.value)}
-                          placeholder="e.g. Phone confirmed 500ml"
-                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm text-slate-900"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs"
                         />
                       </div>
                     </div>
-
                     <div className="flex gap-2 justify-end">
                       <button
                         type="button"
                         onClick={() => setResolvingId(null)}
-                        className="px-3.5 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition"
+                        className="px-3 py-1.5 text-slate-600 font-bold text-xs hover:bg-slate-200 rounded-lg"
                       >
-                        {lang === 'hi' ? 'रद्द करें' : 'Cancel'}
+                        {t('cancel')}
                       </button>
                       <button
                         type="submit"
                         disabled={submittingResolve}
-                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl shadow-xs transition flex items-center gap-1.5"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-1.5 rounded-lg text-xs shadow-xs"
                       >
-                        <Check className="w-4 h-4" />
-                        <span>{submittingResolve ? (lang === 'hi' ? 'सहेज रहे हैं...' : 'Saving...') : t('confirmResolve')}</span>
+                        {submittingResolve ? '...' : t('confirmResolve')}
                       </button>
                     </div>
                   </form>
-                ) : (
-                  <div className="flex justify-end">
-                    <button
-                      onClick={() => {
-                        setResolvingId(d.log_id);
-                        setResolvedQty(d.quantity.toString());
-                      }}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-xs transition active:scale-95 flex items-center gap-1.5"
-                    >
-                      <Check className="w-4 h-4" />
-                      <span>{lang === 'hi' ? 'आपत्ति हल करें (Resolve)' : 'Resolve Query'}</span>
-                    </button>
-                  </div>
                 )}
               </div>
             ))
@@ -280,23 +473,28 @@ export default function VendorInboxView() {
         </div>
       )}
 
-      {/* SUBTAB 2: CHATS & DIRECT MESSAGING (MSG-02) */}
+      {/* SUBTAB 3: DIRECT CHATS */}
       {activeSubTab === 'CHATS' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white rounded-3xl p-3 sm:p-4 border border-slate-200 min-h-[500px]">
-          {/* Customer Conversations List */}
-          <div className="md:col-span-1 border-b md:border-b-0 md:border-r border-slate-100 pr-0 md:pr-3 space-y-1 max-h-[500px] overflow-y-auto">
-            <h4 className="text-xs font-black uppercase text-slate-500 mb-2 px-2">{t('selectCustomer')}</h4>
-            {threads.length === 0 ? (
-              <p className="text-xs text-slate-400 p-4 text-center">{t('noMessages')}</p>
+        <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-xs border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-4">
+          
+          {/* Threads List Sidebar */}
+          <div className="border-b md:border-b-0 md:border-r border-slate-100 pb-3 md:pb-0 md:pr-3 space-y-2 max-h-[480px] overflow-y-auto">
+            {loadingThreads ? (
+              <div className="text-center py-8">
+                <RefreshCw className="w-5 h-5 animate-spin text-blue-600 mx-auto mb-1" />
+                <p className="text-xs text-slate-400">Loading threads...</p>
+              </div>
+            ) : threads.length === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-6">{t('noMessages')}</p>
             ) : (
               threads.map((th) => (
                 <button
                   key={th.customer_id}
                   onClick={() => setSelectedCustomerId(th.customer_id)}
-                  className={`w-full text-left p-3 rounded-2xl transition flex items-start gap-2.5 ${
-                    selectedCustomerId === th.customer_id
-                      ? 'bg-blue-50/80 border border-blue-200'
-                      : 'hover:bg-slate-50 border border-transparent'
+                  className={`w-full text-left p-2.5 rounded-2xl transition flex items-center gap-2.5 ${
+                    selectedCustomerId === th.customer_id 
+                      ? 'bg-blue-50 border border-blue-200' 
+                      : 'hover:bg-slate-50'
                   }`}
                 >
                   <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 font-black flex items-center justify-center shrink-0">

@@ -7,9 +7,11 @@ import { useLanguage } from '../context/LanguageContext';
 
 interface LandingPageProps {
   onOpenAuth: (role: 'vendor' | 'customer', tab?: 'LOGIN' | 'REGISTER') => void;
+  onOpenFindMilkman: (query?: string) => void;
 }
 
-export default function LandingPage({ onOpenAuth }: LandingPageProps) {
+export default function LandingPage({ onOpenAuth, onOpenFindMilkman }: LandingPageProps) {
+  const [localSearch, setLocalSearch] = useState('');
   const { t, lang } = useLanguage();
   const [activeBanner, setActiveBanner] = useState(0);
 
@@ -94,6 +96,59 @@ export default function LandingPage({ onOpenAuth }: LandingPageProps) {
 
         {/* Decorative Grid Light */}
         <div className="absolute inset-0 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none"></div>
+      </section>
+
+      {/* Location-Based Milkman Discovery Section */}
+      <section className="relative -mt-8 z-20 px-4 max-w-4xl mx-auto">
+        <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-xl border border-slate-200">
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0">
+              <span className="p-2.5 bg-blue-100 text-blue-800 rounded-2xl">
+                <MapPin className="w-5 h-5" />
+              </span>
+              <div>
+                <h3 className="font-black text-slate-900 text-sm sm:text-base leading-tight">
+                  {t('searchNearbyMilkman')}
+                </h3>
+                <p className="text-[11px] text-slate-500 font-semibold">
+                  {lang === 'hi' ? 'गाँव या इलाके के हिसाब से सत्यापित दूधिए खोजें' : 'Find verified milkmen delivering in your locality'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex-1 w-full flex gap-2">
+              <input
+                type="text"
+                placeholder={t('searchPlaceholder')}
+                value={localSearch}
+                onChange={(e) => setLocalSearch(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') onOpenFindMilkman(localSearch); }}
+                className="flex-1 px-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:border-blue-600"
+              />
+              <button
+                type="button"
+                onClick={() => onOpenFindMilkman(localSearch)}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-black px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl text-xs sm:text-sm active:scale-95 transition shrink-0 shadow-md shadow-blue-500/20"
+              >
+                {lang === 'hi' ? 'दूधिया खोजें' : 'Search'}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-slate-100 overflow-x-auto text-xs font-bold text-slate-600">
+            <span className="text-[11px] text-slate-400 shrink-0 uppercase tracking-wider">{lang === 'hi' ? 'लोकप्रिय:' : 'Popular:'}</span>
+            {['Jamalpur', '122001', 'Gurugram', 'Mandir Road', 'Rewari'].map((loc) => (
+              <button
+                key={loc}
+                type="button"
+                onClick={() => onOpenFindMilkman(loc)}
+                className="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 rounded-xl transition text-[11px] shrink-0"
+              >
+                📍 {loc}
+              </button>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* Trust & Metric Counter */}

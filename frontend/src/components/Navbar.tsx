@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   LogOut, ArrowRight, Globe, ChevronDown, 
-  LayoutDashboard, UserCircle, ShieldCheck, Check
+  LayoutDashboard, UserCircle, ShieldCheck, Check, Search
 } from 'lucide-react';
 import { AuthState } from '../types';
 import { useLanguage } from '../context/LanguageContext';
@@ -13,6 +13,7 @@ interface NavbarProps {
   onGoHome: () => void;
   onOpenProfile: () => void;
   onNavigateDashboard: () => void;
+  onOpenFindMilkman?: () => void;
 }
 
 export default function Navbar({ 
@@ -21,7 +22,8 @@ export default function Navbar({
   onOpenAuth, 
   onGoHome, 
   onOpenProfile, 
-  onNavigateDashboard 
+  onNavigateDashboard,
+  onOpenFindMilkman
 }: NavbarProps) {
   const { lang, setLang, t } = useLanguage();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -99,6 +101,17 @@ export default function Navbar({
 
         {/* User Persona & Language Actions */}
         <div className="flex items-center gap-2 sm:gap-3">
+          
+          {/* Find Nearby Milkman Quick Action */}
+          <button
+            type="button"
+            onClick={onOpenFindMilkman}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-2xl text-xs font-black transition active:scale-95 shadow-2xs"
+          >
+            <Search className="w-3.5 h-3.5 text-blue-600" />
+            <span className="hidden sm:inline">{t('findMilkman')}</span>
+            <span className="sm:hidden">दूधिया खोजें</span>
+          </button>
           
           {/* Segmented Language Switcher Toggle */}
           <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200 shadow-2xs">

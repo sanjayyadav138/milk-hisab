@@ -1,3 +1,4 @@
+import os
 import datetime
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -9,8 +10,46 @@ from .routers import customers, dailylogs, billing, portal
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
+def run_migrations():
+    """Ensure newly added columns exist in SQLite database without losing data."""
+    import sqlite3
+    db_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "doodh_ledger.db"))
+    if not os.path.exists(db_file):
+        return
+    try:
+        conn = sqlite3.connect(db_file)
+        cursor = conn.cursor()
+        
+        # 1. users table columns
+        user_cols = {row[1] for row in cursor.execute("PRAGMA table_info(users)").fetchall()}
+        columns_to_add_users = [
+            ("city", "VARCHAR(100) DEFAULT 'Gurugram'"),
+            ("area", "VARCHAR(150) DEFAULT 'Jamalpur / Sohna Road'"),
+            ("pincode", "VARCHAR(20) DEFAULT '122001'"),
+            ("service_areas", "VARCHAR(255) DEFAULT 'Gali 1-5, Main Market, Mandir Road, Sector 47-49'"),
+            ("price_cow", "FLOAT DEFAULT 60.0"),
+            ("price_buffalo", "FLOAT DEFAULT 70.0"),
+            ("morning_time", "VARCHAR(50) DEFAULT '6:00 AM - 8:00 AM'"),
+            ("evening_time", "VARCHAR(50) DEFAULT '5:30 PM - 7:30 PM'"),
+        ]
+        for col_name, col_def in columns_to_add_users:
+            if col_name not in user_cols:
+                cursor.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_def}")
+                
+        # 2. customers table columns
+        cust_cols = {row[1] for row in cursor.execute("PRAGMA table_info(customers)").fetchall()}
+        if "customer_type" not in cust_cols:
+            cursor.execute("ALTER TABLE customers ADD COLUMN customer_type VARCHAR(20) DEFAULT 'BUYER'")
+            
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Migration warning: {e}")
+
+run_migrations()
+
 def seed_db():
-    """Seed default vendor and sample customers if database is newly initialized."""
+    """Seed default vendor, sample customers, and suppliers (collection homes)."""
     db = SessionLocal()
     try:
         vendor = db.query(User).first()
@@ -20,7 +59,15 @@ def seed_db():
                 phone="1234",  # Dummy login username (also supports 9971880670)
                 business_name="Milk Hisab Dairy & Supply",
                 upi_id="9971880670@upi",
-                password_hash="1234"  # Dummy login password
+                password_hash="1234",  # Dummy login password
+                city="Gurugram",
+                area="Jamalpur / Sohna Road",
+                pincode="122001",
+                service_areas="Jamalpur, Gali 1-5, Mandir Chowk, Sector 47-49",
+                price_cow=60.0,
+                price_buffalo=70.0,
+                morning_time="6:00 AM - 8:00 AM",
+                evening_time="5:30 PM - 7:30 PM"
             )
             db.add(vendor)
             db.commit()
@@ -36,7 +83,8 @@ def seed_db():
                     address="H.No 12, Gali No. 3",
                     default_quantity=1.5,
                     milk_type="Cow",
-                    price_per_liter=60.0
+                    price_per_liter=60.0,
+                    customer_type="BUYER"
                 ),
                 Customer(
                     vendor_id=vendor.id,
@@ -46,7 +94,8 @@ def seed_db():
                     address="Clinic Road, Near Shiv Mandir",
                     default_quantity=2.0,
                     milk_type="Buffalo",
-                    price_per_liter=70.0
+                    price_per_liter=70.0,
+                    customer_type="BUYER"
                 ),
                 Customer(
                     vendor_id=vendor.id,
@@ -56,7 +105,8 @@ def seed_db():
                     address="Main Bazaar, Opp. Post Office",
                     default_quantity=1.0,
                     milk_type="Cow",
-                    price_per_liter=60.0
+                    price_per_liter=60.0,
+                    customer_type="BUYER"
                 ),
                 Customer(
                     vendor_id=vendor.id,
@@ -66,7 +116,8 @@ def seed_db():
                     address="Chowk Bazar",
                     default_quantity=3.0,
                     milk_type="Mixed",
-                    price_per_liter=65.0
+                    price_per_liter=65.0,
+                    customer_type="BUYER"
                 ),
             ]
             db.add_all(sample_customers)
@@ -88,19 +139,89 @@ def seed_db():
                     db.add(DailyLog(customer_id=c_rakesh.id, date=past_date, quantity_delivered=1.0, status="Delivered"))
             db.commit()
         else:
-            # Ensure existing database has 1234 credentials updated and common names
-            if "(Jamalpur)" in vendor.name or vendor.phone != "1234":
-                vendor.name = "Ramesh Yadav"
-                vendor.phone = "1234"
-                vendor.password_hash = "1234"
+            # Update vendor location fields if empty
+            if not vendor.city or not vendor.area:
+                vendor.city = "Gurugram"
+                vendor.area = "Jamalpur / Sohna Road"
+                vendor.pincode = "122001"
+                vendor.service_areas = "Jamalpur, Gali 1-5, Mandir Chowk, Sector 47-49"
+                vendor.price_cow = 60.0
+                vendor.price_buffalo = 70.0
+                vendor.morning_time = "6:00 AM - 8:00 AM"
+                vendor.evening_time = "5:30 PM - 7:30 PM"
                 db.commit()
-            cust1 = db.query(Customer).first()
-            if cust1:
-                if cust1.phone != "1234" or "Jamalpur" in (cust1.address or ""):
-                    cust1.phone = "1234"
-                    cust1.pin = "1234"
-                    cust1.address = "H.No 12, Gali No. 3"
-                    db.commit()
+
+        # Check if 4 sample suppliers / collection homes exist for Sanjay
+        supplier_count = db.query(Customer).filter(Customer.customer_type == "SUPPLIER").count()
+        if supplier_count == 0:
+            sample_suppliers = [
+                Customer(
+                    vendor_id=vendor.id,
+                    name="Ramu Kaka (घर 1 - संकलन)",
+                    phone="9811100001",
+                    pin="1234",
+                    address="ढाणी, रामपुरा रोड (House #1)",
+                    default_quantity=5.0,
+                    milk_type="Cow",
+                    price_per_liter=50.0,
+                    customer_type="SUPPLIER"
+                ),
+                Customer(
+                    vendor_id=vendor.id,
+                    name="Desi Dairy Farm (घर 2 - संकलन)",
+                    phone="9811100002",
+                    pin="1234",
+                    address="नियर नहर पुलिया (House #2)",
+                    default_quantity=8.0,
+                    milk_type="Buffalo",
+                    price_per_liter=58.0,
+                    customer_type="SUPPLIER"
+                ),
+                Customer(
+                    vendor_id=vendor.id,
+                    name="Kishan Singh (घर 3 - संकलन)",
+                    phone="9811100003",
+                    pin="1234",
+                    address="पुरानी चौपाल के पास (House #3)",
+                    default_quantity=3.5,
+                    milk_type="Cow",
+                    price_per_liter=50.0,
+                    customer_type="SUPPLIER"
+                ),
+                Customer(
+                    vendor_id=vendor.id,
+                    name="Pandit Ji Dairy (घर 4 - संकलन)",
+                    phone="9811100004",
+                    pin="1234",
+                    address="शिव मंदिर वाली गली (House #4)",
+                    default_quantity=4.0,
+                    milk_type="Buffalo",
+                    price_per_liter=58.0,
+                    customer_type="SUPPLIER"
+                ),
+            ]
+            db.add_all(sample_suppliers)
+            db.commit()
+
+            # Seed past collection logs for these 4 homes
+            today = datetime.date.today()
+            for s in sample_suppliers:
+                for i in range(1, 4):
+                    past_date = today - datetime.timedelta(days=i)
+                    db.add(DailyLog(
+                        customer_id=s.id,
+                        date=past_date,
+                        quantity_delivered=s.default_quantity,
+                        status="Delivered"
+                    ))
+            db.commit()
+
+        # Ensure demo user 1234 credentials
+        if "(Jamalpur)" in vendor.name or vendor.phone != "1234":
+            vendor.name = "Sanjay Yadav"
+            vendor.phone = "1234"
+            vendor.password_hash = "1234"
+            db.commit()
     finally:
         db.close()
 

@@ -13,9 +13,18 @@ class User(Base):
     upi_id = Column(String(100), nullable=True)  # E.g., vendor@okhdfcbank
     avatar_url = Column(String(500), nullable=True)
     password_hash = Column(String(100), default="1234")  # Simple pin/pass for MVP
+    city = Column(String(100), default="Gurugram")
+    area = Column(String(150), default="Jamalpur / Sohna Road")
+    pincode = Column(String(20), default="122001")
+    service_areas = Column(String(255), default="Gali 1-5, Main Market, Mandir Road, Sector 47-49")
+    price_cow = Column(Float, default=60.0)
+    price_buffalo = Column(Float, default=70.0)
+    morning_time = Column(String(50), default="6:00 AM - 8:00 AM")
+    evening_time = Column(String(50), default="5:30 PM - 7:30 PM")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     customers = relationship("Customer", back_populates="vendor")
+    milk_requests = relationship("MilkRequest", back_populates="vendor", cascade="all, delete-orphan")
 
 class Customer(Base):
     __tablename__ = "customers"
@@ -30,6 +39,7 @@ class Customer(Base):
     milk_type = Column(String(20), default="Cow")   # Cow / Buffalo / Mixed
     price_per_liter = Column(Float, default=60.0)  # Price in INR
     avatar_url = Column(String(500), nullable=True)
+    customer_type = Column(String(20), default="BUYER")  # "BUYER" (दूध लेने वाला) or "SUPPLIER" (दूध देने वाला / संकलन)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
@@ -38,6 +48,27 @@ class Customer(Base):
     payments = relationship("Payment", back_populates="customer", cascade="all, delete-orphan")
     subusers = relationship("CustomerSubUser", back_populates="customer", cascade="all, delete-orphan")
     messages = relationship("CustomerMessage", back_populates="customer", cascade="all, delete-orphan")
+
+class MilkRequest(Base):
+    __tablename__ = "milk_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    vendor_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    customer_name = Column(String(100), nullable=False)
+    customer_phone = Column(String(20), nullable=False)
+    address = Column(String(255), nullable=False)
+    locality = Column(String(100), nullable=True)
+    city = Column(String(100), default="Gurugram")
+    pincode = Column(String(20), default="122001")
+    milk_type = Column(String(20), default="Cow")  # Cow / Buffalo / Mixed
+    quantity = Column(Float, default=1.0)  # in Liters
+    delivery_time = Column(String(50), default="Morning")  # Morning / Evening / Both
+    start_date = Column(String(20), nullable=True)  # YYYY-MM-DD
+    notes = Column(String(255), nullable=True)
+    status = Column(String(20), default="Pending")  # "Pending", "Accepted", "Rejected"
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    vendor = relationship("User", back_populates="milk_requests")
 
 class CustomerSubUser(Base):
     __tablename__ = "customer_subusers"

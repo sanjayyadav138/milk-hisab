@@ -21,9 +21,13 @@ class VoiceParseResponse(BaseModel):
     raw_text: str
 
 @router.get("/day-view")
-def get_day_checklist(date_str: Optional[str] = Query(None, alias="date"), db: Session = Depends(get_db)):
+def get_day_checklist(date_str: Optional[str] = None, date: Optional[str] = None, db: Session = Depends(get_db)):
     """Returns all active customers with their recorded or default delivery status for a specific date."""
-    target_date = dt_date.fromisoformat(date_str) if date_str else dt_date.today()
+    param_date = date or date_str
+    if param_date and isinstance(param_date, str):
+        target_date = dt_date.fromisoformat(param_date)
+    else:
+        target_date = dt_date.today()
     customers = db.query(Customer).filter(Customer.is_active == True).all()
     
     # Query logs for this specific date
@@ -32,6 +36,7 @@ def get_day_checklist(date_str: Optional[str] = Query(None, alias="date"), db: S
 
     result = []
     for c in customers:
+        ctype = getattr(c, "customer_type", "BUYER") or "BUYER"
         if c.id in log_map:
             log = log_map[c.id]
             result.append({
@@ -42,6 +47,7 @@ def get_day_checklist(date_str: Optional[str] = Query(None, alias="date"), db: S
                 "default_quantity": c.default_quantity,
                 "milk_type": c.milk_type,
                 "price_per_liter": c.price_per_liter,
+                "customer_type": ctype,
                 "log_id": log.id,
                 "date": log.date.isoformat(),
                 "quantity": log.quantity_delivered,
@@ -57,6 +63,7 @@ def get_day_checklist(date_str: Optional[str] = Query(None, alias="date"), db: S
                 "default_quantity": c.default_quantity,
                 "milk_type": c.milk_type,
                 "price_per_liter": c.price_per_liter,
+                "customer_type": ctype,
                 "log_id": None,
                 "date": target_date.isoformat(),
                 "quantity": c.default_quantity,

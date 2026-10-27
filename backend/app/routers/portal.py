@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import extract
+from sqlalchemy import extract, func
 from pydantic import BaseModel
 from typing import Optional, List
 import datetime
 from ..database import get_db
-from ..models import User, Customer, DailyLog, Payment, CustomerSubUser, CustomerMessage
+from ..models import User, Customer, DailyLog, Payment, CustomerSubUser, CustomerMessage, MilkRequest
+from ..schemas import MilkRequestCreate, MilkRequestResponse, VendorPublicProfile
 
 router = APIRouter(prefix="/api/portal", tags=["Portal & Auth"])
 
@@ -27,12 +28,26 @@ class UpdateVendorProfileRequest(BaseModel):
     upi_id: Optional[str] = None
     avatar_url: Optional[str] = None
     pin: Optional[str] = None
+    city: Optional[str] = None
+    area: Optional[str] = None
+    pincode: Optional[str] = None
+    service_areas: Optional[str] = None
+    price_cow: Optional[float] = None
+    price_buffalo: Optional[float] = None
+    morning_time: Optional[str] = None
+    evening_time: Optional[str] = None
 
 class UpdateCustomerProfileRequest(BaseModel):
     id: int
     name: str
     phone: Optional[str] = None
     address: Optional[str] = None
+    default_quantity: Optional[float] = None
+    milk_type: Optional[str] = None
+    price_per_liter: Optional[float] = None
+    avatar_url: Optional[str] = None
+    customer_type: Optional[str] = None
+    pin: Optional[str] = None
     default_quantity: Optional[float] = None
     milk_type: Optional[str] = None
     price_per_liter: Optional[float] = None
@@ -118,7 +133,15 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
                 "phone": vendor.phone,
                 "business_name": vendor.business_name,
                 "upi_id": vendor.upi_id,
-                "avatar_url": vendor.avatar_url
+                "avatar_url": vendor.avatar_url,
+                "city": vendor.city or "Gurugram",
+                "area": vendor.area or "Jamalpur / Sohna Road",
+                "pincode": vendor.pincode or "122001",
+                "service_areas": vendor.service_areas or "All nearby sectors and colonies",
+                "price_cow": vendor.price_cow or 60.0,
+                "price_buffalo": vendor.price_buffalo or 70.0,
+                "morning_time": vendor.morning_time or "6:00 AM - 8:00 AM",
+                "evening_time": vendor.evening_time or "5:30 PM - 7:30 PM"
             }
         }
     else:
@@ -157,7 +180,8 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
                 "default_quantity": customer.default_quantity,
                 "milk_type": customer.milk_type,
                 "price_per_liter": customer.price_per_liter,
-                "avatar_url": customer.avatar_url
+                "avatar_url": customer.avatar_url,
+                "customer_type": getattr(customer, "customer_type", "BUYER") or "BUYER"
             }
         }
 
@@ -176,7 +200,15 @@ def validate_session(req: SessionValidateRequest, db: Session = Depends(get_db))
                 "phone": vendor.phone,
                 "business_name": vendor.business_name,
                 "upi_id": vendor.upi_id,
-                "avatar_url": vendor.avatar_url
+                "avatar_url": vendor.avatar_url,
+                "city": vendor.city or "Gurugram",
+                "area": vendor.area or "Jamalpur / Sohna Road",
+                "pincode": vendor.pincode or "122001",
+                "service_areas": vendor.service_areas or "All nearby sectors and colonies",
+                "price_cow": vendor.price_cow or 60.0,
+                "price_buffalo": vendor.price_buffalo or 70.0,
+                "morning_time": vendor.morning_time or "6:00 AM - 8:00 AM",
+                "evening_time": vendor.evening_time or "5:30 PM - 7:30 PM"
             }
         }
     elif req.role == "customer":
@@ -194,7 +226,8 @@ def validate_session(req: SessionValidateRequest, db: Session = Depends(get_db))
                 "default_quantity": customer.default_quantity,
                 "milk_type": customer.milk_type,
                 "price_per_liter": customer.price_per_liter,
-                "avatar_url": customer.avatar_url
+                "avatar_url": customer.avatar_url,
+                "customer_type": getattr(customer, "customer_type", "BUYER") or "BUYER"
             }
         }
     raise HTTPException(status_code=400, detail="Invalid role specified")
@@ -214,6 +247,22 @@ def update_vendor_profile(req: UpdateVendorProfileRequest, db: Session = Depends
         vendor.avatar_url = req.avatar_url.strip() or None
     if req.pin and req.pin.strip():
         vendor.password_hash = req.pin.strip()
+    if req.city is not None:
+        vendor.city = req.city.strip()
+    if req.area is not None:
+        vendor.area = req.area.strip()
+    if req.pincode is not None:
+        vendor.pincode = req.pincode.strip()
+    if req.service_areas is not None:
+        vendor.service_areas = req.service_areas.strip()
+    if req.price_cow is not None:
+        vendor.price_cow = req.price_cow
+    if req.price_buffalo is not None:
+        vendor.price_buffalo = req.price_buffalo
+    if req.morning_time is not None:
+        vendor.morning_time = req.morning_time.strip()
+    if req.evening_time is not None:
+        vendor.evening_time = req.evening_time.strip()
 
     db.commit()
     db.refresh(vendor)
@@ -225,7 +274,15 @@ def update_vendor_profile(req: UpdateVendorProfileRequest, db: Session = Depends
             "phone": vendor.phone,
             "business_name": vendor.business_name,
             "upi_id": vendor.upi_id,
-            "avatar_url": vendor.avatar_url
+            "avatar_url": vendor.avatar_url,
+            "city": vendor.city,
+            "area": vendor.area,
+            "pincode": vendor.pincode,
+            "service_areas": vendor.service_areas,
+            "price_cow": vendor.price_cow,
+            "price_buffalo": vendor.price_buffalo,
+            "morning_time": vendor.morning_time,
+            "evening_time": vendor.evening_time
         }
     }
 
@@ -248,6 +305,8 @@ def update_customer_profile(req: UpdateCustomerProfileRequest, db: Session = Dep
         customer.price_per_liter = req.price_per_liter
     if req.avatar_url is not None:
         customer.avatar_url = req.avatar_url.strip() or None
+    if req.customer_type is not None:
+        customer.customer_type = req.customer_type
     if req.pin and req.pin.strip():
         customer.pin = req.pin.strip()
 
@@ -263,7 +322,8 @@ def update_customer_profile(req: UpdateCustomerProfileRequest, db: Session = Dep
             "default_quantity": customer.default_quantity,
             "milk_type": customer.milk_type,
             "price_per_liter": customer.price_per_liter,
-            "avatar_url": customer.avatar_url
+            "avatar_url": customer.avatar_url,
+            "customer_type": getattr(customer, "customer_type", "BUYER") or "BUYER"
         }
     }
 
@@ -358,7 +418,8 @@ def get_customer_dashboard(customer_id: int, month_year: Optional[str] = None, d
             "default_quantity": customer.default_quantity,
             "milk_type": customer.milk_type,
             "price_per_liter": customer.price_per_liter,
-            "avatar_url": customer.avatar_url
+            "avatar_url": customer.avatar_url,
+            "customer_type": getattr(customer, "customer_type", "BUYER") or "BUYER"
         },
         "vendor": {
             "name": vendor.name if vendor else "Sanjay Yadav",
@@ -602,3 +663,158 @@ def vendor_send_message(req: VendorReplyMessageRequest, db: Session = Depends(ge
         "message": msg.message,
         "created_at": msg.created_at.isoformat()
     }
+
+# --- Module 10: Location-Based Milkman Discovery & Milk Requests ---
+
+@router.get("/vendors/search")
+def search_vendors(
+    q: Optional[str] = None,
+    city: Optional[str] = None,
+    pincode: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(User)
+    if q and isinstance(q, str) and q.strip():
+        term = f"%{q.strip().lower()}%"
+        query = query.filter(
+            func.lower(User.name).like(term) |
+            func.lower(User.business_name).like(term) |
+            func.lower(User.area).like(term) |
+            func.lower(User.city).like(term) |
+            func.lower(User.pincode).like(term) |
+            func.lower(User.service_areas).like(term)
+        )
+    if city and city.strip():
+        query = query.filter(func.lower(User.city) == city.strip().lower())
+    if pincode and pincode.strip():
+        query = query.filter(User.pincode == pincode.strip())
+
+    vendors = query.all()
+    results = []
+    for v in vendors:
+        active_cust_count = db.query(Customer).filter(
+            Customer.vendor_id == v.id,
+            Customer.is_active == True,
+            Customer.customer_type == "BUYER"
+        ).count()
+        results.append({
+            "id": v.id,
+            "name": v.name,
+            "phone": v.phone,
+            "business_name": v.business_name,
+            "upi_id": v.upi_id,
+            "avatar_url": v.avatar_url,
+            "city": v.city or "Gurugram",
+            "area": v.area or "Jamalpur / Sohna Road",
+            "pincode": v.pincode or "122001",
+            "service_areas": v.service_areas or "All nearby sectors and colonies",
+            "price_cow": v.price_cow or 60.0,
+            "price_buffalo": v.price_buffalo or 70.0,
+            "morning_time": v.morning_time or "6:00 AM - 8:00 AM",
+            "evening_time": v.evening_time or "5:30 PM - 7:30 PM",
+            "active_customers_count": active_cust_count
+        })
+    return results
+
+@router.post("/vendors/{vendor_id}/request", response_model=MilkRequestResponse)
+def create_milk_request(vendor_id: int, req: MilkRequestCreate, db: Session = Depends(get_db)):
+    vendor = db.query(User).filter(User.id == vendor_id).first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="दूधिया (Milkman) नहीं मिला।")
+
+    db_req = MilkRequest(
+        vendor_id=vendor_id,
+        customer_name=req.customer_name.strip(),
+        customer_phone=req.customer_phone.strip(),
+        address=req.address.strip(),
+        locality=req.locality.strip() if req.locality else None,
+        city=req.city.strip() if req.city else "Gurugram",
+        pincode=req.pincode.strip() if req.pincode else "122001",
+        milk_type=req.milk_type,
+        quantity=req.quantity,
+        delivery_time=req.delivery_time,
+        start_date=req.start_date,
+        notes=req.notes.strip() if req.notes else None,
+        status="Pending"
+    )
+    db.add(db_req)
+    db.commit()
+    db.refresh(db_req)
+    return db_req
+
+@router.get("/vendors/{vendor_id}/requests")
+def get_vendor_requests(vendor_id: int, status_filter: Optional[str] = None, db: Session = Depends(get_db)):
+    query = db.query(MilkRequest).filter(MilkRequest.vendor_id == vendor_id)
+    if status_filter:
+        query = query.filter(MilkRequest.status == status_filter)
+    return query.order_by(MilkRequest.created_at.desc()).all()
+
+@router.post("/requests/{request_id}/accept")
+def accept_milk_request(request_id: int, db: Session = Depends(get_db)):
+    req = db.query(MilkRequest).filter(MilkRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="अनुरोध नहीं मिला।")
+
+    req.status = "Accepted"
+    
+    # Check if customer already exists under this vendor
+    clean_phone = req.customer_phone.replace(" ", "").replace("+91", "").replace("-", "")
+    existing = db.query(Customer).filter(
+        Customer.vendor_id == req.vendor_id,
+        (Customer.phone == clean_phone) | (Customer.phone == req.customer_phone)
+    ).first()
+
+    vendor = db.query(User).filter(User.id == req.vendor_id).first()
+    price = vendor.price_cow if req.milk_type == "Cow" else vendor.price_buffalo if req.milk_type == "Buffalo" else 65.0
+
+    full_addr = req.address
+    if req.locality:
+        full_addr += f", {req.locality}"
+
+    if existing:
+        existing.is_active = True
+        existing.default_quantity = req.quantity
+        existing.milk_type = req.milk_type
+        existing.price_per_liter = price
+        existing.address = full_addr
+        new_customer = existing
+    else:
+        new_customer = Customer(
+            vendor_id=req.vendor_id,
+            name=req.customer_name,
+            phone=clean_phone or req.customer_phone,
+            pin="1234",
+            address=full_addr,
+            default_quantity=req.quantity,
+            milk_type=req.milk_type,
+            price_per_liter=price,
+            customer_type="BUYER",
+            is_active=True
+        )
+        db.add(new_customer)
+        db.commit()
+        db.refresh(new_customer)
+
+    # Add welcome message in conversation
+    welcome_msg = CustomerMessage(
+        customer_id=new_customer.id,
+        sender_name=vendor.name if vendor else "दूधिया",
+        sender_role="vendor",
+        message=f"नमस्ते {req.customer_name} जी! आपका दूध अनुरोध स्वीकार कर लिया गया है। कल से {req.quantity}L ({req.milk_type}) की सप्लाई शुरू होगी।"
+    )
+    db.add(welcome_msg)
+    db.commit()
+
+    return {
+        "message": "अनुरोध स्वीकार कर लिया गया और नया ग्राहक आपकी सूची में जुड़ गया!",
+        "customer_id": new_customer.id
+    }
+
+@router.post("/requests/{request_id}/reject")
+def reject_milk_request(request_id: int, db: Session = Depends(get_db)):
+    req = db.query(MilkRequest).filter(MilkRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="अनुरोध नहीं मिला।")
+    req.status = "Rejected"
+    db.commit()
+    return {"message": "अनुरोध अस्वीकार कर दिया गया"}

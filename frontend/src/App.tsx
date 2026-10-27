@@ -3,6 +3,7 @@ import { Milk, Users, FileText, MessageSquare, AlertCircle, CheckCircle, Info, X
 import Navbar from './components/Navbar';
 import LandingPage from './components/LandingPage';
 import AuthModal from './components/AuthModal';
+import FindMilkmanModal from './components/FindMilkmanModal';
 import ProfileModal from './components/ProfileModal';
 import DailyChecklist from './components/DailyChecklist';
 import CustomersView from './components/CustomersView';
@@ -54,6 +55,13 @@ function MainApp() {
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [vendorTab, setVendorTab] = useState<'DAILY' | 'CUSTOMERS' | 'LEDGER' | 'INBOX'>('DAILY');
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [findMilkmanOpen, setFindMilkmanOpen] = useState(false);
+  const [findMilkmanQuery, setFindMilkmanQuery] = useState('');
+
+  const handleOpenFindMilkman = (q = '') => {
+    setFindMilkmanQuery(q);
+    setFindMilkmanOpen(true);
+  };
 
   const authRef = useRef<AuthState>(auth);
   useEffect(() => {
@@ -246,6 +254,7 @@ function MainApp() {
         }}
         onOpenProfile={() => setProfileModalOpen(true)}
         onNavigateDashboard={handleNavigateDashboard}
+        onOpenFindMilkman={() => handleOpenFindMilkman('')}
       />
 
       {/* Floating System Notice / Alert Banner */}
@@ -281,7 +290,7 @@ function MainApp() {
       <main className="flex-1">
         {/* Landing Page for Unauthenticated Visitors */}
         {!auth.role && (
-          <LandingPage onOpenAuth={handleOpenAuth} />
+          <LandingPage onOpenAuth={handleOpenAuth} onOpenFindMilkman={handleOpenFindMilkman} />
         )}
 
         {/* Customer Portal (DSH-02) */}
@@ -370,6 +379,13 @@ function MainApp() {
         onClose={() => setProfileModalOpen(false)}
         auth={auth}
         onProfileUpdated={handleProfileUpdated}
+      />
+
+      {/* Location-Based Find Milkman Modal */}
+      <FindMilkmanModal
+        isOpen={findMilkmanOpen}
+        onClose={() => setFindMilkmanOpen(false)}
+        initialQuery={findMilkmanQuery}
       />
 
       {/* Authentication Modal */}

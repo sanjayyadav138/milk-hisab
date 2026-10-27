@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Search, Phone, MapPin, Milk, X } from 'lucide-react';
+import { UserPlus, Search, Phone, MapPin, Milk, X, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import { fetchCustomers, createCustomer } from '../services/api';
 import { Customer } from '../types';
 import { useLanguage } from '../context/LanguageContext';
@@ -10,14 +10,24 @@ export default function CustomersView() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
+  const [contactTypeFilter, setContactTypeFilter] = useState<'ALL' | 'BUYER' | 'SUPPLIER'>('ALL');
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    phone: string;
+    address: string;
+    default_quantity: number;
+    milk_type: string;
+    price_per_liter: number;
+    customer_type: 'BUYER' | 'SUPPLIER';
+  }>({
     name: '',
     phone: '',
     address: '',
     default_quantity: 1.0,
     milk_type: 'Cow',
-    price_per_liter: 60.0
+    price_per_liter: 60.0,
+    customer_type: 'BUYER'
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -46,7 +56,8 @@ export default function CustomersView() {
       await createCustomer({
         ...formData,
         default_quantity: parseFloat(String(formData.default_quantity)),
-        price_per_liter: parseFloat(String(formData.price_per_liter))
+        price_per_liter: parseFloat(String(formData.price_per_liter)),
+        customer_type: formData.customer_type
       });
       setIsAdding(false);
       setFormData({
@@ -55,36 +66,88 @@ export default function CustomersView() {
         address: '',
         default_quantity: 1.0,
         milk_type: 'Cow',
-        price_per_liter: 60.0
+        price_per_liter: 60.0,
+        customer_type: 'BUYER'
       });
       loadCustomers();
     } catch (err: any) {
-      alert("ग्राहक जोड़ने में त्रुटि: " + err.message);
+      alert("संपर्क जोड़ने में त्रुटि: " + err.message);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const filtered = customers.filter(c => 
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    (c.address && c.address.toLowerCase().includes(search.toLowerCase())) ||
-    (c.phone && c.phone.includes(search))
-  );
+  const buyers = customers.filter(c => (c.customer_type || 'BUYER') === 'BUYER');
+  const suppliers = customers.filter(c => c.customer_type === 'SUPPLIER');
+
+  const filtered = customers.filter(c => {
+    // 1. Role filter
+    if (contactTypeFilter === 'BUYER' && (c.customer_type || 'BUYER') !== 'BUYER') return false;
+    if (contactTypeFilter === 'SUPPLIER' && c.customer_type !== 'SUPPLIER') return false;
+
+    // 2. Search
+    return (
+      c.name.toLowerCase().includes(search.toLowerCase()) ||
+      (c.address && c.address.toLowerCase().includes(search.toLowerCase())) ||
+      (c.phone && c.phone.includes(search))
+    );
+  });
 
   return (
     <div className="pb-32 max-w-2xl mx-auto px-3 sm:px-4 pt-4">
+      
       {/* Top Bar with Add Button */}
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-xl font-black text-slate-900 tracking-tight">{t('customersTitle')}</h2>
-          <p className="text-xs text-slate-500 font-medium">{customers.length} {t('customersSub')}</p>
+          <p className="text-xs text-slate-500 font-medium">
+            {buyers.length} {lang === 'hi' ? 'ग्राहक (बिक्री)' : 'Customers'} • {suppliers.length} {lang === 'hi' ? 'घर (संकलन)' : 'Collection Homes'}
+          </p>
         </div>
         <button
           onClick={() => setIsAdding(true)}
-          className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-2xl font-bold text-sm shadow-md active:scale-95 transition"
+          className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-2xl font-bold text-sm shadow-md active:scale-95 transition"
         >
           <UserPlus className="w-4 h-4" />
-          <span>{t('newCustomerBtn')}</span>
+          <span>{lang === 'hi' ? '+ नया जोड़ें' : '+ Add New'}</span>
+        </button>
+      </div>
+
+      {/* Filter Tabs: All vs Customers (Delivery) vs Suppliers (Collection) */}
+      <div className="grid grid-cols-3 gap-1.5 mb-3 p-1 bg-slate-100 rounded-2xl text-xs font-black">
+        <button
+          onClick={() => setContactTypeFilter('ALL')}
+          className={`py-2 rounded-xl transition ${
+            contactTypeFilter === 'ALL'
+              ? 'bg-white text-slate-900 shadow-xs'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          {t('allContactsTab')} ({customers.length})
+        </button>
+        
+        <button
+          onClick={() => setContactTypeFilter('BUYER')}
+          className={`py-2 rounded-xl transition flex items-center justify-center gap-1 ${
+            contactTypeFilter === 'BUYER'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'text-emerald-700 hover:bg-emerald-50'
+          }`}
+        >
+          <span>📤 {lang === 'hi' ? 'ग्राहक' : 'Customers'}</span>
+          <span className="text-[10px] opacity-80">({buyers.length})</span>
+        </button>
+
+        <button
+          onClick={() => setContactTypeFilter('SUPPLIER')}
+          className={`py-2 rounded-xl transition flex items-center justify-center gap-1 ${
+            contactTypeFilter === 'SUPPLIER'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'text-blue-700 hover:bg-blue-50'
+          }`}
+        >
+          <span>📥 {lang === 'hi' ? 'संकलन (4 घर)' : 'Suppliers'}</span>
+          <span className="text-[10px] opacity-80">({suppliers.length})</span>
         </button>
       </div>
 
@@ -95,17 +158,21 @@ export default function CustomersView() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder={t('searchPlaceholder')}
-          className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-400 text-sm font-medium shadow-xs focus:outline-none focus:border-emerald-500"
+          placeholder={lang === 'hi' ? 'नाम, गाँव या फ़ोन नंबर से खोजें...' : 'Search by name, address or phone...'}
+          className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-400 text-sm font-medium shadow-xs focus:outline-none focus:border-blue-500"
         />
       </div>
 
-      {/* Add Customer Modal */}
+      {/* Add Customer / Supplier Modal */}
       {isAdding && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="font-bold text-lg text-slate-900">{t('addCustomerTitle')}</h3>
+              <h3 className="font-black text-lg text-slate-900">
+                {formData.customer_type === 'SUPPLIER'
+                  ? (lang === 'hi' ? 'दूध देने वाला घर/किसान जोड़ें (संकलन)' : 'Add Milk Supplier (Collection Home)')
+                  : (lang === 'hi' ? 'नया ग्राहक जोड़ें (दूध वितरण)' : 'Add New Customer (Milk Delivery)')}
+              </h3>
               <button 
                 onClick={() => setIsAdding(false)}
                 className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full"
@@ -115,12 +182,50 @@ export default function CustomersView() {
             </div>
 
             <form onSubmit={handleAddSubmit} className="mt-4 space-y-3.5">
+              
+              {/* Persona / Flow Toggle */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('newContactType')}</label>
+                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-2xl text-xs font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ 
+                      ...formData, 
+                      customer_type: 'BUYER',
+                      price_per_liter: 60.0
+                    })}
+                    className={`py-2 rounded-xl transition ${
+                      formData.customer_type === 'BUYER'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    📤 {lang === 'hi' ? 'ग्राहक (दूध देना)' : 'Customer (Delivery)'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ 
+                      ...formData, 
+                      customer_type: 'SUPPLIER',
+                      price_per_liter: 50.0
+                    })}
+                    className={`py-2 rounded-xl transition ${
+                      formData.customer_type === 'SUPPLIER'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    📥 {lang === 'hi' ? 'घर/किसान (दूध लेना)' : 'Supplier (Collection)'}
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1">{t('custNameLabel')}</label>
                 <input
                   type="text"
                   required
-                  placeholder={t('custNamePlaceholder')}
+                  placeholder={formData.customer_type === 'SUPPLIER' ? (lang === 'hi' ? 'उदा. रामू काका (घर #1)' : 'e.g. Ramu Kaka (Home #1)') : t('custNamePlaceholder')}
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:border-blue-600 focus:outline-none"
@@ -151,7 +256,9 @@ export default function CustomersView() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">{t('qtyLabel')}</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    {formData.customer_type === 'SUPPLIER' ? (lang === 'hi' ? 'दैनिक संकलन (L)' : 'Daily Collection (L)') : t('qtyLabel')}
+                  </label>
                   <input
                     type="number"
                     step="0.5"
@@ -163,7 +270,9 @@ export default function CustomersView() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">{t('pricePerLiterLabel')}</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    {formData.customer_type === 'SUPPLIER' ? t('rateBuy') : t('rateSell')}
+                  </label>
                   <input
                     type="number"
                     step="1"
@@ -200,16 +309,16 @@ export default function CustomersView() {
                 <button
                   type="button"
                   onClick={() => setIsAdding(false)}
-                  className="flex-1 py-3 text-slate-600 font-bold hover:bg-slate-100 rounded-xl"
+                  className="flex-1 py-3 text-slate-600 font-bold text-sm bg-slate-100 hover:bg-slate-200 rounded-2xl transition"
                 >
                   {t('cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-md hover:bg-blue-700 active:scale-95 transition"
+                  className="flex-1 py-3 text-white font-black text-sm bg-blue-600 hover:bg-blue-700 rounded-2xl shadow-md transition active:scale-95"
                 >
-                  {submitting ? t('savingCustomer') : t('saveCustomerBtn')}
+                  {submitting ? (lang === 'hi' ? 'जोड़ रहे हैं...' : 'Adding...') : t('saveCustomerBtn')}
                 </button>
               </div>
             </form>
@@ -217,48 +326,77 @@ export default function CustomersView() {
         </div>
       )}
 
-      {/* Customer List */}
+      {/* Customer / Supplier List */}
       {loading ? (
         <div className="text-center py-12">
           <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-3"></div>
-          <p className="text-sm font-semibold text-slate-500">{t('loadingCustomers')}</p>
+          <p className="text-sm font-semibold text-slate-500">{t('loadingBills')}</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="bg-white rounded-3xl p-8 text-center border border-slate-200">
-          <p className="text-slate-500 font-semibold">{t('noCustomersFound')}</p>
+          <p className="font-bold text-slate-700">{t('noCustomers')}</p>
+          <p className="text-xs text-slate-500 mt-1">{t('addFirstCustomer')}</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map(c => (
-            <div key={c.id} className="bg-white rounded-2xl p-4 shadow-xs border border-slate-200 hover:border-emerald-300 transition">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h4 className="text-base font-black text-slate-900">{c.name}</h4>
-                  {c.address && (
-                    <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span>{c.address}</span>
-                    </p>
-                  )}
-                  {c.phone && (
-                    <a href={`tel:${c.phone}`} className="text-xs text-emerald-700 font-semibold flex items-center gap-1 mt-1 hover:underline">
-                      <Phone className="w-3.5 h-3.5" />
-                      <span>{c.phone}</span>
-                    </a>
-                  )}
-                </div>
+          {filtered.map((c) => {
+            const isSupplier = c.customer_type === 'SUPPLIER';
 
-                <div className="text-right">
-                  <span className="inline-block px-2.5 py-1 bg-slate-100 text-slate-800 rounded-xl font-black text-sm">
-                    {c.default_quantity}L {lang === 'hi' ? '/ दिन' : '/ day'}
-                  </span>
-                  <p className="text-[11px] text-slate-500 mt-1 font-semibold">
-                    {c.milk_type} • ₹{c.price_per_liter}/L
-                  </p>
+            return (
+              <div 
+                key={c.id}
+                className={`bg-white rounded-2xl p-4 shadow-xs border transition ${
+                  isSupplier 
+                    ? 'border-blue-200 hover:border-blue-400' 
+                    : 'border-slate-200 hover:border-emerald-300'
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-black text-slate-900 text-base">{c.name}</h4>
+                      {isSupplier ? (
+                        <span className="text-[10px] font-black bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md flex items-center gap-1">
+                          <ArrowDownCircle className="w-3 h-3 text-blue-600" />
+                          {t('supplierHomeBadge')}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md flex items-center gap-1">
+                          <ArrowUpCircle className="w-3 h-3 text-emerald-600" />
+                          {t('customerBadge')}
+                        </span>
+                      )}
+                    </div>
+
+                    {c.phone && (
+                      <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-1">
+                        <Phone className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{c.phone}</span>
+                      </p>
+                    )}
+
+                    {c.address && (
+                      <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{c.address}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="text-right">
+                    <div className={`inline-block px-2.5 py-1 rounded-xl text-xs font-black ${
+                      isSupplier ? 'bg-blue-50 text-blue-900' : 'bg-emerald-50 text-emerald-900'
+                    }`}>
+                      {c.default_quantity}L {c.milk_type}
+                    </div>
+                    <p className="text-xs font-black text-slate-700 mt-1">
+                      ₹{c.price_per_liter} / L
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

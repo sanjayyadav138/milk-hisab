@@ -5,6 +5,14 @@ export interface User {
   business_name: string;
   upi_id?: string;
   avatar_url?: string;
+  city?: string;
+  area?: string;
+  pincode?: string;
+  service_areas?: string;
+  price_cow?: number;
+  price_buffalo?: number;
+  morning_time?: string;
+  evening_time?: string;
 }
 
 export interface Customer {
@@ -17,6 +25,7 @@ export interface Customer {
   milk_type: string;
   price_per_liter: number;
   avatar_url?: string;
+  customer_type?: 'BUYER' | 'SUPPLIER';
   is_active?: boolean;
   created_at?: string;
 }
@@ -29,6 +38,7 @@ export interface DailyLogItem {
   default_quantity: number;
   milk_type: string;
   price_per_liter: number;
+  customer_type?: 'BUYER' | 'SUPPLIER';
   log_id?: number | null;
   date: string;
   quantity: number;
@@ -41,6 +51,7 @@ export interface MonthlyBill {
   customer_name: string;
   phone?: string;
   month_year: string;
+  customer_type?: 'BUYER' | 'SUPPLIER';
   total_liters: number;
   price_per_liter: number;
   total_amount: number;
@@ -137,6 +148,42 @@ export interface VendorInfo {
   name: string;
   business_name: string;
   phone: string;
+}
+
+export interface MilkRequest {
+  id: number;
+  vendor_id: number;
+  customer_name: string;
+  customer_phone: string;
+  address: string;
+  locality?: string;
+  city?: string;
+  pincode?: string;
+  milk_type: string;
+  quantity: number;
+  delivery_time: string;
+  start_date?: string;
+  notes?: string;
+  status: 'Pending' | 'Accepted' | 'Rejected';
+  created_at?: string;
+}
+
+export interface VendorSearchResult {
+  id: number;
+  name: string;
+  phone: string;
+  business_name: string;
+  upi_id?: string;
+  avatar_url?: string;
+  city: string;
+  area: string;
+  pincode: string;
+  service_areas: string;
+  price_cow: number;
+  price_buffalo: number;
+  morning_time: string;
+  evening_time: string;
+  active_customers_count: number;
 }
 
 export type AuthRole = 'vendor' | 'customer' | null;

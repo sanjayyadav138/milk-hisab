@@ -213,22 +213,28 @@ export default function CustomerPortal({ customer, onLogout }: CustomerPortalPro
         {/* Financial Snapshot */}
         <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-white/20">
           <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-2.5 text-center">
-            <p className="text-[10px] text-blue-200 uppercase font-black">{t('thisMonthMilk')}</p>
+            <p className="text-[10px] text-blue-200 uppercase font-black">
+              {customer.customer_type === 'SUPPLIER' ? (lang === 'hi' ? 'कुल संकलित दूध' : 'Total Supplied') : t('thisMonthMilk')}
+            </p>
             <p className="text-xl font-black mt-0.5">
               {month_summary.total_liters.toFixed(1)} <span className="text-xs font-semibold">L</span>
             </p>
           </div>
 
           <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-2.5 text-center">
-            <p className="text-[10px] text-blue-200 uppercase font-black">{t('totalBillCol')}</p>
+            <p className="text-[10px] text-blue-200 uppercase font-black">
+              {customer.customer_type === 'SUPPLIER' ? (lang === 'hi' ? 'कुल संकलन मूल्य' : 'Total Value') : t('totalBillCol')}
+            </p>
             <p className="text-xl font-black mt-0.5">
               ₹{month_summary.total_amount.toFixed(0)}
             </p>
           </div>
 
           {/* Dues / Pending in Alert Amber, Zero dues in Fresh Ledger Green */}
-          <div className={`${month_summary.balance_due > 0 ? 'bg-amber-400 text-amber-950' : 'bg-emerald-400 text-emerald-950'} rounded-2xl p-2.5 text-center shadow-md`}>
-            <p className="text-[10px] uppercase font-black">{t('dueCol')}</p>
+          <div className={`${month_summary.balance_due > 0 ? (customer.customer_type === 'SUPPLIER' ? 'bg-blue-400 text-blue-950' : 'bg-amber-400 text-amber-950') : 'bg-emerald-400 text-emerald-950'} rounded-2xl p-2.5 text-center shadow-md`}>
+            <p className="text-[10px] uppercase font-black">
+              {customer.customer_type === 'SUPPLIER' ? (lang === 'hi' ? 'दूधिया से देय' : 'Due to You') : t('dueCol')}
+            </p>
             <p className="text-xl font-black mt-0.5">
               ₹{month_summary.balance_due.toFixed(0)}
             </p>
@@ -244,7 +250,7 @@ export default function CustomerPortal({ customer, onLogout }: CustomerPortalPro
             activeTab === 'MY_MILK' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          {t('myMilkTab')}
+          {customer.customer_type === 'SUPPLIER' ? (lang === 'hi' ? 'दूध संकलन रिकॉर्ड' : 'Supply Records') : t('myMilkTab')}
         </button>
         <button
           onClick={() => setActiveTab('FAMILY_USERS')}
@@ -311,23 +317,42 @@ export default function CustomerPortal({ customer, onLogout }: CustomerPortalPro
             </div>
           </div>
 
-          {/* Instant UPI Pay Button */}
-          {month_summary.balance_due > 0 && (
-            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-3xl p-5 text-white shadow-lg flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-black uppercase tracking-wider text-emerald-100">{t('instantPayTitle')}</p>
-                <h4 className="text-2xl font-black mt-0.5">₹{month_summary.balance_due.toFixed(0)}</h4>
-                <p className="text-xs text-emerald-100 mt-0.5">UPI ID: {vendor.upi_id}</p>
+          {/* Supplier Receivable Banner OR Buyer Instant UPI Pay Button */}
+          {customer.customer_type === 'SUPPLIER' ? (
+            month_summary.balance_due > 0 && (
+              <div className="bg-gradient-to-r from-blue-700 to-indigo-800 rounded-3xl p-5 text-white shadow-lg flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wider text-blue-200">
+                    {lang === 'hi' ? 'दूधिया की तरफ से आपको मिलने योग्य राशि' : 'Amount Due to You from Vendor'}
+                  </p>
+                  <h4 className="text-2xl font-black mt-0.5">₹{month_summary.balance_due.toFixed(0)}</h4>
+                  <p className="text-xs text-blue-100 mt-0.5">
+                    {lang === 'hi' ? `${vendor.name} (${vendor.phone}) द्वारा देय` : `Payable by ${vendor.name}`}
+                  </p>
+                </div>
+                <div className="bg-white/20 backdrop-blur-md px-3.5 py-2 rounded-2xl text-xs font-bold">
+                  📥 {lang === 'hi' ? 'संकलन हिसाब' : 'Procurement'}
+                </div>
               </div>
+            )
+          ) : (
+            month_summary.balance_due > 0 && (
+              <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-3xl p-5 text-white shadow-lg flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wider text-emerald-100">{t('instantPayTitle')}</p>
+                  <h4 className="text-2xl font-black mt-0.5">₹{month_summary.balance_due.toFixed(0)}</h4>
+                  <p className="text-xs text-emerald-100 mt-0.5">UPI ID: {vendor.upi_id}</p>
+                </div>
 
-              <a
-                href={`upi://pay?pa=${vendor.upi_id}&pn=${encodeURIComponent(vendor.business_name)}&am=${month_summary.balance_due}&cu=INR`}
-                className="bg-white text-emerald-900 hover:bg-emerald-50 px-4 py-3 rounded-2xl font-black text-sm shadow-md active:scale-95 transition flex items-center gap-1.5"
-              >
-                <span>Google Pay / PhonePe</span>
-                <ArrowUpRight className="w-4 h-4" />
-              </a>
-            </div>
+                <a
+                  href={`upi://pay?pa=${vendor.upi_id}&pn=${encodeURIComponent(vendor.business_name)}&am=${month_summary.balance_due}&cu=INR`}
+                  className="bg-white text-emerald-900 hover:bg-emerald-50 px-4 py-3 rounded-2xl font-black text-sm shadow-md active:scale-95 transition flex items-center gap-1.5"
+                >
+                  <span>Google Pay / PhonePe</span>
+                  <ArrowUpRight className="w-4 h-4" />
+                </a>
+              </div>
+            )
           )}
 
           {/* Delivery Actions: Pre-schedule Skip Milk (SKP-01, SKP-02) */}

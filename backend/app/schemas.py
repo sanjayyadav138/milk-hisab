@@ -11,6 +11,7 @@ class CustomerBase(BaseModel):
     milk_type: str = "Cow"  # Cow, Buffalo, Mixed
     price_per_liter: float = 60.0
     avatar_url: Optional[str] = None
+    customer_type: str = "BUYER"  # "BUYER" (दूध लेने वाला) or "SUPPLIER" (दूध देने वाला)
     is_active: bool = True
 
 class CustomerCreate(CustomerBase):
@@ -24,6 +25,7 @@ class CustomerUpdate(BaseModel):
     milk_type: Optional[str] = None
     price_per_liter: Optional[float] = None
     avatar_url: Optional[str] = None
+    customer_type: Optional[str] = None
     is_active: Optional[bool] = None
 
 class CustomerResponse(CustomerBase):
@@ -82,6 +84,7 @@ class CustomerMonthlyBill(BaseModel):
     customer_name: str
     phone: Optional[str] = None
     month_year: str
+    customer_type: str = "BUYER"
     total_liters: float
     price_per_liter: float
     total_amount: float
@@ -92,3 +95,53 @@ class CustomerMonthlyBill(BaseModel):
     upi_link: Optional[str] = None
     whatsapp_message: str
     whatsapp_url: Optional[str] = None
+
+# --- Milk Requests & Search Schemas ---
+class MilkRequestCreate(BaseModel):
+    customer_name: str
+    customer_phone: str
+    address: str
+    locality: Optional[str] = None
+    city: Optional[str] = "Gurugram"
+    pincode: Optional[str] = "122001"
+    milk_type: str = "Cow"
+    quantity: float = 1.0
+    delivery_time: str = "Morning"
+    start_date: Optional[str] = None
+    notes: Optional[str] = None
+
+class MilkRequestResponse(BaseModel):
+    id: int
+    vendor_id: int
+    customer_name: str
+    customer_phone: str
+    address: str
+    locality: Optional[str] = None
+    city: Optional[str] = None
+    pincode: Optional[str] = None
+    milk_type: str
+    quantity: float
+    delivery_time: str
+    start_date: Optional[str] = None
+    notes: Optional[str] = None
+    status: str
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+class VendorPublicProfile(BaseModel):
+    id: int
+    name: str
+    phone: str
+    business_name: str
+    upi_id: Optional[str] = None
+    avatar_url: Optional[str] = None
+    city: str
+    area: str
+    pincode: str
+    service_areas: str
+    price_cow: float
+    price_buffalo: float
+    morning_time: str
+    evening_time: str
+    active_customers_count: int = 0
+    model_config = ConfigDict(from_attributes=True)

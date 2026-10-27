@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Search, Phone, MapPin, Milk, X, ArrowDownCircle, ArrowUpCircle, KeyRound } from 'lucide-react';
+import { UserPlus, Search, Phone, MapPin, Milk, X, ArrowDownCircle, ArrowUpCircle, KeyRound, MessageCircle, CheckCircle2 } from 'lucide-react';
 import { fetchCustomers, createCustomer } from '../services/api';
 import { Customer } from '../types';
 import { useLanguage } from '../context/LanguageContext';
@@ -15,6 +15,12 @@ export default function CustomersView({ onResetCustomerPin }: CustomersViewProps
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [contactTypeFilter, setContactTypeFilter] = useState<'ALL' | 'BUYER' | 'SUPPLIER'>('ALL');
+  const [createdNotice, setCreatedNotice] = useState<{
+    name: string;
+    phone: string;
+    pin: string;
+    whatsapp_share_url?: string;
+  } | null>(null);
 
   const [formData, setFormData] = useState<{
     name: string;
@@ -57,13 +63,21 @@ export default function CustomersView({ onResetCustomerPin }: CustomersViewProps
 
     setSubmitting(true);
     try {
-      await createCustomer({
+      const created = await createCustomer({
         ...formData,
         default_quantity: parseFloat(String(formData.default_quantity)),
         price_per_liter: parseFloat(String(formData.price_per_liter)),
         customer_type: formData.customer_type
       });
       setIsAdding(false);
+      if (created && created.pin) {
+        setCreatedNotice({
+          name: created.name,
+          phone: created.phone || '',
+          pin: created.pin,
+          whatsapp_share_url: created.whatsapp_share_url
+        });
+      }
       setFormData({
         name: '',
         phone: '',
@@ -412,6 +426,54 @@ export default function CustomersView({ onResetCustomerPin }: CustomersViewProps
               </div>
             );
           })}
+        </div>
+      )}
+      {/* Newly Created Customer PIN & WhatsApp Share Dialog */}
+      {createdNotice && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4 border border-slate-200">
+            <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">
+                {lang === 'hi' ? 'खाता सफलतापूर्वक जुड़ गया!' : 'Account Created Successfully!'}
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">{createdNotice.name} ({createdNotice.phone})</p>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-center">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-blue-900">
+                {lang === 'hi' ? 'ग्राहक का नया लॉगिन पिन' : 'Customer Secret PIN'}
+              </p>
+              <p className="text-3xl font-black text-blue-800 tracking-widest mt-1">
+                {createdNotice.pin}
+              </p>
+              <p className="text-[11px] text-blue-700 mt-1">
+                {lang === 'hi' ? 'यह पिन ग्राहक को WhatsApp या SMS से भेजें।' : 'Share this PIN with customer to log in.'}
+              </p>
+            </div>
+
+            {createdNotice.whatsapp_share_url && (
+              <a
+                href={createdNotice.whatsapp_share_url}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-sm transition active:scale-95"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>{lang === 'hi' ? 'WhatsApp पर पिन व लिंक भेजें' : 'Send PIN via WhatsApp'}</span>
+              </a>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setCreatedNotice(null)}
+              className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
+            >
+              {lang === 'hi' ? 'पूर्ण (Done)' : 'Close'}
+            </button>
+          </div>
         </div>
       )}
     </div>

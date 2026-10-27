@@ -6,6 +6,7 @@ from datetime import date, datetime
 class CustomerBase(BaseModel):
     name: str
     phone: Optional[str] = None
+    email: Optional[str] = None
     address: Optional[str] = None
     default_quantity: float = 1.0
     milk_type: str = "Cow"  # Cow, Buffalo, Mixed
@@ -15,11 +16,12 @@ class CustomerBase(BaseModel):
     is_active: bool = True
 
 class CustomerCreate(CustomerBase):
-    pass
+    pin: Optional[str] = None
 
 class CustomerUpdate(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
+    email: Optional[str] = None
     address: Optional[str] = None
     default_quantity: Optional[float] = None
     milk_type: Optional[str] = None
@@ -32,6 +34,9 @@ class CustomerUpdate(BaseModel):
 class CustomerResponse(CustomerBase):
     id: int
     vendor_id: int
+    pin: Optional[str] = None
+    whatsapp_share_url: Optional[str] = None
+    whatsapp_message: Optional[str] = None
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 

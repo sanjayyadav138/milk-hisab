@@ -119,13 +119,34 @@ export async function registerVendorApi(payload: {
   return res.json();
 }
 
+export async function forgotPinApi(payload: { phone: string; role: 'vendor' | 'customer' }) {
+  const res = await fetch(`${API_BASE}/portal/auth/forgot-pin`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "पासवर्ड रीसेट करने में त्रुटि आई" }));
+    throw new Error(err.detail || "पासवर्ड रीसेट करने में त्रुटि आई");
+  }
+  return res.json();
+}
+
+export async function fetchCustomerAccountsByPhone(phone: string) {
+  const res = await fetch(`${API_BASE}/portal/customer/accounts-by-phone?phone=${encodeURIComponent(phone)}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
 export async function registerCustomerApi(payload: {
   name: string;
   phone: string;
+  email?: string;
   address: string;
   default_quantity: number;
   milk_type: string;
   price_per_liter: number;
+  customer_type?: 'BUYER' | 'SUPPLIER';
   vendor_id?: number;
   pin?: string;
 }) {

@@ -12,13 +12,9 @@ Base.metadata.create_all(bind=engine)
 
 def run_migrations():
     """Ensure newly added columns exist in SQLite database without losing data."""
-    import sqlite3
-    db_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "doodh_ledger.db"))
-    if not os.path.exists(db_file):
-        return
     try:
-        conn = sqlite3.connect(db_file)
-        cursor = conn.cursor()
+        raw_conn = engine.raw_connection()
+        cursor = raw_conn.cursor()
         
         # 1. users table columns
         user_cols = {row[1] for row in cursor.execute("PRAGMA table_info(users)").fetchall()}
@@ -40,9 +36,12 @@ def run_migrations():
         cust_cols = {row[1] for row in cursor.execute("PRAGMA table_info(customers)").fetchall()}
         if "customer_type" not in cust_cols:
             cursor.execute("ALTER TABLE customers ADD COLUMN customer_type VARCHAR(20) DEFAULT 'BUYER'")
+        if "email" not in cust_cols:
+            cursor.execute("ALTER TABLE customers ADD COLUMN email VARCHAR(100)")
             
-        conn.commit()
-        conn.close()
+        raw_conn.commit()
+        cursor.close()
+        raw_conn.close()
     except Exception as e:
         print(f"Migration warning: {e}")
 

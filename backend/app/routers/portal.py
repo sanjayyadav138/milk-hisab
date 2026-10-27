@@ -7,6 +7,13 @@ import datetime
 from ..database import get_db
 from ..models import User, Customer, DailyLog, Payment, CustomerSubUser, CustomerMessage, MilkRequest, ContactInquiry
 from ..schemas import MilkRequestCreate, MilkRequestResponse, VendorPublicProfile, ContactInquiryCreate
+from ..services.notifications import (
+    generate_random_pin,
+    format_welcome_whatsapp_message,
+    get_whatsapp_share_url,
+    send_welcome_email,
+    send_welcome_sms
+)
 
 router = APIRouter(prefix="/api/portal", tags=["Portal & Auth"])
 
@@ -70,12 +77,18 @@ class RegisterVendorRequest(BaseModel):
 class RegisterCustomerRequest(BaseModel):
     name: str
     phone: str
+    email: Optional[str] = None
     address: str
     default_quantity: float = 1.0
     milk_type: str = "Cow"
     price_per_liter: float = 60.0
+    customer_type: Optional[str] = "BUYER"
     vendor_id: Optional[int] = None
-    pin: Optional[str] = "1234"
+    pin: Optional[str] = None
+
+class ForgotPinRequest(BaseModel):
+    phone: str
+    role: str  # "vendor" or "customer"
 
 class DisputeCreateRequest(BaseModel):
     log_id: int
@@ -363,6 +376,103 @@ def change_pin(req: ChangePinRequest, db: Session = Depends(get_db)):
         return {"message": "पिन सफलतापूर्वक बदल गया!", "success": True}
     raise HTTPException(status_code=400, detail="Invalid role specified")
 
+@router.post("/auth/forgot-pin")
+def forgot_pin(req: ForgotPinRequest, db: Session = Depends(get_db)):
+    clean_phone = req.phone.replace(" ", "").replace("+91", "").replace("-", "").strip()
+    if not clean_phone:
+        raise HTTPException(status_code=400, detail="कृपया पंजीकृत मोबाइल नंबर दर्ज करें")
+
+    new_pin = generate_random_pin()
+
+    if req.role == "vendor":
+        vendor = db.query(User).filter(
+            (User.phone == clean_phone) | (User.phone.contains(clean_phone))
+        ).first()
+        if not vendor:
+            raise HTTPException(status_code=404, detail="इस नंबर से कोई दूधिया (Vendor) खाता नहीं मिला")
+        
+        vendor.password_hash = new_pin
+        db.commit()
+
+        msg = f"Milk Hisab - Password Reset: Namaste {vendor.name}, Your new PIN is: {new_pin}. Login at https://milkhisab.in"
+        wa_url = get_whatsapp_share_url(vendor.phone, msg)
+        send_welcome_sms(vendor.phone, new_pin, "Milk Hisab")
+
+        return {
+            "success": True,
+            "message": "नया पिन सफलतापूर्वक जनरेट हो गया है!",
+            "pin": new_pin,
+            "phone": vendor.phone,
+            "whatsapp_share_url": wa_url
+        }
+    else:
+        customer = db.query(Customer).filter(
+            Customer.is_active == True,
+            (Customer.phone == clean_phone) | (Customer.phone.contains(clean_phone))
+        ).first()
+        if not customer:
+            raise HTTPException(status_code=404, detail="इस नंबर से कोई ग्राहक (Customer) खाता नहीं मिला")
+        
+        customer.pin = new_pin
+        db.commit()
+
+        vendor = db.query(User).filter(User.id == customer.vendor_id).first()
+        display_vendor = vendor.business_name if vendor else "Milk Hisab"
+
+        msg = f"Milk Hisab - Password Reset: Namaste {customer.name}, Your new PIN is: {new_pin}. Login at https://milkhisab.in. Vendor: {display_vendor}"
+        wa_url = get_whatsapp_share_url(customer.phone, msg)
+
+        if getattr(customer, 'email', None):
+            send_welcome_email(
+                to_email=customer.email,
+                name=customer.name,
+                phone=customer.phone,
+                pin=new_pin,
+                vendor_name=vendor.name if vendor else "Milk Hisab",
+                business_name=vendor.business_name if vendor else None
+            )
+        send_welcome_sms(customer.phone, new_pin, display_vendor)
+
+        return {
+            "success": True,
+            "message": "नया पिन सफलतापूर्वक जनरेट हो गया है!",
+            "pin": new_pin,
+            "phone": customer.phone,
+            "whatsapp_share_url": wa_url
+        }
+
+@router.get("/customer/accounts-by-phone")
+def get_customer_accounts_by_phone(phone: str, db: Session = Depends(get_db)):
+    clean_phone = phone.replace(" ", "").replace("+91", "").replace("-", "").strip()
+    if not clean_phone:
+        return []
+
+    customers = db.query(Customer).filter(
+        Customer.is_active == True,
+        (Customer.phone == clean_phone) | (Customer.phone.contains(clean_phone))
+    ).all()
+
+    results = []
+    for c in customers:
+        v = db.query(User).filter(User.id == c.vendor_id).first()
+        results.append({
+            "customer_id": c.id,
+            "customer_name": c.name,
+            "customer_type": getattr(c, "customer_type", "BUYER") or "BUYER",
+            "milk_type": c.milk_type,
+            "default_quantity": c.default_quantity,
+            "price_per_liter": c.price_per_liter,
+            "address": c.address,
+            "vendor_id": v.id if v else c.vendor_id,
+            "vendor_name": v.name if v else "दूधिया",
+            "business_name": v.business_name if v else "Dairy Supply",
+            "vendor_phone": v.phone if v else "",
+            "vendor_upi": v.upi_id if v else "",
+            "vendor_city": v.city if v else "Gurugram",
+            "vendor_area": v.area if v else "Jamalpur"
+        })
+    return results
+
 @router.post("/auth/register-vendor")
 def register_vendor(req: RegisterVendorRequest, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.phone == req.phone).first()
@@ -389,20 +499,47 @@ def register_customer(req: RegisterCustomerRequest, db: Session = Depends(get_db
         default_vendor = db.query(User).first()
         vendor_id = default_vendor.id if default_vendor else 1
 
+    pin = req.pin.strip() if req.pin and req.pin.strip() else generate_random_pin()
+    cust_type = req.customer_type or "BUYER"
+
     cust = Customer(
         vendor_id=vendor_id,
-        name=req.name,
-        phone=req.phone,
-        address=req.address,
+        name=req.name.strip(),
+        phone=req.phone.strip(),
+        email=req.email.strip() if req.email else None,
+        address=req.address.strip() if req.address else "",
         default_quantity=req.default_quantity,
         milk_type=req.milk_type,
         price_per_liter=req.price_per_liter,
-        pin=req.pin or "1234"
+        customer_type=cust_type,
+        pin=pin
     )
     db.add(cust)
     db.commit()
     db.refresh(cust)
-    return {"message": "Customer registered successfully", "id": cust.id}
+
+    vendor = db.query(User).filter(User.id == vendor_id).first()
+    v_name = vendor.name if vendor else "Milk Hisab"
+    v_biz = vendor.business_name if vendor else None
+
+    # WhatsApp intent
+    wa_msg = format_welcome_whatsapp_message(cust.name, cust.phone, pin, v_name, v_biz)
+    wa_url = get_whatsapp_share_url(cust.phone, wa_msg)
+
+    # Email
+    if cust.email:
+        send_welcome_email(cust.email, cust.name, cust.phone, pin, v_name, v_biz)
+
+    # SMS
+    send_welcome_sms(cust.phone, pin, v_biz or v_name)
+
+    return {
+        "message": "Account registered successfully",
+        "id": cust.id,
+        "pin": pin,
+        "customer_type": cust_type,
+        "whatsapp_share_url": wa_url
+    }
 
 @router.get("/vendors-list")
 def get_vendors_list(db: Session = Depends(get_db)):

@@ -33,6 +33,7 @@ class Customer(Base):
     vendor_id = Column(Integer, ForeignKey("users.id"), nullable=False, default=1)
     name = Column(String(100), nullable=False, index=True)
     phone = Column(String(20), nullable=True, index=True)
+    email = Column(String(100), nullable=True)
     pin = Column(String(20), default="1234")  # Simple access PIN for household login
     address = Column(String(255), nullable=True)
     default_quantity = Column(Float, default=1.0)  # in Liters (e.g., 1.5)

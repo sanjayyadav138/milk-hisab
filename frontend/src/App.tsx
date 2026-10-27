@@ -382,6 +382,7 @@ function MainApp() {
                 customer={auth.customer} 
                 onLogout={() => handleLogout(false)} 
                 onOpenChangePin={() => handleOpenChangePin()}
+                onOpenFindMilkman={() => handleOpenFindMilkman('')}
               />
             )}
 

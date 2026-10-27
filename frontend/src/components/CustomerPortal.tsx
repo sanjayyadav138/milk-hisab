@@ -7,7 +7,8 @@ import {
 } from 'lucide-react';
 import { 
   fetchCustomerDashboard, fetchSubUsers, addSubUserApi, 
-  fetchMessages, sendMessageApi, raiseDisputeApi, skipMilkDateApi
+  fetchMessages, sendMessageApi, raiseDisputeApi, skipMilkDateApi,
+  fetchCustomerAccountsByPhone
 } from '../services/api';
 import { Customer, CustomerDashboardData, SubUser, CustomerMessage } from '../types';
 import { useLanguage } from '../context/LanguageContext';
@@ -16,9 +17,12 @@ interface CustomerPortalProps {
   customer: Customer;
   onLogout: () => void;
   onOpenChangePin?: () => void;
+  onOpenFindMilkman?: () => void;
 }
 
-export default function CustomerPortal({ customer, onLogout, onOpenChangePin }: CustomerPortalProps) {
+export default function CustomerPortal({ customer, onLogout, onOpenChangePin, onOpenFindMilkman }: CustomerPortalProps) {
+  const [activeCustomer, setActiveCustomer] = useState<Customer>(customer);
+  const [linkedVendors, setLinkedVendors] = useState<any[]>([]);
   const { lang, t } = useLanguage();
   const [data, setData] = useState<CustomerDashboardData | null>(null);
   const [subusers, setSubusers] = useState<SubUser[]>([]);
@@ -60,16 +64,24 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin }: 
   };
 
   useEffect(() => {
+    if (customer.phone) {
+      fetchCustomerAccountsByPhone(customer.phone)
+        .then(accs => setLinkedVendors(accs))
+        .catch(e => console.warn('Could not load linked vendor accounts', e));
+    }
+  }, [customer.phone]);
+
+  useEffect(() => {
     loadAll();
-  }, [customer.id]);
+  }, [activeCustomer.id]);
 
   const loadAll = async () => {
     setLoading(true);
     try {
       const [dash, subs, msgs] = await Promise.all([
-        fetchCustomerDashboard(customer.id),
-        fetchSubUsers(customer.id),
-        fetchMessages(customer.id)
+        fetchCustomerDashboard(activeCustomer.id),
+        fetchSubUsers(activeCustomer.id),
+        fetchMessages(activeCustomer.id)
       ]);
       setData(dash);
       setSubusers(subs);
@@ -87,7 +99,7 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin }: 
 
     setSubmittingUser(true);
     try {
-      await addSubUserApi(customer.id, {
+      await addSubUserApi(activeCustomer.id, {
         name: newUserName,
         phone: newUserPhone,
         relation: newUserRelation
@@ -95,7 +107,7 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin }: 
       setIsAddingUser(false);
       setNewUserName('');
       setNewUserPhone('');
-      const updated = await fetchSubUsers(customer.id);
+      const updated = await fetchSubUsers(activeCustomer.id);
       setSubusers(updated);
     } catch (err: any) {
       alert("सदस्य जोड़ने में त्रुटि: " + err.message);
@@ -110,13 +122,13 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin }: 
 
     setSendingMsg(true);
     try {
-      await sendMessageApi(customer.id, {
+      await sendMessageApi(activeCustomer.id, {
         sender_name: customer.name,
         sender_role: 'customer',
         message: text
       });
       setNewMsgText('');
-      const updated = await fetchMessages(customer.id);
+      const updated = await fetchMessages(activeCustomer.id);
       setMessages(updated);
     } catch (err: any) {
       alert("संदेश भेजने में त्रुटि: " + err.message);
@@ -132,11 +144,11 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin }: 
 
     setSubmittingDispute(true);
     try {
-      await raiseDisputeApi(customer.id, disputingLog.id, disputeReason.trim());
+      await raiseDisputeApi(activeCustomer.id, disputingLog.id, disputeReason.trim());
       setDisputingLog(null);
       setDisputeReason('');
       showFeedback('success', lang === 'hi' ? 'आपकी आपत्ति सफलतापूर्वक दूधिया को भेज दी गई है!' : 'Query submitted to vendor successfully!');
-      const updated = await fetchCustomerDashboard(customer.id);
+      const updated = await fetchCustomerDashboard(activeCustomer.id);
       setData(updated);
     } catch (err: any) {
       showFeedback('error', err.message || 'Error submitting query');
@@ -158,11 +170,11 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin }: 
 
     setSubmittingSkip(true);
     try {
-      await skipMilkDateApi(customer.id, skipDate, skipReason.trim() || undefined);
+      await skipMilkDateApi(activeCustomer.id, skipDate, skipReason.trim() || undefined);
       setIsSkipModalOpen(false);
       setSkipReason('');
       showFeedback('success', t('skipSuccess'));
-      const updated = await fetchCustomerDashboard(customer.id);
+      const updated = await fetchCustomerDashboard(activeCustomer.id);
       setData(updated);
     } catch (err: any) {
       setSkipError(err.message || 'Error scheduling skip');
@@ -201,6 +213,62 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin }: 
             <p className="text-xs text-blue-100/90 mt-0.5">
               {t('vendorLabel')} <span className="font-bold text-white">{vendor.name}</span> ({vendor.business_name})
             </p>
+
+            {/* Multiple Vendor Switcher (When single customer gets milk from multiple vendors) */}
+            {linkedVendors.length > 1 ? (
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-bold text-amber-300">
+                  {lang === 'hi' ? 'दूधिया चुनें:' : 'Switch Milkman:'}
+                </span>
+                <select
+                  value={activeCustomer.id}
+                  onChange={(e) => {
+                    const selId = Number(e.target.value);
+                    const selected = linkedVendors.find(v => v.customer_id === selId);
+                    if (selected) {
+                      setActiveCustomer(prev => ({
+                        ...prev,
+                        id: selected.customer_id,
+                        name: selected.customer_name,
+                        customer_type: selected.customer_type,
+                        milk_type: selected.milk_type,
+                        default_quantity: selected.default_quantity,
+                        price_per_liter: selected.price_per_liter,
+                        address: selected.address
+                      }));
+                    }
+                  }}
+                  className="bg-white text-slate-900 font-bold text-xs px-2.5 py-1 rounded-xl shadow-xs border border-blue-300 focus:outline-none"
+                >
+                  {linkedVendors.map((v) => (
+                    <option key={v.customer_id} value={v.customer_id}>
+                      {v.business_name || v.vendor_name} ({v.default_quantity}L {v.milk_type})
+                    </option>
+                  ))}
+                </select>
+                {onOpenFindMilkman && (
+                  <button
+                    type="button"
+                    onClick={onOpenFindMilkman}
+                    className="text-[11px] font-bold text-blue-200 hover:text-white underline"
+                  >
+                    {lang === 'hi' ? '+ नया दूधिया जोड़ें' : '+ Add Milkman'}
+                  </button>
+                )}
+              </div>
+            ) : (
+              onOpenFindMilkman && (
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    onClick={onOpenFindMilkman}
+                    className="text-[11px] font-semibold text-blue-200 hover:text-white underline flex items-center gap-1"
+                  >
+                    <span>{lang === 'hi' ? '+ दूसरा दूधिया भी जोड़ें (Add Another Milkman)' : '+ Add Another Milkman'}</span>
+                  </button>
+                </div>
+              )
+            )}
           </div>
 
           <div className="flex items-center gap-2">

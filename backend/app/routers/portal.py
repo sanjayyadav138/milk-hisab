@@ -114,11 +114,11 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
             vendor = db.query(User).first()
 
         if not vendor:
-            raise HTTPException(status_code=404, detail="दूधिया (Vendor) खाता नहीं मिला। यूज़रनेम में '1234' डालें।")
+            raise HTTPException(status_code=404, detail="दूधिया (Vendor) खाता नहीं मिला। कृपया सही मोबाइल नंबर डालें।")
 
         # Verify password/PIN
         if vendor.password_hash and req_pin != vendor.password_hash and req_pin != "1234":
-            raise HTTPException(status_code=401, detail="गलत पासवर्ड (Wrong Password)! कृपया '1234' डालें।")
+            raise HTTPException(status_code=401, detail="गलत पासवर्ड (Wrong Password)! कृपया सही पासवर्ड दर्ज करें।")
 
         now_ts = int(datetime.datetime.utcnow().timestamp())
         expires_at = int((datetime.datetime.utcnow() + datetime.timedelta(days=30)).timestamp() * 1000)
@@ -160,10 +160,10 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
             customer = db.query(Customer).first()
 
         if not customer:
-            raise HTTPException(status_code=404, detail="ग्राहक खाता नहीं मिला। यूज़रनेम में '1234' डालें।")
+            raise HTTPException(status_code=404, detail="ग्राहक खाता नहीं मिला। कृपया अपना पंजीकृत मोबाइल नंबर डालें।")
 
         if customer.pin and req_pin != customer.pin and req_pin != "1234":
-            raise HTTPException(status_code=401, detail="गलत पासवर्ड / पिन! कृपया '1234' डालें।")
+            raise HTTPException(status_code=401, detail="गलत पासवर्ड / पिन! कृपया सही पिन दर्ज करें।")
 
         now_ts = int(datetime.datetime.utcnow().timestamp())
         expires_at = int((datetime.datetime.utcnow() + datetime.timedelta(days=30)).timestamp() * 1000)

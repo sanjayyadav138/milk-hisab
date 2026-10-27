@@ -83,99 +83,107 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
         {t('announcement')}
       </div>
 
-      {/* Hero Interactive Banner Carousel with Photographic Backgrounds */}
-      <section className="relative overflow-hidden py-16 sm:py-24 md:py-28 px-4 text-white min-h-[520px] sm:min-h-[580px] md:min-h-[640px] flex items-center justify-center bg-slate-950">
-        
-        {/* Photographic Background Images with Smooth Crossfade Transition */}
-        {banners.map((b, i) => (
-          <div
-            key={i}
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-              activeBanner === i ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            }`}
-          >
-            <img
-              src={b.image}
-              alt={b.title}
-              className="w-full h-full object-cover object-center"
-            />
-            {/* Cinematic Gradient Overlays for Guaranteed Text Legibility & Contrast */}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/75 to-slate-950/80" />
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/60 to-slate-950/40" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-slate-950/35 to-slate-950/80" />
-          </div>
-        ))}
-
-        {/* Decorative Grid Light */}
-        <div className="absolute inset-0 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:28px_28px] opacity-15 pointer-events-none z-10" />
-
-        {/* Previous / Next Arrow Controls */}
-        <button
-          type="button"
-          onClick={handlePrevBanner}
-          className="hidden sm:flex absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-20 w-11 h-11 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white items-center justify-center transition active:scale-90 shadow-lg shadow-black/40"
-          aria-label="Previous banner"
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-
-        <button
-          type="button"
-          onClick={handleNextBanner}
-          className="hidden sm:flex absolute right-4 md:right-8 top-1/2 -translate-y-1/2 z-20 w-11 h-11 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white items-center justify-center transition active:scale-90 shadow-lg shadow-black/40"
-          aria-label="Next banner"
-        >
-          <ChevronRight className="w-6 h-6" />
-        </button>
-
-        {/* Slide Content */}
-        <div className="max-w-4xl mx-auto text-center relative z-20">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/25 border border-blue-400/40 text-blue-200 text-xs sm:text-sm font-black mb-6 shadow-md backdrop-blur-md">
-            <Sparkles className="w-4 h-4 text-amber-300" />
-            <span>{banners[activeBanner].badge}</span>
-          </div>
-
-          <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight leading-tight max-w-4xl mx-auto drop-shadow-md">
-            {banners[activeBanner].title}
-          </h1>
-
-          <p className="mt-5 text-sm sm:text-lg text-slate-200 max-w-2xl mx-auto leading-relaxed drop-shadow-sm font-medium">
-            {banners[activeBanner].desc}
-          </p>
-
-          {/* Action CTAs - Primary Dairy Blue for Trust */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <button
-              onClick={() => onOpenAuth('vendor', 'LOGIN')}
-              className="bg-blue-600 hover:bg-blue-500 text-white font-black px-6 py-3.5 rounded-2xl shadow-xl shadow-blue-600/40 text-sm sm:text-base active:scale-95 transition flex items-center gap-2"
+      {/* Hero Interactive Banner Carousel with Clear Photographic Backgrounds */}
+      <section className="relative w-full bg-slate-950 py-3 sm:py-6 px-2 sm:px-4 md:px-6">
+        <div className="max-w-7xl mx-auto relative rounded-3xl shadow-2xl border border-slate-800 bg-slate-900">
+          
+          {/* Photographic Background Images with Smooth Transition */}
+          {banners.map((b, i) => (
+            <div
+              key={i}
+              className={`absolute inset-0 rounded-3xl overflow-hidden transition-opacity duration-700 ease-in-out ${
+                activeBanner === i ? 'opacity-100 z-0' : 'opacity-0 pointer-events-none z-0'
+              }`}
             >
-              <span>{t('ctaVendor')}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-
-            <button
-              onClick={() => onOpenAuth('customer', 'LOGIN')}
-              className="bg-white/10 hover:bg-white/20 text-white font-bold px-6 py-3.5 rounded-2xl backdrop-blur-md border border-white/25 text-sm sm:text-base active:scale-95 transition shadow-lg shadow-black/20"
-            >
-              {t('ctaCustomer')}
-            </button>
-          </div>
-
-          {/* Banner Selector Dots */}
-          <div className="flex justify-center items-center gap-2.5 mt-10">
-            {banners.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setActiveBanner(i)}
-                className={`h-2.5 rounded-full transition-all duration-300 ${
-                  activeBanner === i 
-                    ? 'w-10 bg-blue-400 shadow-md shadow-blue-400/50' 
-                    : 'w-2.5 bg-white/40 hover:bg-white/70'
-                }`}
-                aria-label={`Go to banner ${i + 1}`}
+              <img
+                src={b.image}
+                alt={b.title}
+                className="w-full h-full object-cover object-center sm:object-right"
               />
-            ))}
+              {/* Soft Left-to-Right Scrim: Dark on left for text, completely clear on right to see the photo! */}
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/50 to-transparent hidden sm:block" />
+              {/* Soft Bottom-Up Scrim on mobile so text is legible */}
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/60 to-slate-950/20 sm:hidden" />
+            </div>
+          ))}
+
+          {/* Previous / Next Arrow Controls */}
+          <button
+            type="button"
+            onClick={handlePrevBanner}
+            className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-slate-950/60 hover:bg-slate-900/90 backdrop-blur-md border border-white/20 text-white flex items-center justify-center transition active:scale-95 shadow-xl"
+            aria-label="Previous Slide"
+          >
+            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+          </button>
+
+          <button
+            type="button"
+            onClick={handleNextBanner}
+            className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-slate-950/60 hover:bg-slate-900/90 backdrop-blur-md border border-white/20 text-white flex items-center justify-center transition active:scale-95 shadow-xl"
+            aria-label="Next Slide"
+          >
+            <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+          </button>
+
+          {/* Slide Content positioned on the left so the photo is unobstructed */}
+          <div className="relative z-20 min-h-[460px] sm:min-h-[520px] md:min-h-[560px] flex flex-col justify-center px-6 sm:px-12 md:px-16 py-12 sm:py-16 max-w-2xl text-left">
+            
+            {/* Feature Badge */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-600/30 border border-blue-400/40 text-blue-200 text-xs sm:text-sm font-black mb-4 backdrop-blur-md w-fit shadow-md">
+              <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
+              <span>{banners[activeBanner].badge}</span>
+            </div>
+
+            {/* Title */}
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight text-white drop-shadow-lg">
+              {banners[activeBanner].title}
+            </h1>
+
+            {/* Description */}
+            <p className="mt-4 text-xs sm:text-base text-slate-100 font-medium leading-relaxed drop-shadow-md max-w-xl">
+              {banners[activeBanner].desc}
+            </p>
+
+            {/* Action CTAs */}
+            <div className="mt-6 sm:mt-8 flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => onOpenAuth('vendor', 'LOGIN')}
+                className="bg-blue-600 hover:bg-blue-500 text-white font-black px-5 sm:px-6 py-3 rounded-2xl shadow-xl shadow-blue-600/50 text-xs sm:text-sm active:scale-95 transition flex items-center gap-2"
+              >
+                <span>{t('ctaVendor')}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => onOpenAuth('customer', 'LOGIN')}
+                className="bg-white/15 hover:bg-white/25 text-white font-bold px-5 sm:px-6 py-3 rounded-2xl backdrop-blur-md border border-white/25 text-xs sm:text-sm active:scale-95 transition shadow-lg"
+              >
+                {t('ctaCustomer')}
+              </button>
+            </div>
+
+            {/* Banner Selector Dots & Slide Counter */}
+            <div className="flex items-center gap-2 mt-8 sm:mt-10">
+              {banners.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActiveBanner(i)}
+                  className={`h-2.5 rounded-full transition-all duration-300 ${
+                    activeBanner === i 
+                      ? 'w-10 bg-blue-400 shadow-md shadow-blue-400/60' 
+                      : 'w-2.5 bg-white/40 hover:bg-white/80'
+                  }`}
+                  aria-label={`Slide ${i + 1}`}
+                />
+              ))}
+              <span className="text-[11px] text-white/70 font-bold ml-2">
+                {activeBanner + 1} / {banners.length}
+              </span>
+            </div>
+
           </div>
+
         </div>
       </section>
 

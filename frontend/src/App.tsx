@@ -197,6 +197,7 @@ function MainApp() {
       last_active_at: Date.now(),
     };
     setAuth(enrichedAuth);
+    setAuthModalOpen(false);
     if (enrichedAuth.role === 'vendor') {
       window.location.hash = '#/vendor/dashboard';
     } else if (enrichedAuth.role === 'customer') {

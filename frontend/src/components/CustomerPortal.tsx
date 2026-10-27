@@ -18,7 +18,7 @@ interface CustomerPortalProps {
 }
 
 export default function CustomerPortal({ customer, onLogout }: CustomerPortalProps) {
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const [data, setData] = useState<CustomerDashboardData | null>(null);
   const [subusers, setSubusers] = useState<SubUser[]>([]);
   const [messages, setMessages] = useState<CustomerMessage[]>([]);

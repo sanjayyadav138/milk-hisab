@@ -5,8 +5,8 @@ from pydantic import BaseModel
 from typing import Optional, List
 import datetime
 from ..database import get_db
-from ..models import User, Customer, DailyLog, Payment, CustomerSubUser, CustomerMessage, MilkRequest
-from ..schemas import MilkRequestCreate, MilkRequestResponse, VendorPublicProfile
+from ..models import User, Customer, DailyLog, Payment, CustomerSubUser, CustomerMessage, MilkRequest, ContactInquiry
+from ..schemas import MilkRequestCreate, MilkRequestResponse, VendorPublicProfile, ContactInquiryCreate
 
 router = APIRouter(prefix="/api/portal", tags=["Portal & Auth"])
 
@@ -818,3 +818,21 @@ def reject_milk_request(request_id: int, db: Session = Depends(get_db)):
     req.status = "Rejected"
     db.commit()
     return {"message": "अनुरोध अस्वीकार कर दिया गया"}
+
+@router.post("/contact")
+def submit_contact_inquiry(inquiry: ContactInquiryCreate, db: Session = Depends(get_db)):
+    db_inquiry = ContactInquiry(
+        name=inquiry.name.strip(),
+        phone=inquiry.phone.strip(),
+        email=inquiry.email.strip(),
+        location=inquiry.location.strip(),
+        comments=inquiry.comments.strip()
+    )
+    db.add(db_inquiry)
+    db.commit()
+    db.refresh(db_inquiry)
+    return {
+        "status": "success",
+        "message": "आपकी पूछताछ सफलतापूर्वक दर्ज कर ली गई है। हमारी टीम शीघ्र संपर्क करेगी।",
+        "id": db_inquiry.id
+    }

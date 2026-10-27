@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
 import { 
   Sparkles, Zap, Users, Star, Award, 
-  MapPin, Phone, MessageCircle, ArrowRight, UserCheck 
+  MapPin, Phone, MessageCircle, ArrowRight, Headphones,
+  ShieldCheck, HelpCircle, FileText, CheckCircle
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { PublicPageType } from './Navbar';
 
 interface LandingPageProps {
   onOpenAuth: (role: 'vendor' | 'customer', tab?: 'LOGIN' | 'REGISTER') => void;
   onOpenFindMilkman: (query?: string) => void;
+  onNavigatePage?: (page: PublicPageType) => void;
 }
 
-export default function LandingPage({ onOpenAuth, onOpenFindMilkman }: LandingPageProps) {
+export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigatePage }: LandingPageProps) {
   const [localSearch, setLocalSearch] = useState('');
   const { t, lang } = useLanguage();
   const [activeBanner, setActiveBanner] = useState(0);
@@ -38,6 +41,20 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman }: LandingPa
         : "Send itemized bills straight to customer WhatsApp chats with Google Pay & PhonePe UPI QR links.",
     }
   ];
+
+  const handleNav = (page: PublicPageType) => {
+    if (onNavigatePage) {
+      onNavigatePage(page);
+    } else {
+      const routes: Record<PublicPageType, string> = {
+        ABOUT: '#/about',
+        CONTACT: '#/contact',
+        TERMS: '#/terms',
+        PRIVACY: '#/privacy'
+      };
+      window.location.hash = routes[page];
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f9fafb] text-slate-800 flex flex-col font-sans">
@@ -98,88 +115,63 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman }: LandingPa
         <div className="absolute inset-0 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none"></div>
       </section>
 
-      {/* Location-Based Milkman Discovery Section */}
-      <section className="relative -mt-8 z-20 px-4 max-w-4xl mx-auto">
-        <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-xl border border-slate-200">
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0">
-              <span className="p-2.5 bg-blue-100 text-blue-800 rounded-2xl">
-                <MapPin className="w-5 h-5" />
-              </span>
-              <div>
-                <h3 className="font-black text-slate-900 text-sm sm:text-base leading-tight">
-                  {t('searchNearbyMilkman')}
-                </h3>
-                <p className="text-[11px] text-slate-500 font-semibold">
-                  {lang === 'hi' ? 'गाँव या इलाके के हिसाब से सत्यापित दूधिए खोजें' : 'Find verified milkmen delivering in your locality'}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex-1 w-full flex gap-2">
+      {/* Location-Based Milkman Discovery Bar */}
+      <section className="bg-white border-b border-slate-200 py-6 px-4 shadow-xs">
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-slate-50 p-2 sm:p-2.5 rounded-2xl border border-slate-200 flex flex-col sm:flex-row items-center gap-2 shadow-xs">
+            <div className="flex items-center gap-2.5 px-3 flex-1 w-full">
+              <MapPin className="w-5 h-5 text-blue-600 shrink-0" />
               <input
                 type="text"
                 placeholder={t('searchPlaceholder')}
                 value={localSearch}
                 onChange={(e) => setLocalSearch(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') onOpenFindMilkman(localSearch); }}
-                className="flex-1 px-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:border-blue-600"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') onOpenFindMilkman(localSearch);
+                }}
+                className="w-full bg-transparent text-xs sm:text-sm font-semibold text-slate-800 placeholder-slate-400 focus:outline-none"
               />
-              <button
-                type="button"
-                onClick={() => onOpenFindMilkman(localSearch)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-black px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl text-xs sm:text-sm active:scale-95 transition shrink-0 shadow-md shadow-blue-500/20"
-              >
-                {lang === 'hi' ? 'दूधिया खोजें' : 'Search'}
-              </button>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-slate-100 overflow-x-auto text-xs font-bold text-slate-600">
-            <span className="text-[11px] text-slate-400 shrink-0 uppercase tracking-wider">{lang === 'hi' ? 'लोकप्रिय:' : 'Popular:'}</span>
-            {['Jamalpur', '122001', 'Gurugram', 'Mandir Road', 'Rewari'].map((loc) => (
-              <button
-                key={loc}
-                type="button"
-                onClick={() => onOpenFindMilkman(loc)}
-                className="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 rounded-xl transition text-[11px] shrink-0"
-              >
-                📍 {loc}
-              </button>
-            ))}
+            <button
+              type="button"
+              onClick={() => onOpenFindMilkman(localSearch)}
+              className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-black transition active:scale-95 shrink-0 shadow-xs"
+            >
+              {t('findMilkman')}
+            </button>
           </div>
         </div>
       </section>
 
-      {/* Trust & Metric Counter */}
-      <section className="bg-white border-y border-slate-200 py-6">
-        <div className="max-w-5xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+      {/* Trust Metrics Section */}
+      <section className="py-8 bg-white border-b border-slate-200">
+        <div className="max-w-5xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           <div>
-            <p className="text-2xl sm:text-3xl font-black text-blue-700">{t('metric1Val')}</p>
-            <p className="text-xs text-slate-500 font-semibold mt-0.5">{t('metric1Desc')}</p>
+            <div className="text-2xl sm:text-3xl font-black text-blue-700">{t('metric1Val')}</div>
+            <div className="text-xs text-slate-500 font-bold mt-1">{t('metric1Desc')}</div>
           </div>
           <div>
-            <p className="text-2xl sm:text-3xl font-black text-blue-700">{t('metric2Val')}</p>
-            <p className="text-xs text-slate-500 font-semibold mt-0.5">{t('metric2Desc')}</p>
+            <div className="text-2xl sm:text-3xl font-black text-blue-700">{t('metric2Val')}</div>
+            <div className="text-xs text-slate-500 font-bold mt-1">{t('metric2Desc')}</div>
           </div>
           <div>
-            <p className="text-2xl sm:text-3xl font-black text-emerald-600">{t('metric3Val')}</p>
-            <p className="text-xs text-slate-500 font-semibold mt-0.5">{t('metric3Desc')}</p>
+            <div className="text-2xl sm:text-3xl font-black text-blue-700">{t('metric3Val')}</div>
+            <div className="text-xs text-slate-500 font-bold mt-1">{t('metric3Desc')}</div>
           </div>
           <div>
-            <p className="text-2xl sm:text-3xl font-black text-blue-700">{t('metric4Val')}</p>
-            <p className="text-xs text-slate-500 font-semibold mt-0.5">{t('metric4Desc')}</p>
+            <div className="text-2xl sm:text-3xl font-black text-blue-700">{t('metric4Val')}</div>
+            <div className="text-xs text-slate-500 font-bold mt-1">{t('metric4Desc')}</div>
           </div>
         </div>
       </section>
 
-      {/* Core Features Pillars */}
+      {/* Features Overview */}
       <section className="py-14 px-4 max-w-5xl mx-auto">
-        <div className="text-center mb-12">
+        <div className="text-center mb-10">
           <span className="text-xs font-black uppercase text-blue-700 tracking-wider bg-blue-100 px-3 py-1 rounded-full">
             {t('featuresBadge')}
           </span>
-          <h2 className="text-2xl sm:text-4xl font-black text-slate-900 mt-2">
+          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mt-2">
             {t('featuresHeading')}
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-xl mx-auto">
@@ -220,14 +212,19 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman }: LandingPa
         </div>
       </section>
 
-      {/* About Us Section */}
+      {/* About Us Spotlight Section */}
       <section className="bg-slate-100/70 py-14 px-4 border-t border-slate-200">
         <div className="max-w-4xl mx-auto">
           <div className="bg-white rounded-3xl p-8 sm:p-10 border border-slate-200 shadow-xs">
-            <div className="flex items-center gap-2 mb-3">
-              <Award className="w-5 h-5 text-blue-600" />
-              <span className="text-xs font-black uppercase text-blue-700 tracking-wider">
-                {t('aboutBadge')}
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="flex items-center gap-2">
+                <Award className="w-5 h-5 text-blue-600" />
+                <span className="text-xs font-black uppercase text-blue-700 tracking-wider">
+                  {t('aboutBadge')}
+                </span>
+              </div>
+              <span className="text-[11px] font-bold text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                {lang === 'hi' ? 'स्थापना: 2024' : 'Est. 2024'}
               </span>
             </div>
             <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mb-4">
@@ -239,11 +236,25 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman }: LandingPa
             <p className="text-sm text-slate-600 leading-relaxed">
               {t('aboutP2')}
             </p>
+
+            <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => handleNav('ABOUT')}
+                className="inline-flex items-center gap-1.5 text-xs font-black text-blue-600 hover:text-blue-800 transition active:scale-95"
+              >
+                <span>{lang === 'hi' ? 'हमारे बारे में पूरी जानकारी पढ़ें' : 'Read Full About Us Details'}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+              <span className="text-xs text-slate-400">
+                {lang === 'hi' ? 'बिना किसी कागजी झंझट के संपूर्ण समाधान' : 'Modern SaaS Built for Dairy Supply'}
+              </span>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Customer Testimonials */}
+      {/* Customer & Vendor Testimonials */}
       <section className="py-14 px-4 max-w-5xl mx-auto">
         <div className="text-center mb-10">
           <span className="text-xs font-black uppercase text-blue-700 tracking-wider bg-blue-100 px-3 py-1 rounded-full">
@@ -265,8 +276,8 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman }: LandingPa
               "{t('testi1Quote')}"
             </p>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold">
-                RY
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white flex items-center justify-center font-black text-xs shadow-xs">
+                DP
               </div>
               <div>
                 <p className="text-sm font-bold text-slate-900">{t('testi1Name')}</p>
@@ -285,8 +296,8 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman }: LandingPa
               "{t('testi2Quote')}"
             </p>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
-                SJ
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center font-black text-xs shadow-xs">
+                DH
               </div>
               <div>
                 <p className="text-sm font-bold text-slate-900">{t('testi2Name')}</p>
@@ -313,14 +324,20 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman }: LandingPa
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-center">
-            {/* Founder Card */}
+            {/* Support Desk Card */}
             <div className="bg-white/10 p-5 rounded-2xl backdrop-blur-xs border border-white/10 flex flex-col justify-between">
               <div>
-                <UserCheck className="w-6 h-6 text-blue-300 mx-auto mb-2" />
-                <h4 className="text-sm font-bold">Sanjay Yadav</h4>
+                <Headphones className="w-6 h-6 text-blue-300 mx-auto mb-2" />
+                <h4 className="text-sm font-bold">{t('contactFounderName')}</h4>
                 <p className="text-xs text-blue-200 mt-1">{t('contactFounderRole')}</p>
               </div>
-              <p className="text-[11px] text-slate-300 mt-3 pt-2 border-t border-white/10">Milk Hisab Initiative</p>
+              <button
+                type="button"
+                onClick={() => handleNav('CONTACT')}
+                className="mt-3 text-[11px] font-bold text-blue-300 hover:text-white underline pt-2 border-t border-white/10"
+              >
+                {lang === 'hi' ? 'संपर्क फ़ॉर्म खोलें' : 'Open Contact Form'}
+              </button>
             </div>
 
             {/* Primary Phone & WhatsApp */}
@@ -336,7 +353,7 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman }: LandingPa
                 </a>
               </div>
               <a 
-                href="https://wa.me/919971880670?text=Namaste%20Sanjay%20ji%2C%20I%20want%20to%20know%20more%20about%20Milk%20Hisab" 
+                href="https://wa.me/919971880670?text=Namaste%20Milk%20Hisab%20Team%2C%20I%20want%20to%20know%20more%20about%20Milk%20Hisab" 
                 target="_blank" 
                 rel="noreferrer" 
                 className="mt-3 inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2 px-3 rounded-xl shadow-xs transition"
@@ -380,18 +397,65 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman }: LandingPa
         </div>
       </section>
 
-      {/* Footer - Pure Milk Hisab Branding, No 'All Rights Reserved' */}
-      <footer className="bg-slate-950 text-slate-400 text-xs py-8 px-4 border-t border-slate-900">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
-          <div>
-            <p className="text-sm font-black text-white tracking-tight">Milk Hisab • Digital Milk Ledger India</p>
-            <p className="text-xs text-slate-400 mt-1">
-              Founder: <span className="font-bold text-blue-400">Sanjay Yadav</span> | Contact: <a href="tel:+919971880670" className="hover:text-white underline font-semibold">+91 9971880670</a> (WhatsApp), <a href="tel:8053278764" className="hover:text-white underline font-semibold">8053278764</a>
+      {/* Footer with Menu Navigation Links */}
+      <footer className="bg-slate-950 text-slate-400 text-xs py-10 px-4 border-t border-slate-900">
+        <div className="max-w-5xl mx-auto space-y-6">
+          
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
+            <div>
+              <p className="text-base font-black text-white tracking-tight">
+                Milk Hisab • Digital Milk Ledger
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                {lang === 'hi' 
+                  ? 'सन् 2024 में स्थापित • देश भर के दूधियों और परिवारों के लिए भरोसेमंद डिजिटल डायरी'
+                  : 'Established in 2024 • Trusted by dairy vendors & households across India'}
+              </p>
+            </div>
+
+            {/* Footer Navigation Links */}
+            <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-bold">
+              <button 
+                type="button" 
+                onClick={() => handleNav('ABOUT')}
+                className="hover:text-white transition"
+              >
+                {t('menuAbout')}
+              </button>
+              <span className="text-slate-700">•</span>
+              <button 
+                type="button" 
+                onClick={() => handleNav('CONTACT')}
+                className="hover:text-white transition"
+              >
+                {t('menuContact')}
+              </button>
+              <span className="text-slate-700">•</span>
+              <button 
+                type="button" 
+                onClick={() => handleNav('TERMS')}
+                className="hover:text-white transition"
+              >
+                {t('menuTerms')}
+              </button>
+              <span className="text-slate-700">•</span>
+              <button 
+                type="button" 
+                onClick={() => handleNav('PRIVACY')}
+                className="hover:text-white transition"
+              >
+                {t('menuPrivacy')}
+              </button>
+            </div>
+          </div>
+
+          <div className="pt-6 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left text-[11px] text-slate-500">
+            <p>
+              Helpline: <a href="tel:+919971880670" className="hover:text-white underline">+91 9971880670</a> (WhatsApp), <a href="tel:8053278764" className="hover:text-white underline">8053278764</a> | support@milkhisab.in
             </p>
+            <p>Made with ❤️ for Indian Dairy Vendors and Families.</p>
           </div>
-          <div className="text-center sm:text-right text-[11px] text-slate-500">
-            <p>Made with ❤️ for Indian Milkmen and Families.</p>
-          </div>
+
         </div>
       </footer>
     </div>

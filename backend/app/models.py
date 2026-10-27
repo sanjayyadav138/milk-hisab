@@ -121,3 +121,14 @@ class Payment(Base):
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
 
     customer = relationship("Customer", back_populates="payments")
+
+class ContactInquiry(Base):
+    __tablename__ = "contact_inquiries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    phone = Column(String(20), nullable=False)
+    email = Column(String(100), nullable=False)
+    location = Column(String(150), nullable=False)
+    comments = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)

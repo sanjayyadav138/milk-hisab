@@ -383,3 +383,23 @@ export async function rejectMilkRequestApi(requestId: number): Promise<{ message
   }
   return res.json();
 }
+
+
+export async function submitContactInquiryApi(payload: {
+  name: string;
+  phone: string;
+  email: string;
+  location: string;
+  comments: string;
+}): Promise<{ status: string; message: string; id: number }> {
+  const res = await fetch(`${API_BASE}/portal/contact`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "पूछताछ भेजने में त्रुटि आई" }));
+    throw new Error(err.detail || "पूछताछ भेजने में त्रुटि आई");
+  }
+  return res.json();
+}

@@ -145,3 +145,16 @@ class VendorPublicProfile(BaseModel):
     evening_time: str
     active_customers_count: int = 0
     model_config = ConfigDict(from_attributes=True)
+
+# --- Contact Inquiry Schema ---
+class ContactInquiryCreate(BaseModel):
+    name: str
+    phone: str
+    email: str
+    location: str
+    comments: str
+
+class ContactInquiryResponse(ContactInquiryCreate):
+    id: int
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Milk, Users, FileText, MessageSquare, AlertCircle, CheckCircle, Info, X } from 'lucide-react';
-import Navbar from './components/Navbar';
+import Navbar, { PublicPageType } from './components/Navbar';
 import LandingPage from './components/LandingPage';
 import AuthModal from './components/AuthModal';
 import FindMilkmanModal from './components/FindMilkmanModal';
@@ -10,6 +10,10 @@ import CustomersView from './components/CustomersView';
 import LedgerBillingView from './components/LedgerBillingView';
 import VendorInboxView from './components/VendorInboxView';
 import CustomerPortal from './components/CustomerPortal';
+import AboutUsView from './components/AboutUsView';
+import ContactUsView from './components/ContactUsView';
+import TermsConditionsView from './components/TermsConditionsView';
+import PrivacyPolicyView from './components/PrivacyPolicyView';
 import { AuthState } from './types';
 import { validateSessionApi } from './services/api';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
@@ -20,6 +24,15 @@ const INACTIVITY_TIMEOUT_MS = 7 * 24 * 60 * 60 * 1000; // 7 days inactivity wind
 interface Notice {
   type: 'info' | 'warning' | 'error' | 'success';
   message: string;
+}
+
+function getPublicPageFromHash(hash: string): PublicPageType | null {
+  const cleanHash = hash.replace(/^#\/?/, '').toLowerCase();
+  if (cleanHash === 'about') return 'ABOUT';
+  if (cleanHash === 'contact') return 'CONTACT';
+  if (cleanHash === 'terms') return 'TERMS';
+  if (cleanHash === 'privacy') return 'PRIVACY';
+  return null;
 }
 
 function MainApp() {
@@ -48,6 +61,10 @@ function MainApp() {
       console.error('Failed to parse auth session', e);
     }
     return { role: null, user: null, customer: null, token: null, expires_at: null, last_active_at: null };
+  });
+
+  const [activePublicPage, setActivePublicPage] = useState<PublicPageType | null>(() => {
+    return getPublicPageFromHash(window.location.hash);
   });
 
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -167,6 +184,14 @@ function MainApp() {
     const handleRouteGuard = () => {
       const hash = window.location.hash || '#/';
       const currentRole = authRef.current?.role;
+      const pubPage = getPublicPageFromHash(hash);
+      
+      setActivePublicPage(pubPage);
+
+      // If user is on a public informational page (About, Contact, Terms, Privacy), allow access freely
+      if (pubPage) {
+        return;
+      }
 
       if (currentRole === 'vendor') {
         // Customer route unauthorized protection (DSH-03)
@@ -238,9 +263,29 @@ function MainApp() {
     }
   };
 
+  const handleBackFromPublic = () => {
+    if (auth.role === 'vendor') {
+      window.location.hash = '#/vendor/dashboard';
+    } else if (auth.role === 'customer') {
+      window.location.hash = '#/customer/dashboard';
+    } else {
+      window.location.hash = '#/';
+    }
+  };
+
+  const handleNavigatePage = (page: PublicPageType) => {
+    const routes: Record<PublicPageType, string> = {
+      ABOUT: '#/about',
+      CONTACT: '#/contact',
+      TERMS: '#/terms',
+      PRIVACY: '#/privacy'
+    };
+    window.location.hash = routes[page];
+  };
+
   return (
     <div className="min-h-screen bg-[#f9fafb] flex flex-col font-sans">
-      {/* Top Navbar with Profile Dropdown (PRF-01, PRF-02) */}
+      {/* Top Navbar with Profile Dropdown & Menu Links */}
       <Navbar 
         auth={auth} 
         onLogout={() => handleLogout(false)} 
@@ -255,6 +300,7 @@ function MainApp() {
         onOpenProfile={() => setProfileModalOpen(true)}
         onNavigateDashboard={handleNavigateDashboard}
         onOpenFindMilkman={() => handleOpenFindMilkman('')}
+        onNavigatePage={handleNavigatePage}
       />
 
       {/* Floating System Notice / Alert Banner */}
@@ -286,90 +332,114 @@ function MainApp() {
         </div>
       )}
 
-      {/* Main View Condition */}
+      {/* Main View Router */}
       <main className="flex-1">
-        {/* Landing Page for Unauthenticated Visitors */}
-        {!auth.role && (
-          <LandingPage onOpenAuth={handleOpenAuth} onOpenFindMilkman={handleOpenFindMilkman} />
+        
+        {/* Dedicated Public Informational Views */}
+        {activePublicPage === 'ABOUT' && (
+          <AboutUsView onBack={handleBackFromPublic} />
+        )}
+        {activePublicPage === 'CONTACT' && (
+          <ContactUsView onBack={handleBackFromPublic} />
+        )}
+        {activePublicPage === 'TERMS' && (
+          <TermsConditionsView onBack={handleBackFromPublic} />
+        )}
+        {activePublicPage === 'PRIVACY' && (
+          <PrivacyPolicyView onBack={handleBackFromPublic} />
         )}
 
-        {/* Customer Portal (DSH-02) */}
-        {auth.role === 'customer' && auth.customer && (
-          <CustomerPortal 
-            customer={auth.customer} 
-            onLogout={() => handleLogout(false)} 
-          />
-        )}
+        {/* Regular Role-Based App Views when not on a public subpage */}
+        {!activePublicPage && (
+          <>
+            {/* Landing Page for Unauthenticated Visitors */}
+            {!auth.role && (
+              <LandingPage 
+                onOpenAuth={handleOpenAuth} 
+                onOpenFindMilkman={handleOpenFindMilkman}
+                onNavigatePage={handleNavigatePage}
+              />
+            )}
 
-        {/* Vendor Control Panel (DSH-01) */}
-        {auth.role === 'vendor' && auth.user && (
-          <div className="pb-20 sm:pb-8">
-            {vendorTab === 'DAILY' && <DailyChecklist />}
-            {vendorTab === 'CUSTOMERS' && <CustomersView />}
-            {vendorTab === 'LEDGER' && <LedgerBillingView />}
-            {vendorTab === 'INBOX' && <VendorInboxView />}
+            {/* Customer Portal (DSH-02) */}
+            {auth.role === 'customer' && auth.customer && (
+              <CustomerPortal 
+                customer={auth.customer} 
+                onLogout={() => handleLogout(false)} 
+              />
+            )}
 
-            {/* Bottom Mobile Navigation for Milkman */}
-            <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 shadow-2xl">
-              <div className="max-w-2xl mx-auto grid grid-cols-4 h-16">
-                <button
-                  onClick={() => setVendorTab('DAILY')}
-                  className={`flex flex-col items-center justify-center transition active:scale-95 ${
-                    vendorTab === 'DAILY' 
-                      ? 'text-blue-700 font-black' 
-                      : 'text-slate-500 font-medium hover:text-slate-800'
-                  }`}
-                >
-                  <div className={`p-1 rounded-xl ${vendorTab === 'DAILY' ? 'bg-blue-100' : ''}`}>
-                    <Milk className="w-5 h-5" />
+            {/* Vendor Control Panel (DSH-01) */}
+            {auth.role === 'vendor' && auth.user && (
+              <div className="pb-20 sm:pb-8">
+                {vendorTab === 'DAILY' && <DailyChecklist />}
+                {vendorTab === 'CUSTOMERS' && <CustomersView />}
+                {vendorTab === 'LEDGER' && <LedgerBillingView />}
+                {vendorTab === 'INBOX' && <VendorInboxView />}
+
+                {/* Bottom Mobile Navigation for Milkman */}
+                <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 shadow-2xl">
+                  <div className="max-w-2xl mx-auto grid grid-cols-4 h-16">
+                    <button
+                      onClick={() => setVendorTab('DAILY')}
+                      className={`flex flex-col items-center justify-center transition active:scale-95 ${
+                        vendorTab === 'DAILY' 
+                          ? 'text-blue-700 font-black' 
+                          : 'text-slate-500 font-medium hover:text-slate-800'
+                      }`}
+                    >
+                      <div className={`p-1 rounded-xl ${vendorTab === 'DAILY' ? 'bg-blue-100' : ''}`}>
+                        <Milk className="w-5 h-5" />
+                      </div>
+                      <span className="text-[10px] mt-0.5">{t('navDaily')}</span>
+                    </button>
+
+                    <button
+                      onClick={() => setVendorTab('CUSTOMERS')}
+                      className={`flex flex-col items-center justify-center transition active:scale-95 ${
+                        vendorTab === 'CUSTOMERS' 
+                          ? 'text-blue-700 font-black' 
+                          : 'text-slate-500 font-medium hover:text-slate-800'
+                      }`}
+                    >
+                      <div className={`p-1 rounded-xl ${vendorTab === 'CUSTOMERS' ? 'bg-blue-100' : ''}`}>
+                        <Users className="w-5 h-5" />
+                      </div>
+                      <span className="text-[10px] mt-0.5">{t('navCustomers')}</span>
+                    </button>
+
+                    <button
+                      onClick={() => setVendorTab('LEDGER')}
+                      className={`flex flex-col items-center justify-center transition active:scale-95 ${
+                        vendorTab === 'LEDGER' 
+                          ? 'text-blue-700 font-black' 
+                          : 'text-slate-500 font-medium hover:text-slate-800'
+                      }`}
+                    >
+                      <div className={`p-1 rounded-xl ${vendorTab === 'LEDGER' ? 'bg-blue-100' : ''}`}>
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <span className="text-[10px] mt-0.5">{t('navLedger')}</span>
+                    </button>
+
+                    <button
+                      onClick={() => setVendorTab('INBOX')}
+                      className={`flex flex-col items-center justify-center transition active:scale-95 ${
+                        vendorTab === 'INBOX' 
+                          ? 'text-blue-700 font-black' 
+                          : 'text-slate-500 font-medium hover:text-slate-800'
+                      }`}
+                    >
+                      <div className={`p-1 rounded-xl ${vendorTab === 'INBOX' ? 'bg-blue-100' : ''}`}>
+                        <MessageSquare className="w-5 h-5" />
+                      </div>
+                      <span className="text-[10px] mt-0.5">{t('navInbox')}</span>
+                    </button>
                   </div>
-                  <span className="text-[10px] mt-0.5">{t('navDaily')}</span>
-                </button>
-
-                <button
-                  onClick={() => setVendorTab('CUSTOMERS')}
-                  className={`flex flex-col items-center justify-center transition active:scale-95 ${
-                    vendorTab === 'CUSTOMERS' 
-                      ? 'text-blue-700 font-black' 
-                      : 'text-slate-500 font-medium hover:text-slate-800'
-                  }`}
-                >
-                  <div className={`p-1 rounded-xl ${vendorTab === 'CUSTOMERS' ? 'bg-blue-100' : ''}`}>
-                    <Users className="w-5 h-5" />
-                  </div>
-                  <span className="text-[10px] mt-0.5">{t('navCustomers')}</span>
-                </button>
-
-                <button
-                  onClick={() => setVendorTab('LEDGER')}
-                  className={`flex flex-col items-center justify-center transition active:scale-95 ${
-                    vendorTab === 'LEDGER' 
-                      ? 'text-blue-700 font-black' 
-                      : 'text-slate-500 font-medium hover:text-slate-800'
-                  }`}
-                >
-                  <div className={`p-1 rounded-xl ${vendorTab === 'LEDGER' ? 'bg-blue-100' : ''}`}>
-                    <FileText className="w-5 h-5" />
-                  </div>
-                  <span className="text-[10px] mt-0.5">{t('navLedger')}</span>
-                </button>
-
-                <button
-                  onClick={() => setVendorTab('INBOX')}
-                  className={`flex flex-col items-center justify-center transition active:scale-95 ${
-                    vendorTab === 'INBOX' 
-                      ? 'text-blue-700 font-black' 
-                      : 'text-slate-500 font-medium hover:text-slate-800'
-                  }`}
-                >
-                  <div className={`p-1 rounded-xl ${vendorTab === 'INBOX' ? 'bg-blue-100' : ''}`}>
-                    <MessageSquare className="w-5 h-5" />
-                  </div>
-                  <span className="text-[10px] mt-0.5">{t('navInbox')}</span>
-                </button>
+                </nav>
               </div>
-            </nav>
-          </div>
+            )}
+          </>
         )}
       </main>
 

@@ -30,16 +30,42 @@
 
 ---
 
-## 🚀 How to Run
+## 🚀 How to Run & Deploy
 
-### 1. Launch FastAPI Backend
+### Quick Production Build & Deploy (Recommended)
+
+#### Option A: Linux / macOS / Git Bash (Shell Script)
+```bash
+# 1. Compile and build both Frontend and Backend
+bash build.sh
+
+# 2. Launch production server (serves API + React SPA unified on port 8000)
+bash start.sh
+```
+* Or run both in 1-click: `bash deploy.sh`
+
+#### Option B: Windows Native (.bat)
+* Double-click or run: `build.bat` followed by `start.bat`
+
+#### Option C: Docker & Docker Compose (Any Cloud / VPS)
+```bash
+docker compose up --build -d
+```
+* Access Web App: [http://localhost:8000](http://localhost:8000)
+* Interactive Swagger API Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+---
+
+### Local Development Mode
+
+#### 1. Launch FastAPI Backend
 ```powershell
 cd backend
 .\venv\Scripts\uvicorn app.main:app --reload --port 8000
 ```
 * Interactive API Documentation: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-### 2. Launch React (TypeScript + Vite) Frontend
+#### 2. Launch React (TypeScript + Vite) Frontend
 ```powershell
 cd frontend
 npm run dev

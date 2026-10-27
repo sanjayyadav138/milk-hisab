@@ -4,7 +4,10 @@ import {
   VendorDisputeItem, VendorMessageThread, VendorInfo
 } from '../types';
 
-const API_BASE = "http://localhost:8000/api";
+// Production / Deployment configured API Base URL
+const API_BASE = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api`
+  : (import.meta.env.DEV ? "http://localhost:8000/api" : "/api");
 
 // --- Auth Endpoints ---
 export async function loginApi(phone: string, role: 'vendor' | 'customer', pin: string = '1234') {

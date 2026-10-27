@@ -128,16 +128,42 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+import os
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
 # Include Routers
 app.include_router(customers.router)
 app.include_router(dailylogs.router)
 app.include_router(billing.router)
 app.include_router(portal.router)
 
-@app.get("/")
-def root():
-    return {
-        "app": "Milk Hisab API",
-        "status": "online",
-        "docs_url": "/docs"
-    }
+# Production SPA / Frontend Static Serving
+frontend_dist = os.getenv(
+    "FRONTEND_DIST_DIR",
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
+)
+
+if os.path.exists(frontend_dist) and os.path.exists(os.path.join(frontend_dist, "index.html")):
+    assets_dir = os.path.join(frontend_dist, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_spa(full_path: str = ""):
+        # Avoid intercepting API or docs routes
+        if full_path.startswith("api") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="Not Found")
+        target_file = os.path.join(frontend_dist, full_path)
+        if full_path and os.path.exists(target_file) and os.path.isfile(target_file):
+            return FileResponse(target_file)
+        return FileResponse(os.path.join(frontend_dist, "index.html"))
+else:
+    @app.get("/")
+    def root():
+        return {
+            "app": "Milk Hisab API",
+            "status": "online",
+            "docs_url": "/docs"
+        }

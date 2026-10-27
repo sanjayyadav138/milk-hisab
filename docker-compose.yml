@@ -1,0 +1,19 @@
+services:
+  milk-hisab:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: milk-hisab-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - HOST=0.0.0.0
+      - DATABASE_URL=sqlite:///./doodh_ledger.db
+    volumes:
+      - milk-hisab-data:/app/backend
+
+volumes:
+  milk-hisab-data:
+    driver: local

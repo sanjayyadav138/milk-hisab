@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Store, ShieldCheck, ArrowRight, KeyRound } from 'lucide-react';
+import { X, User, Store, ShieldCheck, ArrowRight } from 'lucide-react';
 import { loginApi, registerVendorApi, registerCustomerApi, fetchVendorsList } from '../services/api';
 import { AuthState, VendorInfo } from '../types';
 import { useLanguage } from '../context/LanguageContext';
@@ -65,27 +65,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialRole = 'v
       onClose();
     } catch (err: any) {
       setErrorMsg(err.message || t('loginError'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleQuickDemoLogin = async (demoRole: 'vendor' | 'customer') => {
-    setLoading(true);
-    setErrorMsg('');
-    try {
-      const data = await loginApi('1234', demoRole, '1234');
-      onSuccess({
-        role: data.role,
-        user: data.user || null,
-        customer: data.customer || null,
-        token: data.token || null,
-        expires_at: data.expires_at || null,
-        last_active_at: Date.now(),
-      });
-      onClose();
-    } catch (err: any) {
-      setErrorMsg(err.message || t('demoLoginError'));
     } finally {
       setLoading(false);
     }
@@ -217,28 +196,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialRole = 'v
               </span>
             </button>
           </div>
-
-          {/* Highlighted Dummy Credentials Box */}
-          {tab === 'LOGIN' && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <KeyRound className="w-4 h-4 text-blue-700 shrink-0" />
-                <div>
-                  <p className="text-[11px] font-bold text-blue-900 uppercase">{t('dummyCredTitle')}</p>
-                  <p className="text-xs font-medium text-blue-800">
-                    {t('dummyCredDesc')}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => { setPhone('1234'); setPin('1234'); }}
-                className="text-[11px] font-black bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 rounded-xl shadow-xs transition"
-              >
-                {t('autoFill')}
-              </button>
-            </div>
-          )}
 
           {errorMsg && (
             <div className="p-3 mb-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl text-xs font-bold">

@@ -1,0 +1,38 @@
+# ==============================================================================
+# Systemd Service for Milk Hisab FastAPI Backend
+# Place at: /etc/systemd/system/milkhisab.service
+# Control:  sudo systemctl start|stop|restart|status milkhisab
+# ==============================================================================
+
+[Unit]
+Description=Milk Hisab FastAPI Backend Daemon
+After=network.target
+
+[Service]
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/var/www/milkhisab/backend
+Environment="PATH=/var/www/milkhisab/backend/venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="DATABASE_URL=sqlite:////var/www/milkhisab/backend/doodh_ledger.db"
+
+# Run Gunicorn with 3 Uvicorn workers for high concurrency
+ExecStart=/var/www/milkhisab/backend/venv/bin/gunicorn \
+    -w 3 \
+    -k uvicorn.workers.UvicornWorker \
+    app.main:app \
+    --bind 127.0.0.1:8000 \
+    --timeout 120 \
+    --keep-alive 5 \
+    --access-logfile /var/log/milkhisab/access.log \
+    --error-logfile /var/log/milkhisab/error.log
+
+# Auto-Restart policy
+Restart=always
+RestartSec=5
+KillSignal=SIGQUIT
+Type=notify
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

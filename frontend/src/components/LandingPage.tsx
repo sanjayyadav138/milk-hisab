@@ -3,7 +3,7 @@ import {
   Sparkles, Zap, Users, Star, Award, 
   MapPin, Phone, MessageCircle, ArrowRight, Headphones,
   ShieldCheck, HelpCircle, FileText, CheckCircle, CheckCircle2,
-  Calendar, Milk, Clock, Mic, Check, ChevronRight
+  Calendar, Milk, Clock, Mic, Check, ChevronRight, Play, Film, Smartphone
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { PublicPageType } from './Navbar';
@@ -18,6 +18,7 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
   const [localSearch, setLocalSearch] = useState('');
   const { t, lang } = useLanguage();
   const [activeFeatureTab, setActiveFeatureTab] = useState<number>(0);
+  const [heroRightTab, setHeroRightTab] = useState<'APP_PREVIEW' | 'FARM_VIDEO'>('APP_PREVIEW');
 
   const featureTabs = [
     {
@@ -76,21 +77,28 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
       </div>
 
       {/* Hero Section: Modern, Luminous, Professional SaaS Aesthetic */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-blue-50/70 via-white to-slate-50 py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 border-b border-slate-200/80">
+      <section className="relative overflow-hidden bg-gradient-to-b from-blue-50/70 via-white to-slate-50 py-10 sm:py-14 md:py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200/80">
         
         {/* Soft Background Radial Blurs */}
         <div className="w-96 h-96 bg-blue-400/10 rounded-full blur-3xl absolute -top-20 -left-20 pointer-events-none" />
         <div className="w-96 h-96 bg-emerald-400/10 rounded-full blur-3xl absolute -top-20 -right-20 pointer-events-none" />
 
-        <div className="max-w-7xl mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
+        {/* Floating 3D Milk Splash Aesthetic Accent in Bottom Right */}
+        <img
+          src="/media/milk-image2.png"
+          alt="Fresh Milk Wave Splash"
+          className="w-72 sm:w-96 lg:w-[28rem] absolute -bottom-10 -right-10 opacity-15 pointer-events-none select-none hidden md:block"
+        />
+
+        <div className="max-w-7xl mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-8 items-center">
           
           {/* Left Hero Content */}
           <div className="lg:col-span-7 space-y-6 text-left">
             
             {/* Luminous Modern Badge */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200/80 text-blue-800 text-xs font-bold shadow-xs">
-              <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
-              <span>{lang === 'hi' ? '✨ आधुनिक डिजिटल दूध बहीखाता 2.0 • 100% सुरक्षित क्लाउड बैकअप' : '✨ Modern Digital Dairy Cloud 2.0 • 100% Cloud Synced'}</span>
+              <img src="/media/cow-image.png" alt="Cow icon" className="w-4 h-4 object-contain inline-block" />
+              <span>{lang === 'hi' ? 'आधुनिक डिजिटल दूध बहीखाता 2.0 • 100% सुरक्षित क्लाउड बैकअप' : 'Modern Digital Dairy Cloud 2.0 • 100% Cloud Synced'}</span>
             </div>
 
             {/* High Impact Headline */}
@@ -153,97 +161,187 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
 
           </div>
 
-          {/* Right Hero: Live Interactive Dairy App Simulation Card */}
+          {/* Right Hero: Interactive Dual-Mode Showcase (App Simulation OR Real Dairy Farm Video) */}
           <div className="lg:col-span-5 relative">
-            <div className="relative mx-auto max-w-md bg-white rounded-3xl p-5 shadow-2xl border border-slate-200 ring-1 ring-slate-900/5 transition hover:shadow-3xl">
-              
-              {/* Mock App Header */}
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-xs">
-                    <Milk className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-black text-slate-900">Milk Hisab Dairy Cloud</h4>
-                    <p className="text-[10px] text-slate-500">29 Oct 2026 • आज का हिसाब</p>
-                  </div>
-                </div>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>लाइव सिंक</span>
-                </span>
-              </div>
+            
+            {/* View Mode Switcher Header */}
+            <div className="flex items-center justify-center gap-1 mb-2 bg-slate-200/60 p-1 rounded-2xl w-fit mx-auto text-xs font-bold shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setHeroRightTab('APP_PREVIEW')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition ${
+                  heroRightTab === 'APP_PREVIEW'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Smartphone className="w-3.5 h-3.5 text-blue-600" />
+                <span>{lang === 'hi' ? 'ऐप लाइव प्रिव्यू' : 'App Preview'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setHeroRightTab('FARM_VIDEO')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition ${
+                  heroRightTab === 'FARM_VIDEO'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Film className="w-3.5 h-3.5 text-emerald-600" />
+                <span>{lang === 'hi' ? 'डेयरी फार्म वीडियो' : 'Farm Video Tour'}</span>
+              </button>
+            </div>
 
-              {/* Bilateral Inward vs Outward Stats Mockup */}
-              <div className="grid grid-cols-3 gap-2 my-3">
-                <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-2 text-center">
-                  <p className="text-[9px] font-bold text-blue-700 uppercase">संकलन</p>
-                  <p className="text-base font-black text-blue-900">45.0 <span className="text-[10px]">L</span></p>
-                  <p className="text-[9px] text-blue-600 font-medium">4 घरों से</p>
-                </div>
-                <div className="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-2 text-center">
-                  <p className="text-[9px] font-bold text-emerald-700 uppercase">वितरण</p>
-                  <p className="text-base font-black text-emerald-900">43.5 <span className="text-[10px]">L</span></p>
-                  <p className="text-[9px] text-emerald-600 font-medium">8 ग्राहकों को</p>
-                </div>
-                <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-2 text-center">
-                  <p className="text-[9px] font-bold text-indigo-700 uppercase">स्टॉक</p>
-                  <p className="text-base font-black text-indigo-900">+1.5 <span className="text-[10px]">L</span></p>
-                  <p className="text-[9px] text-indigo-600 font-medium">शेष बचा</p>
-                </div>
-              </div>
-
-              {/* Live Customer Delivery Card Preview */}
-              <div className="bg-slate-50 rounded-2xl p-3 border border-slate-200 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h5 className="text-xs font-black text-slate-900">राकेश शर्मा (H.No 12)</h5>
-                    <p className="text-[10px] text-slate-500">तय मात्रा: 2.0L गाय का दूध • ₹60/L</p>
+            {/* TAB 1: App Simulation */}
+            {heroRightTab === 'APP_PREVIEW' && (
+              <div className="relative mx-auto max-w-md bg-white rounded-3xl p-5 shadow-2xl border border-slate-200 ring-1 ring-slate-900/5 transition hover:shadow-3xl animate-in fade-in duration-200">
+                
+                {/* Mock App Header */}
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <div className="w-9 h-9 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-xs">
+                      <Milk className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900">Milk Hisab Dairy Cloud</h4>
+                      <p className="text-[10px] text-slate-500">29 Oct 2026 • आज का हिसाब</p>
+                    </div>
                   </div>
-                  <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md">
-                    ✓ वितरित (2.0L)
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>लाइव सिंक</span>
                   </span>
                 </div>
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-[10px] text-slate-500 font-medium">दैनिक स्थिति:</span>
-                  <div className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-slate-200 text-xs font-black text-slate-800">
-                    <span>2.0 Liters</span>
+
+                {/* Bilateral Inward vs Outward Stats Mockup */}
+                <div className="grid grid-cols-3 gap-2 my-3">
+                  <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-2 text-center">
+                    <p className="text-[9px] font-bold text-blue-700 uppercase">संकलन</p>
+                    <p className="text-base font-black text-blue-900">45.0 <span className="text-[10px]">L</span></p>
+                    <p className="text-[9px] text-blue-600 font-medium">4 घरों से</p>
+                  </div>
+                  <div className="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-2 text-center">
+                    <p className="text-[9px] font-bold text-emerald-700 uppercase">वितरण</p>
+                    <p className="text-base font-black text-emerald-900">43.5 <span className="text-[10px]">L</span></p>
+                    <p className="text-[9px] text-emerald-600 font-medium">8 ग्राहकों को</p>
+                  </div>
+                  <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-2 text-center">
+                    <p className="text-[9px] font-bold text-indigo-700 uppercase">स्टॉक</p>
+                    <p className="text-base font-black text-indigo-900">+1.5 <span className="text-[10px]">L</span></p>
+                    <p className="text-[9px] text-indigo-600 font-medium">शेष बचा</p>
                   </div>
                 </div>
-              </div>
 
-              {/* Voice Log Highlight Chip */}
-              <div className="mt-3 p-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                  <Mic className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[11px] font-bold text-emerald-950 truncate">
-                    "राकेश को 2L दूध और वर्मा जी की छुट्टी दर्ज करो"
-                  </p>
-                  <p className="text-[10px] text-emerald-700 font-medium">
-                    ✓ ऐप ने आवाज पहचान कर हिसाब तुरंत अपडेट कर दिया
-                  </p>
-                </div>
-              </div>
-
-              {/* WhatsApp UPI Bill Simulation Chip */}
-              <div className="mt-2.5 p-3 bg-blue-50/80 border border-blue-200 rounded-2xl flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <MessageCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <div>
-                    <p className="text-[11px] font-bold text-slate-900">मासिक WhatsApp बिल तैयार</p>
-                    <p className="text-[10px] text-slate-500">कुल: ₹2,400 • GPay/PhonePe QR शामिल</p>
+                {/* Live Customer Delivery Card Preview */}
+                <div className="bg-slate-50 rounded-2xl p-3 border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className="text-xs font-black text-slate-900">राकेश शर्मा (H.No 12)</h5>
+                      <p className="text-[10px] text-slate-500">तय मात्रा: 2.0L गाय का दूध • ₹60/L</p>
+                    </div>
+                    <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md">
+                      ✓ वितरित (2.0L)
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-[10px] text-slate-500 font-medium">दैनिक स्थिति:</span>
+                    <div className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-slate-200 text-xs font-black text-slate-800">
+                      <span>2.0 Liters</span>
+                    </div>
                   </div>
                 </div>
-                <span className="text-[10px] font-black bg-blue-600 text-white px-2 py-1 rounded-lg shrink-0">
-                  भेजें 🚀
-                </span>
-              </div>
 
-            </div>
+                {/* Voice Log Highlight Chip */}
+                <div className="mt-3 p-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <Mic className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold text-emerald-950 truncate">
+                      "राकेश को 2L दूध और वर्मा जी की छुट्टी दर्ज करो"
+                    </p>
+                    <p className="text-[10px] text-emerald-700 font-medium">
+                      ✓ ऐप ने आवाज पहचान कर हिसाब तुरंत अपडेट कर दिया
+                    </p>
+                  </div>
+                </div>
+
+                {/* WhatsApp UPI Bill Simulation Chip */}
+                <div className="mt-2.5 p-3 bg-blue-50/80 border border-blue-200 rounded-2xl flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <MessageCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <div>
+                      <p className="text-[11px] font-bold text-slate-900">मासिक WhatsApp बिल तैयार</p>
+                      <p className="text-[10px] text-slate-500">कुल: ₹2,400 • GPay/PhonePe QR शामिल</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-black bg-blue-600 text-white px-2 py-1 rounded-lg shrink-0">
+                    भेजें 🚀
+                  </span>
+                </div>
+
+              </div>
+            )}
+
+            {/* TAB 2: Real Dairy Farm Video Showcase */}
+            {heroRightTab === 'FARM_VIDEO' && (
+              <div className="relative mx-auto max-w-md bg-white rounded-3xl p-3 shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in duration-200">
+                <div className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-slate-950">
+                  <video
+                    src="/media/video.mp4"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-4">
+                    <div className="text-white">
+                      <span className="text-[10px] font-bold bg-emerald-600/90 text-white px-2 py-0.5 rounded-full inline-flex items-center gap-1 mb-1">
+                        <Check className="w-3 h-3" />
+                        <span>स्वस्थ पशु, शुद्ध दूध</span>
+                      </span>
+                      <h4 className="font-black text-sm">आधुनिक डेयरी फार्मिंग एवं पशु स्वास्थ्य</h4>
+                      <p className="text-[11px] text-slate-300">स्वच्छ वातावरण से लेकर घर-घर ताज़ा दूध पहुंचाने का डिजिटल साथी</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-3 text-center">
+                  <p className="text-xs font-bold text-slate-700">
+                    {lang === 'hi' ? 'भारतीय डेयरी किसानों और स्थानीय दूधियों का सच्चा डिजिटल साथी' : 'Dedicated to India’s hardworking dairy farmers and milkmen'}
+                  </p>
+                </div>
+              </div>
+            )}
+
           </div>
 
+        </div>
+      </section>
+
+      {/* Panoramic Dairy Heritage Banner Card */}
+      <section className="py-6 px-4 max-w-7xl mx-auto w-full">
+        <div className="relative rounded-3xl overflow-hidden shadow-xl border border-slate-200 bg-slate-950 h-52 sm:h-64 md:h-72">
+          <img
+            src="/media/banner-image-2.jpg"
+            alt="Dairy Cows Grazing Pasture"
+            className="w-full h-full object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/50 to-transparent flex items-center px-6 sm:px-12 md:px-16 text-left">
+            <div className="max-w-xl text-white space-y-2">
+              <span className="inline-block px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold">
+                🌿 {lang === 'hi' ? 'प्राकृतिक पोषण एवं शुद्धता' : 'Natural Care & Farm Purity'}
+              </span>
+              <h2 className="text-xl sm:text-3xl md:text-4xl font-black leading-tight text-white drop-shadow-md">
+                {lang === 'hi' ? 'स्वस्थ पशु, ताज़ा दूध और पारदर्शी डिजिटल हिसाब' : 'Healthy Cattle, Fresh Milk & Transparent Ledgers'}
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-200 font-medium drop-shadow-sm">
+                {lang === 'hi' 
+                  ? 'देश भर के 10,000+ दूधियों और लाखों परिवारों का अटूट भरोसा।' 
+                  : 'Empowering 10,000+ dairy vendors and millions of households across India.'}
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -306,14 +404,14 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
             <button
               type="button"
               onClick={() => onOpenAuth('vendor', 'LOGIN')}
-              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition"
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
             >
               {lang === 'hi' ? 'दूधिया के रूप में शुरू करें' : 'Start as Vendor'}
             </button>
             <button
               type="button"
               onClick={() => onOpenAuth('customer', 'LOGIN')}
-              className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition"
+              className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition cursor-pointer"
             >
               {lang === 'hi' ? 'ग्राहक के रूप में देखें' : 'View as Customer'}
             </button>
@@ -364,7 +462,7 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
                 key={area}
                 type="button"
                 onClick={() => onOpenFindMilkman(area)}
-                className="bg-white/10 hover:bg-white/20 text-white px-2.5 py-1 rounded-lg text-[11px] font-semibold transition"
+                className="bg-white/10 hover:bg-white/20 text-white px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer"
               >
                 📍 {area}
               </button>
@@ -395,44 +493,63 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
         </div>
       </section>
 
-      {/* About Us Spotlight Section */}
+      {/* About Us Spotlight Section with Authentic Alpine Pasture Image */}
       <section className="bg-slate-50/70 py-14 px-4 border-t border-slate-200">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-3xl p-8 sm:p-10 border border-slate-200 shadow-xs text-left">
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <div className="flex items-center gap-2">
-                <Award className="w-5 h-5 text-blue-600" />
-                <span className="text-xs font-semibold uppercase text-blue-700 tracking-wider">
-                  {t('aboutBadge')}
+          <div className="bg-white rounded-3xl overflow-hidden border border-slate-200 shadow-xs text-left">
+            
+            {/* Mountain Pasture Header Banner */}
+            <div className="h-44 sm:h-52 w-full relative overflow-hidden bg-slate-900">
+              <img
+                src="/media/banner-image1.png"
+                alt="Dairy Cows on Alpine Meadow"
+                className="w-full h-full object-cover object-center"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent flex items-end p-5">
+                <span className="text-xs font-bold text-white bg-blue-600/90 px-3 py-1 rounded-full backdrop-blur-xs">
+                  {lang === 'hi' ? 'शुद्धता और भरोसे की डिजिटल नींव' : 'The Foundation of Dairy Trust & Purity'}
                 </span>
               </div>
-              <span className="text-[11px] font-semibold text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
-                {lang === 'hi' ? 'स्थापना: 2026' : 'Est. 2026'}
-              </span>
             </div>
-            <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-4">
-              {t('aboutHeading')}
-            </h3>
-            <p className="text-sm text-slate-600 leading-relaxed mb-4 font-normal">
-              {t('aboutP1')}
-            </p>
-            <p className="text-sm text-slate-600 leading-relaxed font-normal">
-              {t('aboutP2')}
-            </p>
 
-            <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() => handleNav('ABOUT')}
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 transition active:scale-95"
-              >
-                <span>{lang === 'hi' ? 'हमारे बारे में पूरी जानकारी पढ़ें' : 'Read Full About Us Details'}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-              <span className="text-xs text-slate-400 font-normal">
-                {lang === 'hi' ? 'बिना किसी कागजी झंझट के संपूर्ण समाधान' : 'Modern SaaS Built for Dairy Supply'}
-              </span>
+            <div className="p-6 sm:p-8 space-y-4">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Award className="w-5 h-5 text-blue-600" />
+                  <span className="text-xs font-semibold uppercase text-blue-700 tracking-wider">
+                    {t('aboutBadge')}
+                  </span>
+                </div>
+                <span className="text-[11px] font-semibold text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                  {lang === 'hi' ? 'स्थापना: 2026' : 'Est. 2026'}
+                </span>
+              </div>
+
+              <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">
+                {t('aboutHeading')}
+              </h3>
+              <p className="text-sm text-slate-600 leading-relaxed font-normal">
+                {t('aboutP1')}
+              </p>
+              <p className="text-sm text-slate-600 leading-relaxed font-normal">
+                {t('aboutP2')}
+              </p>
+
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleNav('ABOUT')}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 transition active:scale-95 cursor-pointer"
+                >
+                  <span>{lang === 'hi' ? 'हमारे बारे में पूरी जानकारी पढ़ें' : 'Read Full About Us Details'}</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+                <span className="text-xs text-slate-400 font-normal">
+                  {lang === 'hi' ? 'बिना किसी कागजी झंझट के संपूर्ण समाधान' : 'Modern SaaS Built for Dairy Supply'}
+                </span>
+              </div>
             </div>
+
           </div>
         </div>
       </section>

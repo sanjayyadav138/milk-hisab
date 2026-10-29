@@ -209,6 +209,11 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin, on
       {/* Top Greeting Card - Dairy Navy Trust Anchor */}
       <div className="bg-gradient-to-r from-blue-900 via-blue-950 to-slate-900 rounded-3xl p-5 text-white shadow-xl mb-4 relative overflow-hidden">
         <div className="absolute right-0 top-0 translate-x-6 -translate-y-6 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl"></div>
+        <img
+          src="/media/milk-image2.png"
+          alt=""
+          className="absolute -right-6 -bottom-6 w-44 opacity-20 pointer-events-none select-none"
+        />
         <div className="relative z-10 flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -652,7 +657,8 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin, on
               </div>
 
               {filteredLogs.length === 0 ? (
-                <div className="py-6 text-center">
+                <div className="py-8 text-center flex flex-col items-center justify-center">
+                  <img src="/media/cow-image.png" alt="" className="w-14 h-14 opacity-25 mb-2 select-none" />
                   <p className="text-xs text-slate-500">
                     {filterMode === 'SELECTED_DATE'
                       ? (lang === 'hi' ? `तारीख ${selectedDate} के लिए कोई दूध डिलीवरी दर्ज नहीं है।` : `No delivery log found for ${selectedDate}.`)

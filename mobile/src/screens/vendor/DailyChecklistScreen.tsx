@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   StyleSheet, View, Text, TouchableOpacity, FlatList, 
-  ActivityIndicator, SafeAreaView, Alert 
+  ActivityIndicator, SafeAreaView, Alert, Image 
 } from 'react-native';
 import { fetchDayChecklistApi, submitBatchLogsApi } from '../../api/client';
 import { DailyLogItem } from '../../types';
@@ -180,6 +180,11 @@ export default function DailyChecklistScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <Image 
+        source={require('../../../assets/media/milk-image2.png')} 
+        style={styles.ambientWatermark} 
+        resizeMode="contain" 
+      />
       {/* Top Date Navigator */}
       <View style={styles.dateBar}>
         <TouchableOpacity onPress={() => changeDateBy(-1)} style={styles.arrowBtn}>
@@ -295,6 +300,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
+    position: 'relative',
+  },
+  ambientWatermark: {
+    position: 'absolute',
+    right: -30,
+    top: 80,
+    width: 200,
+    height: 200,
+    opacity: 0.12,
+    pointerEvents: 'none',
   },
   dateBar: {
     flexDirection: 'row',

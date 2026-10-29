@@ -1,6 +1,6 @@
 import React from 'react';
 import { 
-  StyleSheet, View, Text, TouchableOpacity, SafeAreaView, ScrollView, Dimensions 
+  StyleSheet, View, Text, TouchableOpacity, SafeAreaView, ScrollView, Image, Dimensions 
 } from 'react-native';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -12,11 +12,11 @@ interface WelcomeSplashScreenProps {
 }
 
 export default function WelcomeSplashScreen({ onGoLogin, onGoRegister }: WelcomeSplashScreenProps) {
-  const { lang, toggleLang, t } = useLanguage();
+  const { lang, toggleLang } = useLanguage();
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
         {/* Top Bar with Language Toggle */}
         <View style={styles.topBar}>
@@ -27,10 +27,14 @@ export default function WelcomeSplashScreen({ onGoLogin, onGoRegister }: Welcome
           </TouchableOpacity>
         </View>
 
-        {/* Hero Banner Section */}
+        {/* Real Brand Logo & Title */}
         <View style={styles.heroSection}>
-          <View style={styles.brandIconWrap}>
-            <Text style={styles.brandEmoji}>🥛</Text>
+          <View style={styles.logoContainer}>
+            <Image 
+              source={require('../../assets/logo.png')} 
+              style={styles.logoImage} 
+              resizeMode="contain" 
+            />
           </View>
 
           <Text style={styles.appTitle}>Milk Hisab</Text>
@@ -43,8 +47,35 @@ export default function WelcomeSplashScreen({ onGoLogin, onGoRegister }: Welcome
           </Text>
         </View>
 
-        {/* Value Highlights Banner Card */}
+        {/* Real Panoramic Dairy Pasture Banner Card */}
+        <View style={styles.pastureBannerCard}>
+          <Image 
+            source={require('../../assets/media/banner-image-2.jpg')} 
+            style={styles.pastureBannerImg}
+            resizeMode="cover"
+          />
+          <View style={styles.pastureOverlay}>
+            <View style={styles.pastureTag}>
+              <Text style={styles.pastureTagText}>
+                {lang === 'hi' ? '🌿 100% शुद्ध देशी गौ दुग्ध' : '🌿 Pure Dairy Heritage'}
+              </Text>
+            </View>
+            <Text style={styles.pastureQuote}>
+              {lang === 'hi' 
+                ? 'गाँव के खेतों से आपके घर के किचन तक — पूर्ण पारदर्शिता' 
+                : 'From Village Pastures to Family Kitchens'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Feature Highlights Card with 3D Milk Splash Watermark */}
         <View style={styles.bannerCard}>
+          <Image 
+            source={require('../../assets/media/milk-image2.png')} 
+            style={styles.watermarkSplash}
+            resizeMode="contain"
+          />
+
           <View style={styles.featureRow}>
             <Text style={styles.featureIcon}>🎙️</Text>
             <View style={styles.featureTextWrap}>
@@ -143,7 +174,7 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   langPill: {
     backgroundColor: 'rgba(255, 255, 255, 0.12)',
@@ -160,52 +191,104 @@ const styles = StyleSheet.create({
   },
   heroSection: {
     alignItems: 'center',
-    marginVertical: 12,
+    marginVertical: 6,
   },
-  brandIconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 28,
-    backgroundColor: '#2563eb',
+  logoContainer: {
+    width: 90,
+    height: 90,
+    borderRadius: 26,
+    backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 10,
     shadowColor: '#2563eb',
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
+    shadowOpacity: 0.4,
+    shadowRadius: 14,
     elevation: 8,
+    padding: 8,
   },
-  brandEmoji: {
-    fontSize: 40,
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
   appTitle: {
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: '900',
     color: '#ffffff',
     letterSpacing: -0.5,
   },
   appSubtitleHindi: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: 'bold',
     color: '#60a5fa',
-    marginTop: 2,
+    marginTop: 1,
   },
   tagline: {
     fontSize: 13,
     color: '#94a3b8',
     textAlign: 'center',
-    marginTop: 8,
-    maxWidth: 280,
+    marginTop: 6,
+    maxWidth: 290,
     lineHeight: 18,
+  },
+  pastureBannerCard: {
+    height: 120,
+    borderRadius: 20,
+    overflow: 'hidden',
+    position: 'relative',
+    marginVertical: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  pastureBannerImg: {
+    width: '100%',
+    height: '100%',
+  },
+  pastureOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(10, 16, 32, 0.55)',
+    padding: 12,
+    justifyContent: 'space-between',
+  },
+  pastureTag: {
+    backgroundColor: 'rgba(16, 185, 129, 0.85)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  pastureTagText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  pastureQuote: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '800',
   },
   bannerCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderRadius: 24,
+    borderRadius: 22,
     padding: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
-    marginVertical: 14,
-    gap: 12,
+    marginVertical: 8,
+    gap: 10,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  watermarkSplash: {
+    position: 'absolute',
+    right: -20,
+    bottom: -20,
+    width: 140,
+    height: 140,
+    opacity: 0.15,
   },
   featureRow: {
     flexDirection: 'row',
@@ -213,7 +296,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   featureIcon: {
-    fontSize: 24,
+    fontSize: 22,
   },
   featureTextWrap: {
     flex: 1,
@@ -237,7 +320,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(59, 130, 246, 0.3)',
     alignItems: 'center',
-    marginBottom: 16,
+    marginVertical: 8,
   },
   demoText: {
     fontSize: 11,
@@ -248,12 +331,13 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   actionButtonsWrap: {
-    gap: 12,
+    gap: 10,
+    marginTop: 6,
   },
   loginBtn: {
     backgroundColor: '#2563eb',
-    borderRadius: 20,
-    paddingVertical: 16,
+    borderRadius: 18,
+    paddingVertical: 15,
     alignItems: 'center',
     shadowColor: '#2563eb',
     shadowOpacity: 0.4,
@@ -267,8 +351,8 @@ const styles = StyleSheet.create({
   },
   registerBtn: {
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 20,
-    paddingVertical: 14,
+    borderRadius: 18,
+    paddingVertical: 13,
     alignItems: 'center',
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.25)',
@@ -280,7 +364,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 12,
   },
   footerText: {
     fontSize: 10,

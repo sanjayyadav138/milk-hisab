@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, View, Text, TouchableOpacity, FlatList, 
-  ActivityIndicator, SafeAreaView, Modal, TextInput, Linking, Alert 
+  ActivityIndicator, SafeAreaView, Modal, TextInput, Linking, Alert, Image 
 } from 'react-native';
 import { fetchCustomerDashboardApi, raiseDisputeApi, skipMilkDateApi } from '../../api/client';
 import { CustomerDashboardData, Customer } from '../../types';
@@ -305,6 +305,28 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 4,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  cardMilkWatermark: {
+    position: 'absolute',
+    right: -20,
+    bottom: -20,
+    width: 150,
+    height: 150,
+    opacity: 0.18,
+  },
+  headerTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  headerCardLogo: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: '#ffffff',
+    padding: 2,
   },
   headerTop: {
     flexDirection: 'row',

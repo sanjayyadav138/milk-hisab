@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   StyleSheet, View, Text, TextInput, TouchableOpacity, 
-  ActivityIndicator, SafeAreaView, KeyboardAvoidingView, Platform, ScrollView, Alert 
+  ActivityIndicator, SafeAreaView, KeyboardAvoidingView, Platform, ScrollView, Alert, Image 
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -58,8 +58,15 @@ export default function LoginScreen({ initialRole = 'vendor', onBack, onGoRegist
             </TouchableOpacity>
           </View>
 
-          {/* Header */}
+          {/* Header with Official Logo */}
           <View style={styles.header}>
+            <View style={styles.logoBadgeWrap}>
+              <Image 
+                source={require('../../assets/logo.png')} 
+                style={styles.logoBadgeImg} 
+                resizeMode="contain" 
+              />
+            </View>
             <Text style={styles.title}>
               {lang === 'hi' ? 'अपने खाते में लॉगिन करें' : 'Login to Your Account'}
             </Text>
@@ -200,7 +207,26 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   header: {
-    marginBottom: 20,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  logoBadgeWrap: {
+    width: 68,
+    height: 68,
+    borderRadius: 20,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    padding: 6,
+    shadowColor: '#2563eb',
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  logoBadgeImg: {
+    width: '100%',
+    height: '100%',
   },
   title: {
     fontSize: 24,

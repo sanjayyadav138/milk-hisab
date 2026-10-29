@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { 
-  StyleSheet, View, Text, TouchableOpacity, SafeAreaView 
+  StyleSheet, View, Text, TouchableOpacity, SafeAreaView, Image 
 } from 'react-native';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { LanguageProvider, useLanguage } from './src/context/LanguageContext';
@@ -77,7 +77,11 @@ function MainNavigator() {
       {/* Top Header Bar */}
       <View style={styles.topHeader}>
         <View style={styles.brandRow}>
-          <Text style={styles.brandIcon}>🥛</Text>
+          <Image 
+            source={require('./assets/logo.png')} 
+            style={styles.brandLogoImg} 
+            resizeMode="contain" 
+          />
           <View>
             <Text style={styles.brandTitle}>Milk Hisab</Text>
             <Text style={styles.brandSub}>
@@ -159,8 +163,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  brandIcon: {
-    fontSize: 24,
+  brandLogoImg: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
   },
   brandTitle: {
     fontSize: 16,

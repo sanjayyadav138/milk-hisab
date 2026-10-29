@@ -6,33 +6,37 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 
-export default function AuthScreen() {
-  const { loginVendor, loginCustomer, loading } = useAuth();
-  const { t, lang, toggleLang } = useLanguage();
+interface LoginScreenProps {
+  initialRole?: 'vendor' | 'customer';
+  onBack: () => void;
+  onGoRegister: (role: 'vendor' | 'customer') => void;
+}
+
+export default function LoginScreen({ initialRole = 'vendor', onBack, onGoRegister }: LoginScreenProps) {
+  const { login, loading } = useAuth();
+  const { t, lang } = useLanguage();
   
-  const [role, setRole] = useState<'vendor' | 'customer'>('vendor');
+  const [role, setRole] = useState<'vendor' | 'customer'>(initialRole);
   const [phone, setPhone] = useState('');
-  const [pin, setPin] = useState('');
+  const [pin, setPin] = useState('1234');
 
   const handleLogin = async () => {
-    if (!phone.trim() || phone.trim().length < 10) {
-      Alert.alert(lang === 'hi' ? 'अमान्य मोबाइल' : 'Invalid Mobile', t('enterPhone'));
-      return;
-    }
-    if (!pin.trim() || pin.trim().length < 4) {
-      Alert.alert(lang === 'hi' ? 'अमान्य पिन' : 'Invalid PIN', t('enterPin'));
+    const cleanPhone = phone.trim();
+    if (!cleanPhone) {
+      Alert.alert(lang === 'hi' ? 'मोबाइल नंबर आवश्यक' : 'Mobile Required', t('enterPhone'));
       return;
     }
 
     try {
-      if (role === 'vendor') {
-        await loginVendor(phone.trim(), pin.trim());
-      } else {
-        await loginCustomer(phone.trim(), pin.trim());
-      }
+      await login(cleanPhone, role, pin.trim() || '1234');
     } catch (err: any) {
-      Alert.alert(lang === 'hi' ? 'लॉगिन विफल' : 'Login Failed', err.message || 'Check phone or PIN');
+      Alert.alert(lang === 'hi' ? 'लॉगिन विफल' : 'Login Failed', err.message || 'कृपया सही मोबाइल या पिन दर्ज करें');
     }
+  };
+
+  const handleFillDemo = () => {
+    setPhone('1234');
+    setPin('1234');
   };
 
   return (
@@ -43,26 +47,32 @@ export default function AuthScreen() {
       >
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           
-          {/* Language Switcher Bar */}
+          {/* Top Bar with Back Button */}
           <View style={styles.topBar}>
-            <TouchableOpacity onPress={toggleLang} style={styles.langPill}>
-              <Text style={styles.langPillText}>
-                🌐 {lang === 'hi' ? 'English' : 'हिन्दी'}
-              </Text>
+            <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+              <Text style={styles.backBtnText}>‹ वापस (Back)</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={handleFillDemo} style={styles.demoFillBtn}>
+              <Text style={styles.demoFillText}>⚡ डेमो 1234</Text>
             </TouchableOpacity>
           </View>
 
-          {/* App Branding */}
+          {/* Header */}
           <View style={styles.header}>
-            <View style={styles.logoBadge}>
-              <Text style={styles.logoIcon}>🥛</Text>
-            </View>
-            <Text style={styles.appTitle}>{t('appName')}</Text>
-            <Text style={styles.appSubtitle}>{t('tagline')}</Text>
+            <Text style={styles.title}>
+              {lang === 'hi' ? 'अपने खाते में लॉगिन करें' : 'Login to Your Account'}
+            </Text>
+            <Text style={styles.subtitle}>
+              {lang === 'hi' 
+                ? 'दैनिक दूध बहीखाता व हिसाब देखने हेतु विवरण दर्ज करें' 
+                : 'Enter your credentials to access your daily ledger'}
+            </Text>
           </View>
 
-          {/* Role Switcher Tabs */}
+          {/* Card */}
           <View style={styles.card}>
+            {/* Role Switcher Tabs */}
             <View style={styles.roleTabs}>
               <TouchableOpacity
                 onPress={() => setRole('vendor')}
@@ -83,63 +93,63 @@ export default function AuthScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Input Form */}
+            {/* Phone/Username Input */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>{t('phone')}</Text>
+              <Text style={styles.label}>
+                {lang === 'hi' ? 'मोबाइल नंबर या आईडी' : 'Mobile Number or ID'}
+              </Text>
               <TextInput
                 style={styles.input}
-                placeholder={t('enterPhone')}
+                placeholder={lang === 'hi' ? '10-अंकों का मोबाइल या 1234' : '10-digit mobile or 1234'}
                 placeholderTextColor="#94a3b8"
-                keyboardType="phone-pad"
-                maxLength={10}
+                autoCapitalize="none"
                 value={phone}
                 onChangeText={setPhone}
               />
             </View>
 
+            {/* PIN Input */}
             <View style={styles.formGroup}>
               <Text style={styles.label}>{t('pin')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder={t('enterPin')}
+                placeholder="4 अंकों का पिन (उदा. 1234)"
                 placeholderTextColor="#94a3b8"
                 keyboardType="number-pad"
                 secureTextEntry
-                maxLength={6}
                 value={pin}
                 onChangeText={setPin}
               />
             </View>
 
-            {/* Submit Button */}
+            {/* Login Button */}
             <TouchableOpacity 
               onPress={handleLogin}
               disabled={loading}
               style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+              activeOpacity={0.85}
             >
               {loading ? (
                 <ActivityIndicator color="#ffffff" />
               ) : (
                 <Text style={styles.submitButtonText}>
-                  {role === 'vendor' ? t('loginAsVendor') : t('loginAsCustomer')} →
+                  {lang === 'hi' ? 'लॉगिन करें' : 'Login Now'} →
                 </Text>
               )}
             </TouchableOpacity>
 
-            {/* Helper Hint */}
-            <Text style={styles.hintText}>
-              {lang === 'hi' 
-                ? 'नया खाता या पिन भूलने पर अपने स्थानीय दूधिया / एडमिन से संपर्क करें।' 
-                : 'Contact your local milkman or admin if you forgot your PIN.'}
-            </Text>
+            {/* Switch to Register Link */}
+            <View style={styles.registerPromptRow}>
+              <Text style={styles.registerPromptText}>
+                {lang === 'hi' ? 'खाता नहीं है?' : "Don't have an account?"}
+              </Text>
+              <TouchableOpacity onPress={() => onGoRegister(role)}>
+                <Text style={styles.registerLinkText}>
+                  {lang === 'hi' ? ' नया खाता बनाएं' : ' Register Now'}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-          </View>
-
-          {/* Trust Footer */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              🔒 100% सुरक्षित • क्लाउड सिंक • 24x7 बैकअप
-            </Text>
           </View>
 
         </ScrollView>
@@ -151,7 +161,7 @@ export default function AuthScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#0a1020',
   },
   container: {
     flex: 1,
@@ -163,75 +173,67 @@ const styles = StyleSheet.create({
   },
   topBar: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginBottom: 10,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
-  langPill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+  backBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  backBtnText: {
+    color: '#93c5fd',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  demoFillBtn: {
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(59, 130, 246, 0.4)',
   },
-  langPillText: {
-    color: '#38bdf8',
+  demoFillText: {
+    color: '#60a5fa',
     fontSize: 12,
     fontWeight: 'bold',
   },
   header: {
-    alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
-  logoBadge: {
-    width: 68,
-    height: 68,
-    borderRadius: 22,
-    backgroundColor: '#2563eb',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-    shadowColor: '#2563eb',
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  logoIcon: {
-    fontSize: 32,
-  },
-  appTitle: {
-    fontSize: 26,
+  title: {
+    fontSize: 24,
     fontWeight: '900',
     color: '#ffffff',
-    textAlign: 'center',
   },
-  appSubtitle: {
+  subtitle: {
     fontSize: 13,
     color: '#94a3b8',
     marginTop: 4,
-    textAlign: 'center',
+    lineHeight: 18,
   },
   card: {
     backgroundColor: '#ffffff',
-    borderRadius: 28,
-    padding: 24,
+    borderRadius: 26,
+    padding: 22,
     shadowColor: '#000000',
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
     elevation: 8,
   },
   roleTabs: {
     flexDirection: 'row',
     backgroundColor: '#f1f5f9',
-    borderRadius: 18,
+    borderRadius: 16,
     padding: 4,
-    marginBottom: 20,
+    marginBottom: 18,
   },
   roleTab: {
     flex: 1,
     paddingVertical: 10,
     alignItems: 'center',
-    borderRadius: 14,
+    borderRadius: 12,
   },
   roleTabActive: {
     backgroundColor: '#2563eb',
@@ -265,16 +267,16 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    fontSize: 16,
+    fontSize: 15,
     color: '#0f172a',
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   submitButton: {
     backgroundColor: '#2563eb',
     borderRadius: 18,
     paddingVertical: 14,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 6,
     shadowColor: '#2563eb',
     shadowOpacity: 0.35,
     shadowRadius: 8,
@@ -288,20 +290,19 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '900',
   },
-  hintText: {
-    fontSize: 11,
-    color: '#94a3b8',
-    textAlign: 'center',
-    marginTop: 16,
-    lineHeight: 16,
-  },
-  footer: {
-    marginTop: 20,
+  registerPromptRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 18,
   },
-  footerText: {
-    fontSize: 11,
+  registerPromptText: {
+    fontSize: 12,
     color: '#64748b',
-    fontWeight: '600',
+  },
+  registerLinkText: {
+    fontSize: 12,
+    color: '#2563eb',
+    fontWeight: 'bold',
   },
 });

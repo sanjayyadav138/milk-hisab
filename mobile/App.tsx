@@ -5,7 +5,9 @@ import {
 } from 'react-native';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { LanguageProvider, useLanguage } from './src/context/LanguageContext';
-import AuthScreen from './src/screens/AuthScreen';
+import WelcomeSplashScreen from './src/screens/WelcomeSplashScreen';
+import LoginScreen from './src/screens/LoginScreen';
+import RegisterScreen from './src/screens/RegisterScreen';
 import DailyChecklistScreen from './src/screens/vendor/DailyChecklistScreen';
 import CustomersScreen from './src/screens/vendor/CustomersScreen';
 import CustomerPortalScreen from './src/screens/customer/CustomerPortalScreen';
@@ -13,11 +15,55 @@ import CustomerPortalScreen from './src/screens/customer/CustomerPortalScreen';
 function MainNavigator() {
   const { auth, logout } = useAuth();
   const { lang, toggleLang } = useLanguage();
+  
+  // Navigation State for Unauthenticated flow: 'SPLASH' | 'LOGIN' | 'REGISTER'
+  const [unauthScreen, setUnauthScreen] = useState<'SPLASH' | 'LOGIN' | 'REGISTER'>('SPLASH');
+  const [selectedRole, setSelectedRole] = useState<'vendor' | 'customer'>('vendor');
+  
+  // Navigation State for Vendor Tabs
   const [vendorTab, setVendorTab] = useState<'DAILY' | 'CUSTOMERS'>('DAILY');
 
-  // 1. Not Authenticated: Show AuthScreen
+  // 1. Not Authenticated: Flow between Splash, Login, and Register
   if (!auth.token || !auth.role) {
-    return <AuthScreen />;
+    if (unauthScreen === 'LOGIN') {
+      return (
+        <LoginScreen 
+          initialRole={selectedRole}
+          onBack={() => setUnauthScreen('SPLASH')}
+          onGoRegister={(role) => {
+            setSelectedRole(role);
+            setUnauthScreen('REGISTER');
+          }}
+        />
+      );
+    }
+
+    if (unauthScreen === 'REGISTER') {
+      return (
+        <RegisterScreen 
+          initialRole={selectedRole}
+          onBack={() => setUnauthScreen('SPLASH')}
+          onGoLogin={(role) => {
+            setSelectedRole(role);
+            setUnauthScreen('LOGIN');
+          }}
+        />
+      );
+    }
+
+    // Default: Splash / Welcome Screen
+    return (
+      <WelcomeSplashScreen 
+        onGoLogin={(role) => {
+          if (role) setSelectedRole(role);
+          setUnauthScreen('LOGIN');
+        }}
+        onGoRegister={(role) => {
+          if (role) setSelectedRole(role);
+          setUnauthScreen('REGISTER');
+        }}
+      />
+    );
   }
 
   // 2. Customer Role: Show CustomerPortalScreen
@@ -86,7 +132,7 @@ export default function App() {
   return (
     <LanguageProvider>
       <AuthProvider>
-        <StatusBar style="auto" />
+        <StatusBar style="light" />
         <MainNavigator />
       </AuthProvider>
     </LanguageProvider>

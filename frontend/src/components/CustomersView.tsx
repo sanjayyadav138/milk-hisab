@@ -348,7 +348,7 @@ export default function CustomersView({ onResetCustomerPin }: CustomersViewProps
       {loading ? (
         <div className="text-center py-12">
           <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-3"></div>
-          <p className="text-sm font-semibold text-slate-500">{t('loadingBills')}</p>
+          <p className="text-sm font-semibold text-slate-500">{t('loadingCustomers')}</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="bg-white rounded-3xl p-8 text-center border border-slate-200">

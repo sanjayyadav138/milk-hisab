@@ -462,7 +462,7 @@ function MainApp() {
             auth={auth} 
             onProfileUpdated={(updated) => {
               handleProfileUpdated(updated);
-              showNotice('success', 'प्रोफ़ाइल सफलतापूर्वक अपडेट हो गई!');
+              showNotice('success', t('profileUpdatedSuccess') || 'Profile updated successfully!');
             }}
             onBack={handleBackFromDedicatedPage} 
           />

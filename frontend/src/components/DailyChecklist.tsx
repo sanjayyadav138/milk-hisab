@@ -498,8 +498,8 @@ export default function DailyChecklist() {
                           {lang === 'hi' ? 'ग्राहक का दावा:' : 'Customer claim:'}{' '}
                           <span className="font-black bg-amber-200/80 px-1.5 py-0.5 rounded text-amber-950">
                             {item.reported_quantity !== null && item.reported_quantity !== undefined 
-                              ? `${item.reported_quantity}L मिला` 
-                              : 'मात्रा गलत है'}
+                              ? `${item.reported_quantity}L ${lang === 'hi' ? 'मिला' : 'received'}` 
+                              : (lang === 'hi' ? 'मात्रा गलत है' : 'Discrepancy')}
                           </span>
                           {item.dispute_reason && <span className="ml-1 opacity-90">({item.dispute_reason})</span>}
                         </p>

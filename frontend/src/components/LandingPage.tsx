@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Sparkles, Zap, Users, Star, Award, 
   MapPin, Phone, MessageCircle, ArrowRight, Headphones,
-  ShieldCheck, HelpCircle, FileText, CheckCircle,
-  ChevronLeft, ChevronRight
+  ShieldCheck, HelpCircle, FileText, CheckCircle, CheckCircle2,
+  Calendar, Milk, Clock, Mic, Check, ChevronRight
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { PublicPageType } from './Navbar';
@@ -17,50 +17,40 @@ interface LandingPageProps {
 export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigatePage }: LandingPageProps) {
   const [localSearch, setLocalSearch] = useState('');
   const { t, lang } = useLanguage();
-  const [activeBanner, setActiveBanner] = useState(0);
+  const [activeFeatureTab, setActiveFeatureTab] = useState<number>(0);
 
-  const banners = [
+  const featureTabs = [
     {
-      image: '/banners/banner-1.jpg',
-      badge: lang === 'hi' ? "🥛 भारत का नंबर 1 डिजिटल दूध बहीखाता" : "🥛 India's #1 Digital Milk Diary",
-      title: lang === 'hi' ? "कागजी डायरी छोड़िए, फोन पर 1-क्लिक में दूध का हिसाब रखिए!" : "Ditch Paper Diaries. Track Milk Delivery & Billing in 1-Click!",
+      id: 0,
+      icon: <Mic className="w-5 h-5 text-emerald-600" />,
+      badge: lang === 'hi' ? '🎙️ देसी हिंदी वॉइस असिस्टेंट' : '🎙️ Natural Voice Logging',
+      title: lang === 'hi' ? 'बोलिए और पूरा हिसाब दर्ज हो जाएगा' : 'Speak Naturally to Log Daily Milk',
       desc: lang === 'hi' 
-        ? "दूधिया और ग्राहक दोनों के लिए बेहद आसान। बोलकर एंट्री करें, ऑटोमैटिक मासिक बिल बनाएं और सीधे WhatsApp पर भेजें।"
-        : "Super simple for milk vendors & households. Voice-powered logging, automated monthly ledger, and instant WhatsApp bill sharing with UPI.",
+        ? '"राकेश को 2 लीटर दूध और शर्मा जी की छुट्टी दर्ज करो" — माइक दबाइए और बोलिए, ऐप नाम और मात्रा समझकर तुरंत एंट्री कर देता है।'
+        : 'Just speak: "Add 2 liters for Rakesh and skip Sharma Ji today". The AI assistant recognizes Hindi & English names and updates records instantly.',
+      highlight: lang === 'hi' ? '10 सेकंड में 50 ग्राहकों की एंट्री पूरी' : 'Log 50 customer deliveries in 10 seconds'
     },
     {
-      image: '/banners/banner-2.jpg',
-      badge: lang === 'hi' ? "🎙️ बोलकर एंट्री (Voice Assistant)" : "🎙️ Voice-Powered Logging (Natural Speech)",
-      title: lang === 'hi' ? "'राकेश को 2 लीटर दूध और शर्मा जी की छुट्टी दर्ज करो'" : "'Add 2 Liters for Rakesh and Skip Sharma Ji Today'",
+      id: 1,
+      icon: <MessageCircle className="w-5 h-5 text-emerald-600" />,
+      badge: lang === 'hi' ? '📲 1-क्लिक WhatsApp बिलिंग व UPI' : '📲 Instant WhatsApp Bills with UPI QR',
+      title: lang === 'hi' ? 'महीने के अंत में हिसाब का झंझट खत्म' : 'Automated Month-End Billing & Payments',
       desc: lang === 'hi'
-        ? "माइक दबाइए और देसी हिंदी में बोलिए। ऐप अपने आप समझकर पूरा हिसाब सही कर देगा।"
-        : "Tap the mic and speak naturally. The app extracts customer names and updates daily quantities automatically.",
+        ? 'महीने की आखिरी तारीख को 1-क्लिक में ग्राहक के WhatsApp पर सुंदर बिल और PhonePe / Google Pay का सीधा UPI पेमेंट QR लिंक भेजें।'
+        : 'Dispatch itemized monthly statements straight to customer WhatsApp chats complete with Google Pay & PhonePe UPI QR codes.',
+      highlight: lang === 'hi' ? '98% समय पर भुगतान वसूली' : '98% on-time payment collections'
     },
     {
-      image: '/banners/banner-3.jpg',
-      badge: lang === 'hi' ? "📲 1-क्लिक WhatsApp बिलिंग व UPI" : "📲 1-Click WhatsApp Bills & UPI QR",
-      title: lang === 'hi' ? "महीने के अंत में हिसाब का झंझट खत्म!" : "No More Month-End Billing Headaches!",
+      id: 2,
+      icon: <Users className="w-5 h-5 text-blue-600" />,
+      badge: lang === 'hi' ? '📱 ग्राहक मोबाइल पोर्टल व ट्रैकिंग' : '📱 Customer Mobile Portal & Family Access',
+      title: lang === 'hi' ? 'ग्राहक फोन पर रोज़ का हिसाब खुद देखें' : 'Customers Track Daily Milk on Their Phone',
       desc: lang === 'hi'
-        ? "ग्राहकों को सीधे उनके WhatsApp पर बिल और PhonePe/GPay का UPI लिंक भेजें। ग्राहक घर बैठे हिसाब चेक करें।"
-        : "Send itemized bills straight to customer WhatsApp chats with Google Pay & PhonePe UPI QR links.",
+        ? 'ग्राहक अपने मोबाइल नंबर से लॉगिन करके रोज़ का दूध, छुट्टी की अग्रिम सूचना और पुराना हिसाब बिना किसी फोन कॉल के कभी भी चेक कर सकते हैं।'
+        : 'Customers log in with mobile number to check daily delivery logs, schedule skips, and verify monthly balances with zero disputes.',
+      highlight: lang === 'hi' ? '0 विवाद और 100% पारदर्शिता' : 'Zero disputes & 100% ledger trust'
     }
   ];
-
-  // Auto-advance banner every 6.5 seconds
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setActiveBanner((prev) => (prev + 1) % banners.length);
-    }, 6500);
-    return () => clearInterval(timer);
-  }, [banners.length]);
-
-  const handlePrevBanner = () => {
-    setActiveBanner((prev) => (prev - 1 + banners.length) % banners.length);
-  };
-
-  const handleNextBanner = () => {
-    setActiveBanner((prev) => (prev + 1) % banners.length);
-  };
 
   const handleNav = (page: PublicPageType) => {
     if (onNavigatePage) {
@@ -77,121 +67,274 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
   };
 
   return (
-    <div className="min-h-screen bg-[#f9fafb] text-slate-800 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#fafbfc] text-slate-800 flex flex-col font-sans">
+      
       {/* Top Banner Bar - Dairy Navy Trust Anchor */}
-      <div className="bg-blue-900 text-blue-100 text-xs py-2 px-4 text-center font-semibold tracking-wide">
-        {t('announcement')}
+      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-950 text-blue-100 text-xs py-2 px-4 text-center font-bold tracking-wide shadow-xs flex items-center justify-center gap-2">
+        <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+        <span>{t('announcement')}</span>
       </div>
 
-      {/* Hero Interactive Banner Carousel with Clear Photographic Backgrounds */}
-      <section className="relative w-full bg-slate-950 py-3 sm:py-6 px-2 sm:px-4 md:px-6">
-        <div className="max-w-7xl mx-auto relative rounded-3xl shadow-2xl border border-slate-800 bg-slate-900">
+      {/* Hero Section: Modern, Luminous, Professional SaaS Aesthetic */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-blue-50/70 via-white to-slate-50 py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 border-b border-slate-200/80">
+        
+        {/* Soft Background Radial Blurs */}
+        <div className="w-96 h-96 bg-blue-400/10 rounded-full blur-3xl absolute -top-20 -left-20 pointer-events-none" />
+        <div className="w-96 h-96 bg-emerald-400/10 rounded-full blur-3xl absolute -top-20 -right-20 pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
           
-          {/* Photographic Background Images with Smooth Transition */}
-          {banners.map((b, i) => (
-            <div
-              key={i}
-              className={`absolute inset-0 rounded-3xl overflow-hidden transition-opacity duration-700 ease-in-out ${
-                activeBanner === i ? 'opacity-100 z-0' : 'opacity-0 pointer-events-none z-0'
-              }`}
-            >
-              <img
-                src={b.image}
-                alt={b.title}
-                className="w-full h-full object-cover object-center sm:object-right"
-              />
-              {/* Soft Left-to-Right Scrim: Dark on left for text, completely clear on right to see the photo! */}
-              <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/50 to-transparent hidden sm:block" />
-              {/* Soft Bottom-Up Scrim on mobile so text is legible */}
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/60 to-slate-950/20 sm:hidden" />
-            </div>
-          ))}
-
-          {/* Previous / Next Arrow Controls */}
-          <button
-            type="button"
-            onClick={handlePrevBanner}
-            className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-slate-950/60 hover:bg-slate-900/90 backdrop-blur-md border border-white/20 text-white flex items-center justify-center transition active:scale-95 shadow-xl"
-            aria-label="Previous Slide"
-          >
-            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-          </button>
-
-          <button
-            type="button"
-            onClick={handleNextBanner}
-            className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-slate-950/60 hover:bg-slate-900/90 backdrop-blur-md border border-white/20 text-white flex items-center justify-center transition active:scale-95 shadow-xl"
-            aria-label="Next Slide"
-          >
-            <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
-          </button>
-
-          {/* Slide Content positioned on the left so the photo is unobstructed */}
-          <div className="relative z-20 min-h-[460px] sm:min-h-[520px] md:min-h-[560px] flex flex-col justify-center px-6 sm:px-12 md:px-16 py-12 sm:py-16 max-w-2xl text-left">
+          {/* Left Hero Content */}
+          <div className="lg:col-span-7 space-y-6 text-left">
             
-            {/* Feature Badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-600/30 border border-blue-400/40 text-blue-200 text-xs sm:text-sm font-semibold mb-4 backdrop-blur-md w-fit shadow-md">
-              <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
-              <span>{banners[activeBanner].badge}</span>
+            {/* Luminous Modern Badge */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200/80 text-blue-800 text-xs font-bold shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
+              <span>{lang === 'hi' ? '✨ आधुनिक डिजिटल दूध बहीखाता 2.0 • 100% सुरक्षित क्लाउड बैकअप' : '✨ Modern Digital Dairy Cloud 2.0 • 100% Cloud Synced'}</span>
             </div>
 
-            {/* Title */}
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-tight text-white drop-shadow-lg">
-              {banners[activeBanner].title}
+            {/* High Impact Headline */}
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black tracking-tight leading-[1.15] text-slate-900">
+              {lang === 'hi' ? 'कागजी डायरी छोड़िए,' : 'Say Goodbye to Paper Diaries,'}{' '}
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700">
+                {lang === 'hi' ? 'फोन पर 1-क्लिक में दूध का हिसाब रखिए' : 'Manage Milk Delivery & Ledger in 1-Click'}
+              </span>
             </h1>
 
-            {/* Description */}
-            <p className="mt-4 text-xs sm:text-base text-slate-100 font-normal leading-relaxed drop-shadow-md max-w-xl">
-              {banners[activeBanner].desc}
+            {/* Subtitle */}
+            <p className="text-sm sm:text-base md:text-lg text-slate-600 leading-relaxed font-normal max-w-xl">
+              {lang === 'hi'
+                ? 'दूधिया और ग्राहक दोनों के लिए बेहद आसान। बोलकर एंट्री करें, ऑटोमैटिक मासिक बिल बनाएं और सीधे WhatsApp व PhonePe/GPay UPI पर हिसाब सुलझाएं।'
+                : 'Built for modern dairy milkmen & households. Natural voice logging, automated monthly billing, and instant WhatsApp bill sharing with PhonePe/GPay UPI QR.'}
             </p>
 
             {/* Action CTAs */}
-            <div className="mt-6 sm:mt-8 flex flex-wrap items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
               <button
+                type="button"
                 onClick={() => onOpenAuth('vendor', 'LOGIN')}
-                className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 sm:px-6 py-3 rounded-2xl shadow-xl shadow-blue-600/50 text-xs sm:text-sm active:scale-95 transition flex items-center gap-2"
+                className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold px-6 py-3.5 rounded-2xl shadow-xl shadow-blue-500/25 text-sm sm:text-base active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>{t('ctaVendor')}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
               <button
+                type="button"
                 onClick={() => onOpenAuth('customer', 'LOGIN')}
-                className="bg-white/15 hover:bg-white/25 text-white font-semibold px-5 sm:px-6 py-3 rounded-2xl backdrop-blur-md border border-white/25 text-xs sm:text-sm active:scale-95 transition shadow-lg"
+                className="bg-white hover:bg-slate-50 text-slate-800 font-bold px-6 py-3.5 rounded-2xl border border-slate-200 shadow-sm text-sm sm:text-base active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer"
               >
-                {t('ctaCustomer')}
+                <span>{t('ctaCustomer')}</span>
               </button>
             </div>
 
-            {/* Banner Selector Dots & Slide Counter */}
-            <div className="flex items-center gap-2 mt-8 sm:mt-10">
-              {banners.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setActiveBanner(i)}
-                  className={`h-2.5 rounded-full transition-all duration-300 ${
-                    activeBanner === i 
-                      ? 'w-10 bg-blue-400 shadow-md shadow-blue-400/60' 
-                      : 'w-2.5 bg-white/40 hover:bg-white/80'
-                  }`}
-                  aria-label={`Slide ${i + 1}`}
-                />
-              ))}
-              <span className="text-[11px] text-white/70 font-bold ml-2">
-                {activeBanner + 1} / {banners.length}
+            {/* Trust Proof Chips */}
+            <div className="pt-4 border-t border-slate-200/70 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-600 font-medium">
+              <div className="flex items-center gap-1.5">
+                <div className="flex text-amber-500">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-3.5 h-3.5 fill-current" />
+                  ))}
+                </div>
+                <span className="font-bold text-slate-800">4.9/5</span>
+                <span>(10,000+ {lang === 'hi' ? 'उपयोगकर्ता' : 'Users'})</span>
+              </div>
+              <span className="text-slate-300">•</span>
+              <span className="flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>1-क्लिक WhatsApp बिलिंग</span>
+              </span>
+              <span className="text-slate-300">•</span>
+              <span className="flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                <span>100% सुरक्षित क्लाउड</span>
               </span>
             </div>
 
           </div>
 
+          {/* Right Hero: Live Interactive Dairy App Simulation Card */}
+          <div className="lg:col-span-5 relative">
+            <div className="relative mx-auto max-w-md bg-white rounded-3xl p-5 shadow-2xl border border-slate-200 ring-1 ring-slate-900/5 transition hover:shadow-3xl">
+              
+              {/* Mock App Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-xs">
+                    <Milk className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-slate-900">Milk Hisab Dairy Cloud</h4>
+                    <p className="text-[10px] text-slate-500">29 Oct 2026 • आज का हिसाब</p>
+                  </div>
+                </div>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>लाइव सिंक</span>
+                </span>
+              </div>
+
+              {/* Bilateral Inward vs Outward Stats Mockup */}
+              <div className="grid grid-cols-3 gap-2 my-3">
+                <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-2 text-center">
+                  <p className="text-[9px] font-bold text-blue-700 uppercase">संकलन</p>
+                  <p className="text-base font-black text-blue-900">45.0 <span className="text-[10px]">L</span></p>
+                  <p className="text-[9px] text-blue-600 font-medium">4 घरों से</p>
+                </div>
+                <div className="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-2 text-center">
+                  <p className="text-[9px] font-bold text-emerald-700 uppercase">वितरण</p>
+                  <p className="text-base font-black text-emerald-900">43.5 <span className="text-[10px]">L</span></p>
+                  <p className="text-[9px] text-emerald-600 font-medium">8 ग्राहकों को</p>
+                </div>
+                <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-2 text-center">
+                  <p className="text-[9px] font-bold text-indigo-700 uppercase">स्टॉक</p>
+                  <p className="text-base font-black text-indigo-900">+1.5 <span className="text-[10px]">L</span></p>
+                  <p className="text-[9px] text-indigo-600 font-medium">शेष बचा</p>
+                </div>
+              </div>
+
+              {/* Live Customer Delivery Card Preview */}
+              <div className="bg-slate-50 rounded-2xl p-3 border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h5 className="text-xs font-black text-slate-900">राकेश शर्मा (H.No 12)</h5>
+                    <p className="text-[10px] text-slate-500">तय मात्रा: 2.0L गाय का दूध • ₹60/L</p>
+                  </div>
+                  <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md">
+                    ✓ वितरित (2.0L)
+                  </span>
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-[10px] text-slate-500 font-medium">दैनिक स्थिति:</span>
+                  <div className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-slate-200 text-xs font-black text-slate-800">
+                    <span>2.0 Liters</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Voice Log Highlight Chip */}
+              <div className="mt-3 p-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Mic className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold text-emerald-950 truncate">
+                    "राकेश को 2L दूध और वर्मा जी की छुट्टी दर्ज करो"
+                  </p>
+                  <p className="text-[10px] text-emerald-700 font-medium">
+                    ✓ ऐप ने आवाज पहचान कर हिसाब तुरंत अपडेट कर दिया
+                  </p>
+                </div>
+              </div>
+
+              {/* WhatsApp UPI Bill Simulation Chip */}
+              <div className="mt-2.5 p-3 bg-blue-50/80 border border-blue-200 rounded-2xl flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <MessageCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <div>
+                    <p className="text-[11px] font-bold text-slate-900">मासिक WhatsApp बिल तैयार</p>
+                    <p className="text-[10px] text-slate-500">कुल: ₹2,400 • GPay/PhonePe QR शामिल</p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-black bg-blue-600 text-white px-2 py-1 rounded-lg shrink-0">
+                  भेजें 🚀
+                </span>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* Interactive 3-Pillar Feature Tabs */}
+      <section className="py-12 px-4 max-w-5xl mx-auto w-full">
+        <div className="text-center mb-8">
+          <span className="text-xs font-bold uppercase text-blue-700 tracking-wider bg-blue-100 px-3 py-1 rounded-full">
+            {lang === 'hi' ? 'मुख्य सुविधाएं (Features)' : 'Key Features'}
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mt-2">
+            {lang === 'hi' ? 'दूधिया और ग्राहक दोनों के लिए आधुनिक तकनीक' : 'Modern Dairy Tech for Milkmen & Households'}
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-xl mx-auto">
+            {lang === 'hi' ? 'हर रोज़ का हिसाब-किताब हो गया अब बिल्कुल आसान और पारदर्शी।' : 'Daily ledger management simplified with 100% transparency.'}
+          </p>
+        </div>
+
+        {/* Feature Tab Selector */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+          {featureTabs.map((f, idx) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setActiveFeatureTab(idx)}
+              className={`p-4 rounded-2xl text-left border transition cursor-pointer ${
+                activeFeatureTab === idx
+                  ? 'bg-white border-blue-500 shadow-md ring-2 ring-blue-500/10'
+                  : 'bg-slate-50/80 border-slate-200 hover:bg-white hover:border-slate-300'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                {f.icon}
+                <span className="text-xs font-bold text-slate-700">{f.badge}</span>
+              </div>
+              <h3 className="text-sm font-black text-slate-900 leading-snug">{f.title}</h3>
+              <p className="text-xs text-slate-500 mt-1 line-clamp-2">{f.desc}</p>
+            </button>
+          ))}
+        </div>
+
+        {/* Active Tab Detailed Highlight Card */}
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="space-y-3 flex-1 text-left">
+            <span className="text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-full">
+              {featureTabs[activeFeatureTab].badge}
+            </span>
+            <h3 className="text-xl sm:text-2xl font-black text-slate-900">
+              {featureTabs[activeFeatureTab].title}
+            </h3>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              {featureTabs[activeFeatureTab].desc}
+            </p>
+            <div className="pt-2 flex items-center gap-2 text-xs font-bold text-blue-700">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>{featureTabs[activeFeatureTab].highlight}</span>
+            </div>
+          </div>
+
+          <div className="shrink-0 flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+            <button
+              type="button"
+              onClick={() => onOpenAuth('vendor', 'LOGIN')}
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition"
+            >
+              {lang === 'hi' ? 'दूधिया के रूप में शुरू करें' : 'Start as Vendor'}
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenAuth('customer', 'LOGIN')}
+              className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition"
+            >
+              {lang === 'hi' ? 'ग्राहक के रूप में देखें' : 'View as Customer'}
+            </button>
+          </div>
         </div>
       </section>
 
       {/* Location-Based Milkman Discovery Bar */}
-      <section className="bg-white border-b border-slate-200 py-6 px-4 shadow-xs">
-        <div className="max-w-3xl mx-auto">
-          <div className="bg-slate-50 p-2 sm:p-2.5 rounded-2xl border border-slate-200 flex flex-col sm:flex-row items-center gap-2 shadow-xs">
-            <div className="flex items-center gap-2.5 px-3 flex-1 w-full">
+      <section className="bg-gradient-to-r from-blue-900 via-indigo-950 to-blue-900 py-10 px-4 text-white shadow-inner">
+        <div className="max-w-3xl mx-auto text-center space-y-4">
+          <div>
+            <h3 className="text-xl sm:text-2xl font-black">
+              {lang === 'hi' ? 'अपने क्षेत्र का सत्यापित दूधिया खोजें' : 'Find Verified Milkmen in Your Area'}
+            </h3>
+            <p className="text-xs sm:text-sm text-blue-200 mt-1">
+              {lang === 'hi' ? 'गाय और भैंस के ताज़ा दूध की दैनिक होम डिलीवरी के लिए स्थानीय दूधियों से सीधे जुड़ें।' : 'Connect directly with local dairies for fresh cow & buffalo milk delivery.'}
+            </p>
+          </div>
+
+          <div className="bg-white p-2 sm:p-2.5 rounded-2xl flex flex-col sm:flex-row items-center gap-2 shadow-xl">
+            <div className="flex items-center gap-2.5 px-3 flex-1 w-full text-slate-800">
               <MapPin className="w-5 h-5 text-blue-600 shrink-0" />
               <input
                 type="text"
@@ -201,16 +344,31 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') onOpenFindMilkman(localSearch);
                 }}
-                className="w-full bg-transparent text-xs sm:text-sm font-semibold text-slate-800 placeholder-slate-400 focus:outline-none"
+                className="w-full bg-transparent text-xs sm:text-sm font-semibold text-slate-900 placeholder-slate-400 focus:outline-none"
               />
             </div>
             <button
               type="button"
               onClick={() => onOpenFindMilkman(localSearch)}
-              className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-bold transition active:scale-95 shrink-0 shadow-xs"
+              className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-bold transition active:scale-95 shrink-0 shadow-sm cursor-pointer"
             >
               {t('findMilkman')}
             </button>
+          </div>
+
+          {/* Quick Area Chips */}
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-1 text-xs">
+            <span className="text-blue-200 font-semibold">{lang === 'hi' ? 'लोकप्रिय क्षेत्र:' : 'Popular Areas:'}</span>
+            {['Jamalpur', 'Gurgaon', 'Sector 14', 'Palam Vihar', 'Delhi NCR', 'Manesar'].map(area => (
+              <button
+                key={area}
+                type="button"
+                onClick={() => onOpenFindMilkman(area)}
+                className="bg-white/10 hover:bg-white/20 text-white px-2.5 py-1 rounded-lg text-[11px] font-semibold transition"
+              >
+                📍 {area}
+              </button>
+            ))}
           </div>
         </div>
       </section>
@@ -219,75 +377,28 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
       <section className="py-8 bg-white border-b border-slate-200">
         <div className="max-w-5xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           <div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-blue-700">{t('metric1Val')}</div>
+            <div className="text-2xl sm:text-3xl font-black text-blue-700">10,000+</div>
             <div className="text-xs text-slate-500 font-semibold mt-1">{t('metric1Desc')}</div>
           </div>
           <div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-blue-700">{t('metric2Val')}</div>
+            <div className="text-2xl sm:text-3xl font-black text-blue-700">10 Sec</div>
             <div className="text-xs text-slate-500 font-semibold mt-1">{t('metric2Desc')}</div>
           </div>
           <div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-blue-700">{t('metric3Val')}</div>
+            <div className="text-2xl sm:text-3xl font-black text-blue-700">WhatsApp</div>
             <div className="text-xs text-slate-500 font-semibold mt-1">{t('metric3Desc')}</div>
           </div>
           <div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-blue-700">{t('metric4Val')}</div>
-            <div className="text-xs text-slate-500 font-semibold mt-1">{t('metric4Desc')}</div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Overview */}
-      <section className="py-14 px-4 max-w-5xl mx-auto">
-        <div className="text-center mb-10">
-          <span className="text-xs font-semibold uppercase text-blue-700 tracking-wider bg-blue-100 px-3 py-1 rounded-full">
-            {t('featuresBadge')}
-          </span>
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mt-2">
-            {t('featuresHeading')}
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-xl mx-auto font-normal">
-            {t('featuresSub')}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs hover:shadow-md transition">
-            <div className="w-12 h-12 bg-blue-100 text-blue-800 rounded-2xl flex items-center justify-center mb-4">
-              <Zap className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-2">{t('feat1Title')}</h3>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
-              {t('feat1Desc')}
-            </p>
-          </div>
-
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs hover:shadow-md transition">
-            <div className="w-12 h-12 bg-emerald-100 text-emerald-800 rounded-2xl flex items-center justify-center mb-4">
-              <Sparkles className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-2">{t('feat2Title')}</h3>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
-              {t('feat2Desc')}
-            </p>
-          </div>
-
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs hover:shadow-md transition">
-            <div className="w-12 h-12 bg-indigo-100 text-indigo-800 rounded-2xl flex items-center justify-center mb-4">
-              <Users className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-2">{t('feat3Title')}</h3>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
-              {t('feat3Desc')}
-            </p>
+            <div className="text-2xl sm:text-3xl font-black text-blue-700">₹0</div>
+            <div className="text-xs text-slate-500 font-semibold mt-1">{lang === 'hi' ? 'मुफ़्त रजिस्ट्रेशन' : 'Free Registration'}</div>
           </div>
         </div>
       </section>
 
       {/* About Us Spotlight Section */}
-      <section className="bg-slate-100/70 py-14 px-4 border-t border-slate-200">
+      <section className="bg-slate-50/70 py-14 px-4 border-t border-slate-200">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-3xl p-8 sm:p-10 border border-slate-200 shadow-xs">
+          <div className="bg-white rounded-3xl p-8 sm:p-10 border border-slate-200 shadow-xs text-left">
             <div className="flex items-center justify-between gap-2 mb-3">
               <div className="flex items-center gap-2">
                 <Award className="w-5 h-5 text-blue-600" />
@@ -327,7 +438,7 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
       </section>
 
       {/* Customer & Vendor Testimonials */}
-      <section className="py-14 px-4 max-w-5xl mx-auto">
+      <section className="py-14 px-4 max-w-5xl mx-auto text-left">
         <div className="text-center mb-10">
           <span className="text-xs font-bold uppercase text-blue-700 tracking-wider bg-blue-100 px-3 py-1 rounded-full">
             {t('testiBadge')}
@@ -381,7 +492,7 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
       </section>
 
       {/* Contact Us Section - Deep Dairy Blue Theme */}
-      <section className="bg-gradient-to-br from-blue-950 via-slate-900 to-blue-900 text-white py-14 px-4 border-t border-blue-900">
+      <section className="bg-gradient-to-br from-blue-950 via-slate-900 to-blue-900 text-white py-14 px-4 border-t border-blue-900 text-left">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10">
             <span className="text-xs font-bold uppercase text-blue-300 tracking-wider bg-white/10 px-3 py-1 rounded-full">
@@ -406,7 +517,7 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
               <button
                 type="button"
                 onClick={() => handleNav('CONTACT')}
-                className="mt-3 text-[11px] font-bold text-blue-300 hover:text-white underline pt-2 border-t border-white/10"
+                className="mt-3 text-[11px] font-bold text-blue-300 hover:text-white underline pt-2 border-t border-white/10 cursor-pointer"
               >
                 {lang === 'hi' ? 'संपर्क फ़ॉर्म खोलें' : 'Open Contact Form'}
               </button>
@@ -463,14 +574,14 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
                 <h4 className="text-sm font-bold">{t('officeTitle')}</h4>
                 <p className="text-xs text-blue-200 mt-1">{t('officeVal')}</p>
               </div>
-              <p className="text-[11px] text-slate-300 mt-3 pt-2 border-t border-white/10">All India Digital Dairy</p>
+              <p className="text-[11px] text-slate-300 mt-3 pt-2 border-t border-white/10">Near Post Office, Jamalpur, Gurgaon</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Footer with Menu Navigation Links */}
-      <footer className="bg-slate-950 text-slate-400 text-xs py-10 px-4 border-t border-slate-900">
+      <footer className="bg-slate-950 text-slate-400 text-xs py-10 px-4 border-t border-slate-900 text-left">
         <div className="max-w-5xl mx-auto space-y-6">
           
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
@@ -490,7 +601,7 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
               <button 
                 type="button" 
                 onClick={() => handleNav('ABOUT')}
-                className="hover:text-white transition"
+                className="hover:text-white transition cursor-pointer"
               >
                 {t('menuAbout')}
               </button>
@@ -498,7 +609,7 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
               <button 
                 type="button" 
                 onClick={() => handleNav('CONTACT')}
-                className="hover:text-white transition"
+                className="hover:text-white transition cursor-pointer"
               >
                 {t('menuContact')}
               </button>
@@ -506,7 +617,7 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
               <button 
                 type="button" 
                 onClick={() => handleNav('TERMS')}
-                className="hover:text-white transition"
+                className="hover:text-white transition cursor-pointer"
               >
                 {t('menuTerms')}
               </button>
@@ -514,7 +625,7 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
               <button 
                 type="button" 
                 onClick={() => handleNav('PRIVACY')}
-                className="hover:text-white transition"
+                className="hover:text-white transition cursor-pointer"
               >
                 {t('menuPrivacy')}
               </button>
@@ -523,9 +634,9 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
 
           <div className="pt-6 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left text-[11px] text-slate-500">
             <p>
-              Helpline: <a href="tel:+919971880670" className="hover:text-white underline">+91 9971880670</a> (WhatsApp), <a href="tel:8053278764" className="hover:text-white underline">8053278764</a> | support@milkhisab.in
+              Helpline: <a href="tel:+919971880670" className="hover:text-white underline">+91 9971880670</a> (WhatsApp), <a href="tel:8053278764" className="hover:text-white underline">8053278764</a> | info@milkhisab.in
             </p>
-            <p>Made with ❤️ for Indian Dairy Vendors and Families.</p>
+            <p>Near Post Office, Jamalpur, Gurgaon Haryana 122503</p>
           </div>
 
         </div>

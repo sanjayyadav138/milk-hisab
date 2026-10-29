@@ -194,7 +194,9 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin, on
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="text-center">
           <div className="animate-spin w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full mx-auto mb-3"></div>
-          <p className="text-sm font-bold text-slate-600">आपका दूध खाता लोड हो रहा है...</p>
+          <p className="text-sm font-semibold text-slate-600">
+            {lang === 'hi' ? 'आपका दूध खाता लोड हो रहा है...' : 'Loading your milk account details...'}
+          </p>
         </div>
       </div>
     );
@@ -530,10 +532,12 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin, on
                     <div className="mt-3 p-3.5 bg-amber-50 border border-amber-300 rounded-2xl text-xs">
                       <p className="font-bold text-amber-900 flex items-center gap-1.5">
                         <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                        <span>आपकी दर्ज आपत्ति समीक्षाधीन है:</span>
+                        <span>{lang === 'hi' ? 'आपकी दर्ज आपत्ति समीक्षाधीन है:' : 'Your submitted concern is under review:'}</span>
                       </p>
                       <p className="text-amber-800 mt-1 font-semibold">"{selectedLog.dispute_reason}"</p>
-                      <p className="text-[11px] text-amber-700 mt-1">दूधिया को इसकी सूचना भेज दी गई है। जैसे ही वे अपडेट करेंगे, आपको यहाँ सूचना मिल जाएगी।</p>
+                      <p className="text-[11px] text-amber-700 mt-1">
+                        {lang === 'hi' ? 'दूधिया को इसकी सूचना भेज दी गई है। जैसे ही वे अपडेट करेंगे, आपको यहाँ सूचना मिल जाएगी।' : 'Milkman has been notified. You will see an update here once resolved.'}
+                      </p>
                     </div>
                   )}
 
@@ -542,9 +546,9 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin, on
                     <div className="mt-3 p-3.5 bg-emerald-50 border border-emerald-300 rounded-2xl text-xs">
                       <p className="font-bold text-emerald-900 flex items-center gap-1.5">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>दूधिया द्वारा हिसाब सुलझाया गया:</span>
+                        <span>{lang === 'hi' ? 'दूधिया द्वारा हिसाब सुलझाया गया:' : 'Resolved by Milkman:'}</span>
                       </p>
-                      <p className="text-emerald-800 mt-1 font-semibold">{selectedLog.notes || 'मात्रा अपडेट कर दी गई है'}</p>
+                      <p className="text-emerald-800 mt-1 font-semibold">{selectedLog.notes || (lang === 'hi' ? 'मात्रा अपडेट कर दी गई है' : 'Quantity updated by milkman')}</p>
                     </div>
                   )}
 

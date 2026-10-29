@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Search, MapPin, Milk, Clock, Phone, Sparkles, 
   ArrowLeft, CheckCircle2, ArrowRight, ShieldCheck, 
-  Send, SlidersHorizontal, RotateCcw, X, Star, Check 
+  Send, SlidersHorizontal, RotateCcw, X, Star, Check, Calendar 
 } from 'lucide-react';
 import { searchVendorsApi, createMilkRequestApi } from '../services/api';
 import { VendorSearchResult, AuthState } from '../types';
@@ -69,49 +69,66 @@ export default function FindMilkmanView({ initialQuery = '', auth, onBack }: Fin
     handleSearch('');
   };
 
-  const handleOpenRequest = async (vendor: VendorSearchResult) => {
+  const todayStr = new Date().toISOString().split('T')[0];
+  const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+  const handleOpenRequest = (vendor: VendorSearchResult) => {
     setSelectedVendor(vendor);
     setRequestSubmitted(false);
 
-    // If logged in as customer, instant 1-click request!
     if (auth?.role === 'customer' && auth.customer) {
-      setSubmitting(true);
-      try {
-        await createMilkRequestApi(vendor.id, {
-          customer_name: auth.customer.name,
-          customer_phone: auth.customer.phone || '',
-          address: auth.customer.address || '',
-          locality: vendor.area || '',
-          milk_type: auth.customer.milk_type || 'Cow',
-          quantity: auth.customer.default_quantity || 1.0,
-          delivery_time: 'Morning',
-          start_date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-          notes: 'Direct 1-click request from verified Milk Hisab customer profile'
-        });
-        setRequestSubmitted(true);
-      } catch (err: any) {
-        alert(err.message || 'Failed to submit request');
-      } finally {
-        setSubmitting(false);
-      }
+      setReqForm({
+        customer_name: auth.customer.name,
+        customer_phone: auth.customer.phone || '',
+        address: auth.customer.address || '',
+        locality: vendor.area || vendor.city || '',
+        milk_type: auth.customer.milk_type || 'Cow',
+        quantity: auth.customer.default_quantity || 1.5,
+        delivery_time: 'Morning',
+        start_date: tomorrowStr,
+        notes: ''
+      });
     } else {
       setReqForm({
-        ...reqForm,
+        customer_name: '',
+        customer_phone: '',
+        address: '',
+        locality: vendor.area || vendor.city || '',
         milk_type: 'Cow',
-        locality: vendor.area || ''
+        quantity: 1.5,
+        delivery_time: 'Morning',
+        start_date: tomorrowStr,
+        notes: ''
       });
     }
   };
 
-  const handleGuestSubmit = async (e: React.FormEvent) => {
+  const handleSubmitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedVendor) return;
+    if (!reqForm.customer_name.trim() || !reqForm.customer_phone.trim()) {
+      alert(lang === 'hi' ? 'कृपया नाम और फोन नंबर दर्ज करें' : 'Please provide Name and Phone');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      await createMilkRequestApi(selectedVendor.id, reqForm);
+      await createMilkRequestApi(selectedVendor.id, {
+        customer_name: reqForm.customer_name.trim(),
+        customer_phone: reqForm.customer_phone.trim(),
+        address: reqForm.address.trim() || selectedVendor.area || selectedVendor.city || 'स्थानीय',
+        locality: reqForm.locality.trim() || selectedVendor.area || '',
+        city: selectedVendor.city,
+        pincode: selectedVendor.pincode,
+        milk_type: reqForm.milk_type,
+        quantity: Number(reqForm.quantity) || 1.0,
+        delivery_time: reqForm.delivery_time,
+        start_date: reqForm.start_date,
+        notes: reqForm.notes.trim() || undefined
+      });
       setRequestSubmitted(true);
     } catch (err: any) {
-      alert(err.message || 'Failed to submit request');
+      alert(lang === 'hi' ? 'अनुरोध भेजने में समस्या आई: ' + err.message : 'Error sending request: ' + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -428,125 +445,333 @@ export default function FindMilkmanView({ initialQuery = '', auth, onBack }: Fin
 
       </div>
 
-      {/* Request Modal / Drawer (For unauthenticated visitors or confirmation) */}
+      {/* Request Modal / Drawer */}
       {selectedVendor && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 overflow-hidden">
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in overflow-y-auto">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[92vh] flex flex-col">
             
-            <div className="bg-gradient-to-r from-blue-700 to-indigo-900 px-5 py-4 text-white flex items-center justify-between">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 px-5 py-4 text-white flex items-center justify-between shrink-0">
               <div>
-                <h3 className="font-bold text-base">
-                  {lang === 'hi' ? 'दूध डिलीवरी अनुरोध' : 'Request Milk Delivery'}
+                <h3 className="font-black text-base sm:text-lg">
+                  {lang === 'hi' ? 'दूध डिलीवरी का अनुरोध' : 'Request Milk Delivery'}
                 </h3>
-                <p className="text-xs text-blue-100">{selectedVendor.business_name} ({selectedVendor.name})</p>
+                <p className="text-xs text-blue-100 mt-0.5">
+                  {selectedVendor.business_name || selectedVendor.name} • {selectedVendor.area || selectedVendor.city}
+                </p>
               </div>
               <button 
                 type="button"
                 onClick={() => setSelectedVendor(null)}
-                className="p-1 rounded-full hover:bg-white/20 text-white/80 hover:text-white"
+                className="p-1.5 rounded-full hover:bg-white/20 text-white/80 hover:text-white transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-5">
+            <div className="p-5 overflow-y-auto">
               {requestSubmitted ? (
-                <div className="text-center py-6 space-y-3">
-                  <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-xs">
-                    <CheckCircle2 className="w-8 h-8" />
+                <div className="text-center py-6 space-y-4">
+                  <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
+                    <CheckCircle2 className="w-10 h-10" />
                   </div>
-                  <h4 className="text-lg font-bold text-slate-900">
-                    {lang === 'hi' ? 'अनुरोध सफलतापूर्वक भेजा गया!' : 'Request Sent Successfully!'}
-                  </h4>
-                  <p className="text-xs text-slate-600 leading-relaxed max-w-xs mx-auto">
-                    {lang === 'hi' 
-                      ? `${selectedVendor.name} जी को आपका अनुरोध मिल गया है। वे जल्द ही आपसे संपर्क करके दूध सप्लाई शुरू करेंगे।`
-                      : `Your milk request has been sent to ${selectedVendor.name}. They will confirm and start delivery.`}
-                  </p>
+                  <div>
+                    <h4 className="text-xl font-black text-slate-900">
+                      {lang === 'hi' ? 'अनुरोध सफलतापूर्वक भेजा गया! ✓' : 'Request Sent Successfully! ✓'}
+                    </h4>
+                    <p className="text-xs text-slate-600 mt-1.5 leading-relaxed max-w-sm mx-auto">
+                      {lang === 'hi' 
+                        ? `दूधिया ${selectedVendor.name} जी को आपका अनुरोध मिल गया है। वे जल्द ही आपसे संपर्क करके सप्लाई शुरू करेंगे।`
+                        : `Your request has been sent to ${selectedVendor.name}. They will contact you shortly to begin delivery.`}
+                    </p>
+                  </div>
+
+                  {/* Summary card */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left text-xs space-y-2">
+                    <p className="text-slate-500 font-bold uppercase text-[10px] tracking-wider">
+                      {lang === 'hi' ? 'अनुरोध का विवरण:' : 'Request Summary:'}
+                    </p>
+                    <div className="flex justify-between font-bold text-slate-800">
+                      <span>{lang === 'hi' ? 'मात्रा व प्रकार:' : 'Quantity & Type:'}</span>
+                      <span className="text-blue-700">{reqForm.quantity}L ({reqForm.milk_type === 'Cow' ? (lang === 'hi' ? 'गाय का दूध' : 'Cow Milk') : (lang === 'hi' ? 'भैंस का दूध' : 'Buffalo Milk')})</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-slate-800">
+                      <span>{lang === 'hi' ? 'शुरुआत तारीख:' : 'Start Date:'}</span>
+                      <span className="text-slate-900 font-black">{reqForm.start_date}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-slate-800">
+                      <span>{lang === 'hi' ? 'डिलीवरी समय:' : 'Delivery Time:'}</span>
+                      <span>{reqForm.delivery_time === 'Morning' ? t('morning') : reqForm.delivery_time === 'Evening' ? t('evening') : t('bothTimes')}</span>
+                    </div>
+                  </div>
+
                   <button
                     type="button"
                     onClick={() => setSelectedVendor(null)}
-                    className="w-full mt-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition"
+                    className="w-full mt-2 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition"
                   >
                     {lang === 'hi' ? 'ठीक है (Done)' : 'Close'}
                   </button>
                 </div>
               ) : (
-                /* Guest Request Form */
-                <form onSubmit={handleGuestSubmit} className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">{t('nameLabel')}</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder=""
-                      value={reqForm.customer_name}
-                      onChange={(e) => setReqForm({ ...reqForm, customer_name: e.target.value })}
-                      className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:border-blue-600 focus:outline-none bg-slate-50"
-                    />
-                  </div>
+                <form onSubmit={handleSubmitRequest} className="space-y-4">
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">{t('phoneLabel')}</label>
-                    <input
-                      type="tel"
-                      required
-                      placeholder=""
-                      value={reqForm.customer_phone}
-                      onChange={(e) => setReqForm({ ...reqForm, customer_phone: e.target.value })}
-                      className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:border-blue-600 focus:outline-none bg-slate-50"
-                    />
-                  </div>
+                  {/* Customer Identity Block */}
+                  {auth?.role === 'customer' && auth.customer ? (
+                    <div className="bg-blue-50/80 border border-blue-200 rounded-2xl p-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                          {auth.customer.name.charAt(0)}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-xs font-black text-slate-900 truncate">{auth.customer.name}</p>
+                            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-bold shrink-0">
+                              ✓ {lang === 'hi' ? 'सत्यापित खाता' : 'Verified'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-600 truncate mt-0.5">
+                            📞 {auth.customer.phone} {reqForm.address ? `• 📍 ${reqForm.address}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                      <p className="text-[11px] font-black text-slate-700 uppercase tracking-wider">
+                        {lang === 'hi' ? 'आपकी जानकारी (Customer Details):' : 'Your Details:'}
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1">{t('nameLabel')} *</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder=""
+                            value={reqForm.customer_name}
+                            onChange={(e) => setReqForm({ ...reqForm, customer_name: e.target.value })}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:border-blue-600 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1">{t('phoneLabel')} *</label>
+                          <input
+                            type="tel"
+                            required
+                            placeholder=""
+                            value={reqForm.customer_phone}
+                            onChange={(e) => setReqForm({ ...reqForm, customer_phone: e.target.value })}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:border-blue-600 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">{t('addressLabel')} *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder=""
+                          value={reqForm.address}
+                          onChange={(e) => setReqForm({ ...reqForm, address: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:border-blue-600 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  )}
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">{t('addressLabel')}</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder=""
-                      value={reqForm.address}
-                      onChange={(e) => setReqForm({ ...reqForm, address: e.target.value })}
-                      className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:border-blue-600 focus:outline-none bg-slate-50"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
+                  {/* If logged in customer has no address on file, ask for it */}
+                  {auth?.role === 'customer' && auth.customer && !auth.customer.address && (
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">{t('qtyLabel')}</label>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        📍 {t('addressLabel')} *
+                      </label>
                       <input
-                        type="number"
-                        step="0.5"
-                        min="0.5"
+                        type="text"
                         required
-                        value={reqForm.quantity}
-                        onChange={(e) => setReqForm({ ...reqForm, quantity: parseFloat(e.target.value) || 1.0 })}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:border-blue-600 focus:outline-none"
+                        placeholder=""
+                        value={reqForm.address}
+                        onChange={(e) => setReqForm({ ...reqForm, address: e.target.value })}
+                        className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:border-blue-600 focus:outline-none"
                       />
                     </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">{t('milkTypeLabel')}</label>
-                      <select
-                        value={reqForm.milk_type}
-                        onChange={(e) => setReqForm({ ...reqForm, milk_type: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:border-blue-600 focus:outline-none bg-white"
-                      >
-                        <option value="Cow">{t('cowMilk')} (₹{selectedVendor.price_cow}/L)</option>
-                        <option value="Buffalo">{t('buffaloMilk')} (₹{selectedVendor.price_buffalo}/L)</option>
-                      </select>
+                  )}
+
+                  {/* 1. HOW MUCH MILK (दूध मात्रा व प्रकार) */}
+                  <div className="bg-blue-50/40 p-3.5 rounded-2xl border border-blue-100 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                        <Milk className="w-4 h-4 text-blue-600" />
+                        <span>{lang === 'hi' ? '1. कितना दूध चाहिए? (Daily Quantity)' : '1. How much milk? (Daily Quantity)'}</span>
+                      </label>
+                      <span className="text-[11px] font-bold text-blue-700">
+                        ₹{(reqForm.quantity * (reqForm.milk_type === 'Cow' ? (selectedVendor.price_cow || 60) : (selectedVendor.price_buffalo || 70))).toFixed(0)} / {lang === 'hi' ? 'दिन' : 'day'}
+                      </span>
                     </div>
+
+                    {/* Stepper + Quick chips */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex items-center bg-white p-1 rounded-2xl border border-slate-200 shadow-2xs">
+                        <button
+                          type="button"
+                          onClick={() => setReqForm(p => ({ ...p, quantity: Math.max(0.5, Math.round((p.quantity - 0.5) * 10) / 10) }))}
+                          className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 font-black text-slate-700 active:scale-95 transition"
+                        >
+                          -
+                        </button>
+                        <span className="w-16 text-center font-black text-base text-slate-900">
+                          {reqForm.quantity} L
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setReqForm(p => ({ ...p, quantity: Math.min(20, Math.round((p.quantity + 0.5) * 10) / 10) }))}
+                          className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 font-black text-slate-700 active:scale-95 transition"
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1">
+                        {[0.5, 1.0, 1.5, 2.0, 3.0].map(q => (
+                          <button
+                            key={q}
+                            type="button"
+                            onClick={() => setReqForm(p => ({ ...p, quantity: q }))}
+                            className={`px-2.5 py-1.5 rounded-xl text-xs font-black transition ${
+                              reqForm.quantity === q
+                                ? 'bg-blue-600 text-white shadow-xs'
+                                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                            }`}
+                          >
+                            {q}L
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Milk Type Selection */}
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setReqForm(p => ({ ...p, milk_type: 'Cow' }))}
+                        className={`p-2.5 rounded-2xl border text-left transition ${
+                          reqForm.milk_type === 'Cow'
+                            ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500/20'
+                            : 'border-slate-200 bg-white hover:bg-slate-50'
+                        }`}
+                      >
+                        <p className="text-xs font-black text-slate-900">🐮 {t('cowMilk')}</p>
+                        <p className="text-[11px] text-blue-700 font-bold mt-0.5">₹{selectedVendor.price_cow || 60}/L</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setReqForm(p => ({ ...p, milk_type: 'Buffalo' }))}
+                        className={`p-2.5 rounded-2xl border text-left transition ${
+                          reqForm.milk_type === 'Buffalo'
+                            ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500/20'
+                            : 'border-slate-200 bg-white hover:bg-slate-50'
+                        }`}
+                      >
+                        <p className="text-xs font-black text-slate-900">🐃 {t('buffaloMilk')}</p>
+                        <p className="text-[11px] text-blue-700 font-bold mt-0.5">₹{selectedVendor.price_buffalo || 70}/L</p>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 2. FROM WHEN TO START (कब से शुरू करना है) */}
+                  <div className="bg-amber-50/40 p-3.5 rounded-2xl border border-amber-100 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                        <Calendar className="w-4 h-4 text-amber-600" />
+                        <span>{lang === 'hi' ? '2. कब से शुरू करना है? (Start Date)' : '2. From when to start? (Start Date)'}</span>
+                      </label>
+                      <span className="text-[11px] font-bold text-amber-900">
+                        {reqForm.start_date === todayStr ? (lang === 'hi' ? 'आज से शुरू' : 'Starting Today') : reqForm.start_date === tomorrowStr ? (lang === 'hi' ? 'कल से शुरू' : 'Starting Tomorrow') : reqForm.start_date}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setReqForm(p => ({ ...p, start_date: todayStr }))}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                          reqForm.start_date === todayStr
+                            ? 'bg-amber-600 text-white shadow-xs'
+                            : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {lang === 'hi' ? 'आज से (Today)' : 'Today'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setReqForm(p => ({ ...p, start_date: tomorrowStr }))}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                          reqForm.start_date === tomorrowStr
+                            ? 'bg-amber-600 text-white shadow-xs'
+                            : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {lang === 'hi' ? 'कल से (Tomorrow)' : 'Tomorrow'}
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          {lang === 'hi' ? 'तारीख चुनें:' : 'Select Exact Date:'}
+                        </label>
+                        <input
+                          type="date"
+                          min={todayStr}
+                          required
+                          value={reqForm.start_date}
+                          onChange={(e) => setReqForm({ ...reqForm, start_date: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-600 cursor-pointer"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          {lang === 'hi' ? 'सप्लाई का समय:' : 'Delivery Timing:'}
+                        </label>
+                        <select
+                          value={reqForm.delivery_time}
+                          onChange={(e) => setReqForm({ ...reqForm, delivery_time: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-600"
+                        >
+                          <option value="Morning">🌅 {t('morning')}</option>
+                          <option value="Evening">🌆 {t('evening')}</option>
+                          <option value="Both">☀️ {t('bothTimes')}</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Notes / Special Instructions */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      📝 {lang === 'hi' ? 'विशेष निर्देश / नोट (वैकल्पिक):' : 'Special Instructions (Optional):'}
+                    </label>
+                    <input
+                      type="text"
+                      placeholder=""
+                      value={reqForm.notes}
+                      onChange={(e) => setReqForm({ ...reqForm, notes: e.target.value })}
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:border-blue-600 focus:outline-none"
+                    />
                   </div>
 
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="w-full mt-2 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    className="w-full mt-2 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 cursor-pointer"
                   >
                     {submitting ? (
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
                       <>
                         <Send className="w-4 h-4" />
-                        <span>{lang === 'hi' ? 'अनुरोध भेजें (Send Request)' : 'Submit Request'}</span>
+                        <span>{lang === 'hi' ? 'दूध सप्लाई शुरू करने का अनुरोध भेजें' : 'Send Milk Request'}</span>
                       </>
                     )}
                   </button>

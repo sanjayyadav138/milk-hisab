@@ -57,42 +57,41 @@ export default function FindMilkmanModal({ isOpen, onClose, initialQuery = '', a
     }
   };
 
-  const handleOpenRequest = async (vendor: VendorSearchResult) => {
+  const handleOpenRequest = (vendor: VendorSearchResult) => {
     setSelectedVendor(vendor);
-
-    // Requirement 3: If logged in as customer, send request directly with customer details!
-    if (auth?.role === 'customer' && auth.customer) {
-      setSubmitting(true);
-      try {
-        const cust = auth.customer;
-        await createMilkRequestApi(vendor.id, {
-          customer_name: cust.name,
-          customer_phone: cust.phone || '',
-          address: cust.address || '',
-          locality: vendor.area || vendor.city || '',
-          city: vendor.city,
-          pincode: vendor.pincode,
-          milk_type: cust.milk_type || 'Cow',
-          quantity: cust.default_quantity || 1.5,
-          delivery_time: 'Morning',
-          start_date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-          notes: ''
-        });
-        setRequestSubmitted(true);
-      } catch (err: any) {
-        alert(lang === 'hi' ? 'अनुरोध भेजने में त्रुटि: ' + err.message : 'Error sending request: ' + err.message);
-      } finally {
-        setSubmitting(false);
-      }
-      return;
-    }
-
-    // Otherwise, show form for unauthenticated visitors
     setRequestSubmitted(false);
-    setReqForm(prev => ({
-      ...prev,
-      locality: vendor.area || vendor.city || ''
-    }));
+
+    const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+    if (auth?.role === 'customer' && auth.customer) {
+      setReqForm({
+        customer_name: auth.customer.name,
+        customer_phone: auth.customer.phone || '',
+        address: auth.customer.address || '',
+        locality: vendor.area || vendor.city || '',
+        city: vendor.city,
+        pincode: vendor.pincode,
+        milk_type: auth.customer.milk_type || 'Cow',
+        quantity: auth.customer.default_quantity || 1.5,
+        delivery_time: 'Morning',
+        start_date: tomorrowStr,
+        notes: ''
+      });
+    } else {
+      setReqForm({
+        customer_name: '',
+        customer_phone: '',
+        address: '',
+        locality: vendor.area || vendor.city || '',
+        city: vendor.city,
+        pincode: vendor.pincode,
+        milk_type: 'Cow',
+        quantity: 1.5,
+        delivery_time: 'Morning',
+        start_date: tomorrowStr,
+        notes: ''
+      });
+    }
   };
 
   const handleSubmitRequest = async (e: React.FormEvent) => {
@@ -321,49 +320,88 @@ export default function FindMilkmanModal({ isOpen, onClose, initialQuery = '', a
               </div>
 
               <form onSubmit={handleSubmitRequest} className="space-y-3.5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {auth?.role === 'customer' && auth.customer ? (
+                  <div className="bg-blue-50/80 border border-blue-200 rounded-2xl p-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                        {auth.customer.name.charAt(0)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs font-black text-slate-900 truncate">{auth.customer.name}</p>
+                          <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-bold shrink-0">
+                            ✓ {lang === 'hi' ? 'सत्यापित खाता' : 'Verified'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-600 truncate mt-0.5">
+                          📞 {auth.customer.phone} {reqForm.address ? `• 📍 ${reqForm.address}` : ''}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          {lang === 'hi' ? 'आपका नाम *' : 'Your Name *'}
+                        </label>
+                        <input 
+                          type="text"
+                          required
+                          placeholder=""
+                          value={reqForm.customer_name}
+                          onChange={(e) => setReqForm({ ...reqForm, customer_name: e.target.value })}
+                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          {lang === 'hi' ? 'फ़ोन नंबर (WhatsApp) *' : 'Phone Number *'}
+                        </label>
+                        <input 
+                          type="tel"
+                          required
+                          placeholder=""
+                          value={reqForm.customer_phone}
+                          onChange={(e) => setReqForm({ ...reqForm, customer_phone: e.target.value })}
+                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        {lang === 'hi' ? 'घर का पूरा पता (मकान नं., गली, लैंडमार्क) *' : 'Full House Address *'}
+                      </label>
+                      <input 
+                        type="text"
+                        required
+                        placeholder=""
+                        value={reqForm.address}
+                        onChange={(e) => setReqForm({ ...reqForm, address: e.target.value })}
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {auth?.role === 'customer' && auth.customer && !auth.customer.address && (
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      {lang === 'hi' ? 'आपका नाम *' : 'Your Name *'}
+                      {lang === 'hi' ? 'घर का पूरा पता (मकान नं., गली, लैंडमार्क) *' : 'Full House Address *'}
                     </label>
                     <input 
                       type="text"
                       required
                       placeholder=""
-                      value={reqForm.customer_name}
-                      onChange={(e) => setReqForm({ ...reqForm, customer_name: e.target.value })}
+                      value={reqForm.address}
+                      onChange={(e) => setReqForm({ ...reqForm, address: e.target.value })}
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-blue-500"
                     />
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      {lang === 'hi' ? 'फ़ोन नंबर (WhatsApp) *' : 'Phone Number *'}
-                    </label>
-                    <input 
-                      type="tel"
-                      required
-                      placeholder=""
-                      value={reqForm.customer_phone}
-                      onChange={(e) => setReqForm({ ...reqForm, customer_phone: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    {lang === 'hi' ? 'घर का पूरा पता (मकान नं., गली, लैंडमार्क) *' : 'Full House Address *'}
-                  </label>
-                  <input 
-                    type="text"
-                    required
-                    placeholder=""
-                    value={reqForm.address}
-                    onChange={(e) => setReqForm({ ...reqForm, address: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
+                )}
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div>

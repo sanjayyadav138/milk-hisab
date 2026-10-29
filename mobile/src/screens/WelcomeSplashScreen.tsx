@@ -4,6 +4,7 @@ import {
   StyleSheet, View, Text, TouchableOpacity, SafeAreaView, 
   Image, Dimensions, Platform 
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLanguage } from '../context/LanguageContext';
 
 const { width, height } = Dimensions.get('window');
@@ -20,56 +21,59 @@ export default function WelcomeSplashScreen({ onGoLogin, onGoRegister }: Welcome
     <View style={styles.container}>
       <StatusBar style="light" />
 
-      {/* Netflix-Style Full-Bleed Background Image */}
-      <Image 
-        source={require('../../assets/media/banner-image-2.jpg')} 
-        style={styles.backgroundImage}
-        resizeMode="cover"
-      />
-
-      {/* Cinematic Dark Vignette & Gradient Overlays */}
-      <View style={styles.topVignette} />
-      <View style={styles.bottomGradient} />
+      {/* Netflix-Style Hero Banner with Rich Visual Clarity */}
+      <View style={styles.bannerWrapper}>
+        <Image 
+          source={require('../../assets/media/banner-image1.png')} 
+          style={styles.bannerImage}
+          resizeMode="cover"
+        />
+        {/* Cinematic Linear Gradient: Gentle top fade, fully clear middle banner, smooth drop to pure black */}
+        <LinearGradient
+          colors={[
+            'rgba(0, 0, 0, 0.75)',
+            'rgba(0, 0, 0, 0.05)',
+            'rgba(0, 0, 0, 0.35)',
+            'rgba(0, 0, 0, 0.88)',
+            '#000000',
+            '#000000'
+          ]}
+          locations={[0, 0.22, 0.52, 0.78, 0.95, 1.0]}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
 
       <SafeAreaView style={styles.contentSafeArea}>
-        {/* Top Navigation Bar: Official Logo on Left, Language Pill on Right */}
+        {/* Top Navigation Bar: Pure Logo on Left (No White Box), Netflix-Style Language Pill on Right */}
         <View style={styles.topNavBar}>
-          <View style={styles.logoBadge}>
-            <Image 
-              source={require('../../assets/logo.png')} 
-              style={styles.logoImg} 
-              resizeMode="contain" 
-            />
-          </View>
+          <Image 
+            source={require('../../assets/logo.png')} 
+            style={styles.brandLogo} 
+            resizeMode="contain" 
+          />
 
-          <TouchableOpacity onPress={toggleLang} style={styles.langSwitchPill} activeOpacity={0.8}>
-            <Text style={styles.langSwitchText}>
+          <TouchableOpacity onPress={toggleLang} style={styles.langPill} activeOpacity={0.8}>
+            <Text style={styles.langPillText}>
               🌐 {lang === 'hi' ? 'English' : 'हिन्दी'}
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Center Cinematic Hero Typography */}
+        {/* Center Cinematic Hero Content (Unified Netflix Black & White Styling) */}
         <View style={styles.centerHero}>
-          <View style={styles.taglineBadge}>
-            <Text style={styles.taglineBadgeText}>
-              {lang === 'hi' ? '🥛 भारत का डिजिटल दुग्ध बहीखाता' : "🥛 India's Modern Dairy Cloud"}
-            </Text>
-          </View>
-
           <Text style={styles.heroTitle}>
             {lang === 'hi' 
-              ? 'स्मार्ट दुग्ध बहीखाता,\nहर बूँद का हिसाब।' 
-              : 'Smart Dairy Ledger,\nEvery Drop Accounted.'}
+              ? 'दूध का डिजिटल हिसाब,\nअब बिल्कुल आसान।' 
+              : 'Smart Milk Diary.\nEvery Drop Accounted.'}
           </Text>
 
           <Text style={styles.heroSubtitle}>
             {lang === 'hi' 
-              ? 'कागज़ की डायरी छोड़ें। देसी आवाज़ से 10 सेकंड में डिलीवरी एंट्री, 1-क्लिक WhatsApp बिल और तुरंत UPI भुगतान।' 
-              : 'Say goodbye to paper diaries. Speak naturally to log daily milk, dispatch 1-click WhatsApp bills & collect payments via UPI.'}
+              ? 'कागज़ की डायरी छोड़ें। बोलकर रोज़ की एंट्री करें, 1-क्लिक में WhatsApp बिल भेजें और तुरंत UPI से भुगतान लें।' 
+              : 'Say goodbye to paper diaries. Speak naturally to log milk, send instant WhatsApp bills & collect payments via UPI.'}
           </Text>
 
-          {/* 3 Netflix-Style Feature Badges */}
+          {/* Unified Netflix-Style Feature Badges */}
           <View style={styles.featuresRow}>
             <View style={styles.featurePill}>
               <Text style={styles.featurePillText}>🎙️ {lang === 'hi' ? 'आवाज़ से एंट्री' : 'Voice AI'}</Text>
@@ -78,12 +82,12 @@ export default function WelcomeSplashScreen({ onGoLogin, onGoRegister }: Welcome
               <Text style={styles.featurePillText}>📲 {lang === 'hi' ? 'WhatsApp बिल' : 'WhatsApp QR'}</Text>
             </View>
             <View style={styles.featurePill}>
-              <Text style={styles.featurePillText}>⚖️ {lang === 'hi' ? '0 विवाद' : 'Zero Disputes'}</Text>
+              <Text style={styles.featurePillText}>⚡ {lang === 'hi' ? 'तुरंत UPI' : 'Instant UPI'}</Text>
             </View>
           </View>
         </View>
 
-        {/* Bottom Action Dock (Netflix-style Big Get Started / Sign In Buttons) */}
+        {/* Bottom Action Dock (Netflix Signature Bold CTAs) */}
         <View style={styles.bottomDock}>
           
           {/* Quick Demo Hint */}
@@ -96,33 +100,33 @@ export default function WelcomeSplashScreen({ onGoLogin, onGoRegister }: Welcome
             </Text>
           </View>
 
-          {/* Primary Action Button (Sign In) */}
+          {/* Primary Action Button (Netflix Bold Red) */}
           <TouchableOpacity 
             onPress={() => onGoLogin('vendor')} 
             style={styles.primaryBtn}
-            activeOpacity={0.85}
+            activeOpacity={0.88}
           >
             <Text style={styles.primaryBtnText}>
-              {lang === 'hi' ? 'लॉगिन करें (Sign In)' : 'Sign In'} →
+              {lang === 'hi' ? 'लॉगिन करें (Sign In)' : 'Sign In'} ›
             </Text>
           </TouchableOpacity>
 
-          {/* Secondary Action Button (Register / Get Started) */}
+          {/* Secondary Action Button (Netflix Charcoal Button) */}
           <TouchableOpacity 
             onPress={() => onGoRegister('vendor')} 
             style={styles.secondaryBtn}
             activeOpacity={0.85}
           >
             <Text style={styles.secondaryBtnText}>
-              + {lang === 'hi' ? 'नया खाता बनाएं (Get Started)' : 'Create Free Account'}
+              + {lang === 'hi' ? 'नया खाता बनाएं (Get Started)' : 'Get Started / Create Account'}
             </Text>
           </TouchableOpacity>
 
           {/* Trust Footer */}
           <Text style={styles.footerNote}>
             {lang === 'hi' 
-              ? 'मेहनती दूधियों व लाखों परिवारों का विश्वसनीय डिजिटल साथी' 
-              : 'Trusted by dairy farmers, vendors & households across India'}
+              ? 'मेहनती दूधियों व परिवारों का विश्वसनीय डिजिटल साथी' 
+              : 'Trusted by dairy vendors & households across India'}
           </Text>
         </View>
 
@@ -134,182 +138,150 @@ export default function WelcomeSplashScreen({ onGoLogin, onGoRegister }: Welcome
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#070b14',
+    backgroundColor: '#000000',
     position: 'relative',
   },
-  backgroundImage: {
+  bannerWrapper: {
     position: 'absolute',
     top: 0,
     left: 0,
+    right: 0,
+    height: height * 0.70,
+    backgroundColor: '#000000',
+  },
+  bannerImage: {
     width: width,
-    height: height,
-    opacity: 0.45,
-  },
-  topVignette: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 180,
-    backgroundColor: 'rgba(7, 11, 20, 0.75)',
-  },
-  bottomGradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: height * 0.75,
-    backgroundColor: 'rgba(7, 11, 20, 0.94)',
+    height: '100%',
+    opacity: 0.95,
   },
   contentSafeArea: {
     flex: 1,
     justifyContent: 'space-between',
-    paddingHorizontal: 22,
-    paddingTop: Platform.OS === 'android' ? 40 : 16,
-    paddingBottom: 24,
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'android' ? 44 : 16,
+    paddingBottom: 22,
   },
   topNavBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  logoBadge: {
-    width: 60,
-    height: 60,
-    borderRadius: 18,
-    backgroundColor: '#ffffff',
-    padding: 6,
-    shadowColor: '#2563eb',
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 6,
+  brandLogo: {
+    width: 145,
+    height: 42,
   },
-  logoImg: {
-    width: '100%',
-    height: '100%',
-  },
-  langSwitchPill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.14)',
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 22,
+  langPill: {
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.28)',
+    borderColor: '#404040',
   },
-  langSwitchText: {
-    color: '#38bdf8',
+  langPillText: {
+    color: '#ffffff',
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   centerHero: {
-    marginVertical: 'auto',
-    paddingTop: 20,
-  },
-  taglineBadge: {
-    backgroundColor: 'rgba(37, 99, 235, 0.3)',
-    borderWidth: 1,
-    borderColor: 'rgba(96, 165, 250, 0.4)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-    marginBottom: 14,
-  },
-  taglineBadgeText: {
-    color: '#93c5fd',
-    fontSize: 11,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
+    marginTop: 'auto',
+    marginBottom: 20,
+    alignItems: 'center',
+    paddingHorizontal: 6,
   },
   heroTitle: {
-    fontSize: 34,
+    fontSize: 32,
     fontWeight: '900',
     color: '#ffffff',
-    lineHeight: 42,
-    letterSpacing: -0.8,
+    textAlign: 'center',
+    lineHeight: 38,
+    letterSpacing: -0.5,
   },
   heroSubtitle: {
     fontSize: 13,
-    color: '#94a3b8',
-    marginTop: 12,
+    color: '#d4d4d4',
+    textAlign: 'center',
+    marginTop: 10,
     lineHeight: 19,
-    maxWidth: 320,
+    maxWidth: 340,
   },
   featuresRow: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 18,
+    marginTop: 16,
     flexWrap: 'wrap',
+    justifyContent: 'center',
   },
   featurePill: {
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: 'rgba(255, 255, 255, 0.18)',
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 12,
+    borderRadius: 4,
   },
   featurePillText: {
-    color: '#e2e8f0',
+    color: '#e5e5e5',
     fontSize: 11,
     fontWeight: '600',
   },
   bottomDock: {
-    gap: 12,
-    paddingBottom: 8,
+    gap: 10,
+    paddingBottom: 4,
   },
   demoPill: {
-    backgroundColor: 'rgba(59, 130, 246, 0.15)',
-    borderRadius: 12,
+    backgroundColor: '#171717',
+    borderRadius: 4,
     paddingVertical: 7,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.3)',
+    borderColor: '#2e2e2e',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   demoPillText: {
     fontSize: 11,
-    color: '#93c5fd',
+    color: '#a3a3a3',
   },
   demoHighlight: {
     fontWeight: '900',
     color: '#ffffff',
   },
   primaryBtn: {
-    backgroundColor: '#2563eb',
-    borderRadius: 20,
-    paddingVertical: 16,
+    backgroundColor: '#E50914',
+    borderRadius: 4,
+    paddingVertical: 15,
     alignItems: 'center',
-    shadowColor: '#2563eb',
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowColor: '#E50914',
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 6,
   },
   primaryBtnText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '900',
-    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
   },
   secondaryBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 20,
+    backgroundColor: '#262626',
+    borderRadius: 4,
     paddingVertical: 14,
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.22)',
+    borderWidth: 1,
+    borderColor: '#404040',
   },
   secondaryBtnText: {
     color: '#ffffff',
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   footerNote: {
     fontSize: 10,
-    color: '#64748b',
+    color: '#737373',
     textAlign: 'center',
-    marginTop: 6,
+    marginTop: 4,
     lineHeight: 14,
   },
 });

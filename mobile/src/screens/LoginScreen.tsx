@@ -66,13 +66,11 @@ export default function LoginScreen({ initialRole = 'vendor', onBack, onGoRegist
 
           {/* Centered Brand Header with Logo */}
           <View style={styles.header}>
-            <View style={styles.logoBadgeWrap}>
-              <Image 
-                source={require('../../assets/logo.png')} 
-                style={styles.logoBadgeImg} 
-                resizeMode="contain" 
-              />
-            </View>
+            <Image 
+              source={require('../../assets/logo.png')} 
+              style={styles.brandLogoImg} 
+              resizeMode="contain" 
+            />
             <Text style={styles.title}>
               {lang === 'hi' ? 'खाते में लॉगिन करें' : 'Sign In to Milk Hisab'}
             </Text>
@@ -237,23 +235,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     alignItems: 'center',
   },
-  logoBadgeWrap: {
-    width: 68,
-    height: 68,
-    borderRadius: 22,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-    padding: 6,
-    shadowColor: '#2563eb',
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  logoBadgeImg: {
-    width: '100%',
-    height: '100%',
+  brandLogoImg: {
+    width: 165,
+    height: 48,
+    marginBottom: 12,
   },
   title: {
     fontSize: 22,

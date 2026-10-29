@@ -103,13 +103,11 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
 
           {/* Centered Brand Header with Logo */}
           <View style={styles.header}>
-            <View style={styles.logoBadgeWrap}>
-              <Image 
-                source={require('../../assets/logo.png')} 
-                style={styles.logoBadgeImg} 
-                resizeMode="contain" 
-              />
-            </View>
+            <Image 
+              source={require('../../assets/logo.png')} 
+              style={styles.brandLogoImg} 
+              resizeMode="contain" 
+            />
             <Text style={styles.title}>
               {lang === 'hi' ? 'नया खाता बनाएं' : 'Create Free Account'}
             </Text>
@@ -390,23 +388,10 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     alignItems: 'center',
   },
-  logoBadgeWrap: {
-    width: 60,
-    height: 60,
-    borderRadius: 18,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-    padding: 6,
-    shadowColor: '#2563eb',
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  logoBadgeImg: {
-    width: '100%',
-    height: '100%',
+  brandLogoImg: {
+    width: 165,
+    height: 48,
+    marginBottom: 10,
   },
   title: {
     fontSize: 22,

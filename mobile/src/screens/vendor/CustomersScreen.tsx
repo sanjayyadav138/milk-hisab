@@ -35,7 +35,7 @@ export default function CustomersScreen() {
       const data = await fetchCustomersApi();
       setCustomers(data);
     } catch (err: any) {
-      Alert.alert('त्रुटि', err.message || 'ग्राहक लोड नहीं हो सके');
+      Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', err.message || (lang === 'hi' ? 'ग्राहक लोड नहीं हो सके' : 'Could not load contacts'));
     } finally {
       setLoading(false);
     }
@@ -43,11 +43,11 @@ export default function CustomersScreen() {
 
   const handleAddSubmit = async () => {
     if (!newName.trim()) {
-      Alert.alert('नाम आवश्यक', 'कृपया नाम दर्ज करें');
+      Alert.alert(lang === 'hi' ? 'नाम आवश्यक' : 'Name Required', lang === 'hi' ? 'कृपया नाम दर्ज करें' : 'Please enter full name');
       return;
     }
     if (!newPhone.trim() || newPhone.trim().length < 10) {
-      Alert.alert('मोबाइल नंबर आवश्यक', '10 अंकों का मान्य मोबाइल दर्ज करें');
+      Alert.alert(lang === 'hi' ? 'मोबाइल नंबर आवश्यक' : 'Phone Required', lang === 'hi' ? '10 अंकों का मान्य मोबाइल दर्ज करें' : 'Please enter a valid 10-digit mobile number');
       return;
     }
 
@@ -68,9 +68,9 @@ export default function CustomersScreen() {
       setNewPhone('');
       setNewAddress('');
       loadCustomers();
-      Alert.alert('सफल', `${newName} को सफलतापूर्वक जोड़ दिया गया! डिफ़ॉल्ट पिन: 1234`);
+      Alert.alert(lang === 'hi' ? 'सफल' : 'Success', lang === 'hi' ? `${newName} को जोड़ दिया गया! डिफ़ॉल्ट पिन: 1234` : `${newName} added successfully! Default PIN: 1234`);
     } catch (err: any) {
-      Alert.alert('त्रुटि', err.message || 'ग्राहक जोड़ने में समस्या');
+      Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', err.message || (lang === 'hi' ? 'ग्राहक जोड़ने में समस्या' : 'Failed to add contact'));
     } finally {
       setSubmitting(false);
     }
@@ -79,9 +79,13 @@ export default function CustomersScreen() {
   const openWhatsApp = (phone: string, name: string) => {
     const cleanPhone = phone.replace(/[^0-9]/g, '');
     const fullPhone = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
-    const text = encodeURIComponent(`नमस्ते ${name} जी! Milk Hisab (मिल्क हिसाब) पर आपका दैनिक दूध का रिकॉर्ड दर्ज है। अधिक जानकारी या ऐप लॉगिन हेतु: http://16.176.65.41`);
+    const text = encodeURIComponent(
+      lang === 'hi' 
+        ? `नमस्ते ${name} जी! Milk Hisab पर आपका दैनिक दूध का रिकॉर्ड दर्ज है। लॉगिन हेतु: http://16.176.65.41`
+        : `Hello ${name}! Your milk ledger records are updated on Milk Hisab. Log in at: http://16.176.65.41`
+    );
     Linking.openURL(`whatsapp://send?phone=${fullPhone}&text=${text}`).catch(() => {
-      Alert.alert('WhatsApp नहीं मिला', 'फोन में WhatsApp ऐप इनस्टॉल होना चाहिए');
+      Alert.alert(lang === 'hi' ? 'WhatsApp नहीं मिला' : 'WhatsApp Not Found', lang === 'hi' ? 'फोन में WhatsApp ऐप इनस्टॉल होना चाहिए' : 'WhatsApp must be installed on your device');
     });
   };
 
@@ -115,7 +119,7 @@ export default function CustomersScreen() {
               <Text style={styles.cardName}>{item.name}</Text>
               <View style={[styles.badge, isSupplier ? styles.badgeSupplier : styles.badgeBuyer]}>
                 <Text style={styles.badgeText}>
-                  {isSupplier ? '📥 सप्लायर (4 घर)' : '📤 ग्राहक'}
+                  {isSupplier ? (lang === 'hi' ? '📥 सप्लायर (4 घर)' : '📥 Sourcing') : (lang === 'hi' ? '📤 ग्राहक' : '📤 Customer')}
                 </Text>
               </View>
             </View>
@@ -135,17 +139,17 @@ export default function CustomersScreen() {
               onPress={() => makeCall(item.phone)} 
               style={styles.actionBtnCall}
             >
-              <Text style={styles.actionBtnText}>कॉल</Text>
+              <Text style={styles.actionBtnText}>{lang === 'hi' ? 'कॉल' : 'Call'}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         <View style={styles.cardFooter}>
           <Text style={styles.rateInfo}>
-            दैनिक: <Text style={styles.rateHighlight}>{item.default_quantity}L</Text> ({item.milk_type})
+            {lang === 'hi' ? 'दैनिक: ' : 'Daily: '}<Text style={styles.rateHighlight}>{item.default_quantity}L</Text> ({item.milk_type})
           </Text>
           <Text style={styles.rateInfo}>
-            दर: <Text style={styles.rateHighlight}>₹{item.price_per_liter}</Text>/L
+            {lang === 'hi' ? 'दर: ' : 'Rate: '}<Text style={styles.rateHighlight}>₹{item.price_per_liter}</Text>/L
           </Text>
         </View>
       </View>
@@ -168,7 +172,7 @@ export default function CustomersScreen() {
             onPress={() => setIsAddModalOpen(true)}
             style={styles.addBtn}
           >
-            <Text style={styles.addBtnText}>+ नया</Text>
+            <Text style={styles.addBtnText}>{lang === 'hi' ? '+ नया' : '+ Add'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -179,7 +183,7 @@ export default function CustomersScreen() {
             style={[styles.pill, filterType === 'ALL' && styles.pillActive]}
           >
             <Text style={[styles.pillText, filterType === 'ALL' && styles.pillTextActive]}>
-              सभी ({customers.length})
+              {lang === 'hi' ? 'सभी' : 'All'} ({customers.length})
             </Text>
           </TouchableOpacity>
 
@@ -188,7 +192,7 @@ export default function CustomersScreen() {
             style={[styles.pill, filterType === 'BUYER' && styles.pillActive]}
           >
             <Text style={[styles.pillText, filterType === 'BUYER' && styles.pillTextActive]}>
-              ग्राहक ({buyers.length})
+              {lang === 'hi' ? 'ग्राहक' : 'Customers'} ({buyers.length})
             </Text>
           </TouchableOpacity>
 
@@ -197,7 +201,7 @@ export default function CustomersScreen() {
             style={[styles.pill, filterType === 'SUPPLIER' && styles.pillActive]}
           >
             <Text style={[styles.pillText, filterType === 'SUPPLIER' && styles.pillTextActive]}>
-              सप्लायर घर ({suppliers.length})
+              {lang === 'hi' ? 'सप्लायर घर' : 'Sourcing Homes'} ({suppliers.length})
             </Text>
           </TouchableOpacity>
         </View>
@@ -207,7 +211,9 @@ export default function CustomersScreen() {
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#2563eb" />
-          <Text style={styles.loadingText}>ग्राहक लोड हो रहे हैं...</Text>
+          <Text style={styles.loadingText}>
+            {lang === 'hi' ? 'ग्राहक लोड हो रहे हैं...' : 'Loading contacts...'}
+          </Text>
         </View>
       ) : (
         <FlatList
@@ -217,7 +223,9 @@ export default function CustomersScreen() {
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>कोई संपर्क नहीं मिला</Text>
+              <Text style={styles.emptyText}>
+                {lang === 'hi' ? 'कोई संपर्क नहीं मिला' : 'No contacts found'}
+              </Text>
             </View>
           }
         />
@@ -227,7 +235,9 @@ export default function CustomersScreen() {
       <Modal visible={isAddModalOpen} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>+ नया संपर्क जोड़ें</Text>
+            <Text style={styles.modalTitle}>
+              {lang === 'hi' ? '+ नया संपर्क जोड़ें' : '+ Add New Contact'}
+            </Text>
             
             {/* Type selector */}
             <View style={styles.modalTypeRow}>
@@ -236,7 +246,7 @@ export default function CustomersScreen() {
                 style={[styles.typeOption, newType === 'BUYER' && styles.typeOptionActive]}
               >
                 <Text style={[styles.typeOptionText, newType === 'BUYER' && styles.typeOptionTextActive]}>
-                  📤 ग्राहक (बिक्री)
+                  {lang === 'hi' ? '📤 ग्राहक (बिक्री)' : '📤 Customer (Delivery)'}
                 </Text>
               </TouchableOpacity>
 
@@ -245,20 +255,22 @@ export default function CustomersScreen() {
                 style={[styles.typeOption, newType === 'SUPPLIER' && styles.typeOptionActive]}
               >
                 <Text style={[styles.typeOptionText, newType === 'SUPPLIER' && styles.typeOptionTextActive]}>
-                  📥 सप्लायर (संकलन)
+                  {lang === 'hi' ? '📥 सप्लायर (संकलन)' : '📥 Sourcing (Home)'}
                 </Text>
               </TouchableOpacity>
             </View>
 
             <TextInput 
               style={styles.modalInput} 
-              placeholder="पूरा नाम (उदा. राकेश शर्मा)" 
+              placeholder={lang === 'hi' ? 'पूरा नाम (उदा. राकेश शर्मा)' : 'Full Name (e.g. Rakesh Sharma)'} 
+              placeholderTextColor="#94a3b8"
               value={newName} 
               onChangeText={setNewName} 
             />
             <TextInput 
               style={styles.modalInput} 
-              placeholder="10 अंकों का मोबाइल नंबर" 
+              placeholder={lang === 'hi' ? '10 अंकों का मोबाइल नंबर' : '10-digit mobile number'} 
+              placeholderTextColor="#94a3b8"
               keyboardType="phone-pad" 
               maxLength={10}
               value={newPhone} 
@@ -266,7 +278,8 @@ export default function CustomersScreen() {
             />
             <TextInput 
               style={styles.modalInput} 
-              placeholder="पता / मकान नं. / गली" 
+              placeholder={lang === 'hi' ? 'पता / मकान नं. / गली' : 'Address / House No.'} 
+              placeholderTextColor="#94a3b8"
               value={newAddress} 
               onChangeText={setNewAddress} 
             />
@@ -274,14 +287,16 @@ export default function CustomersScreen() {
             <View style={styles.modalRow}>
               <TextInput 
                 style={[styles.modalInput, { flex: 1, marginRight: 6 }]} 
-                placeholder="दैनिक मात्रा (L)" 
+                placeholder={lang === 'hi' ? 'दैनिक मात्रा (L)' : 'Daily Qty (L)'} 
+                placeholderTextColor="#94a3b8"
                 keyboardType="numeric" 
                 value={newQty} 
                 onChangeText={setNewQty} 
               />
               <TextInput 
                 style={[styles.modalInput, { flex: 1, marginLeft: 6 }]} 
-                placeholder="दर प्रति लीटर (₹)" 
+                placeholder={lang === 'hi' ? 'दर प्रति लीटर (₹)' : 'Price per Liter (₹)'} 
+                placeholderTextColor="#94a3b8"
                 keyboardType="numeric" 
                 value={newRate} 
                 onChangeText={setNewRate} 
@@ -293,7 +308,9 @@ export default function CustomersScreen() {
                 onPress={() => setIsAddModalOpen(false)} 
                 style={styles.modalCancelBtn}
               >
-                <Text style={styles.modalCancelText}>रद्द करें</Text>
+                <Text style={styles.modalCancelText}>
+                  {lang === 'hi' ? 'रद्द करें' : 'Cancel'}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
@@ -304,7 +321,9 @@ export default function CustomersScreen() {
                 {submitting ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.modalSaveText}>सुरक्षित करें</Text>
+                  <Text style={styles.modalSaveText}>
+                    {lang === 'hi' ? 'सुरक्षित करें' : 'Save Contact'}
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>

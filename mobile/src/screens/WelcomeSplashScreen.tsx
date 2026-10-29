@@ -1,10 +1,12 @@
 import React from 'react';
+import { StatusBar } from 'expo-status-bar';
 import { 
-  StyleSheet, View, Text, TouchableOpacity, SafeAreaView, ScrollView, Image, Dimensions 
+  StyleSheet, View, Text, TouchableOpacity, SafeAreaView, 
+  Image, Dimensions, Platform 
 } from 'react-native';
 import { useLanguage } from '../context/LanguageContext';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 interface WelcomeSplashScreenProps {
   onGoLogin: (role?: 'vendor' | 'customer') => void;
@@ -15,362 +17,299 @@ export default function WelcomeSplashScreen({ onGoLogin, onGoRegister }: Welcome
   const { lang, toggleLang } = useLanguage();
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
-        {/* Top Bar with Language Toggle */}
-        <View style={styles.topBar}>
-          <TouchableOpacity onPress={toggleLang} style={styles.langPill}>
-            <Text style={styles.langPillText}>
+    <View style={styles.container}>
+      <StatusBar style="light" />
+
+      {/* Netflix-Style Full-Bleed Background Image */}
+      <Image 
+        source={require('../../assets/media/banner-image-2.jpg')} 
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      />
+
+      {/* Cinematic Dark Vignette & Gradient Overlays */}
+      <View style={styles.topVignette} />
+      <View style={styles.bottomGradient} />
+
+      <SafeAreaView style={styles.contentSafeArea}>
+        {/* Top Navigation Bar: Official Logo on Left, Language Pill on Right */}
+        <View style={styles.topNavBar}>
+          <View style={styles.logoBadge}>
+            <Image 
+              source={require('../../assets/logo.png')} 
+              style={styles.logoImg} 
+              resizeMode="contain" 
+            />
+          </View>
+
+          <TouchableOpacity onPress={toggleLang} style={styles.langSwitchPill} activeOpacity={0.8}>
+            <Text style={styles.langSwitchText}>
               🌐 {lang === 'hi' ? 'English' : 'हिन्दी'}
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Real Brand Logo & Title */}
-        <View style={styles.heroSection}>
-          <View style={styles.logoContainer}>
-            <Image 
-              source={require('../../assets/logo.png')} 
-              style={styles.logoImage} 
-              resizeMode="contain" 
-            />
-          </View>
-
-          <Text style={styles.appTitle}>Milk Hisab</Text>
-          <Text style={styles.appSubtitleHindi}>मिल्क हिसाब</Text>
-          
-          <Text style={styles.tagline}>
-            {lang === 'hi' 
-              ? 'भारत का सबसे सरल व पारदर्शी डिजिटल दुग्ध बहीखाता' 
-              : "India's Modern & Transparent Digital Milk Ledger"}
-          </Text>
-        </View>
-
-        {/* Real Panoramic Dairy Pasture Banner Card */}
-        <View style={styles.pastureBannerCard}>
-          <Image 
-            source={require('../../assets/media/banner-image-2.jpg')} 
-            style={styles.pastureBannerImg}
-            resizeMode="cover"
-          />
-          <View style={styles.pastureOverlay}>
-            <View style={styles.pastureTag}>
-              <Text style={styles.pastureTagText}>
-                {lang === 'hi' ? '🌿 100% शुद्ध देशी गौ दुग्ध' : '🌿 Pure Dairy Heritage'}
-              </Text>
-            </View>
-            <Text style={styles.pastureQuote}>
-              {lang === 'hi' 
-                ? 'गाँव के खेतों से आपके घर के किचन तक — पूर्ण पारदर्शिता' 
-                : 'From Village Pastures to Family Kitchens'}
+        {/* Center Cinematic Hero Typography */}
+        <View style={styles.centerHero}>
+          <View style={styles.taglineBadge}>
+            <Text style={styles.taglineBadgeText}>
+              {lang === 'hi' ? '🥛 भारत का डिजिटल दुग्ध बहीखाता' : "🥛 India's Modern Dairy Cloud"}
             </Text>
           </View>
-        </View>
 
-        {/* Feature Highlights Card with 3D Milk Splash Watermark */}
-        <View style={styles.bannerCard}>
-          <Image 
-            source={require('../../assets/media/milk-image2.png')} 
-            style={styles.watermarkSplash}
-            resizeMode="contain"
-          />
-
-          <View style={styles.featureRow}>
-            <Text style={styles.featureIcon}>🎙️</Text>
-            <View style={styles.featureTextWrap}>
-              <Text style={styles.featureTitle}>
-                {lang === 'hi' ? 'देसी आवाज़ से एंट्री' : 'Voice-Powered Entry'}
-              </Text>
-              <Text style={styles.featureDesc}>
-                {lang === 'hi' ? 'बोलिए और 10 सेकंड में पूरे गाँव या शहर का हिसाब दर्ज' : 'Speak naturally to record deliveries in seconds'}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.featureRow}>
-            <Text style={styles.featureIcon}>📲</Text>
-            <View style={styles.featureTextWrap}>
-              <Text style={styles.featureTitle}>
-                {lang === 'hi' ? '1-क्लिक WhatsApp बिल' : '1-Click WhatsApp Bills'}
-              </Text>
-              <Text style={styles.featureDesc}>
-                {lang === 'hi' ? 'सीधा PhonePe / Google Pay UPI QR कोड के साथ बिल भेजें' : 'Instant itemized statements with UPI payment QR'}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.featureRow}>
-            <Text style={styles.featureIcon}>⚖️</Text>
-            <View style={styles.featureTextWrap}>
-              <Text style={styles.featureTitle}>
-                {lang === 'hi' ? '100% निष्पक्ष व पारदर्शी' : '100% Ledger Transparency'}
-              </Text>
-              <Text style={styles.featureDesc}>
-                {lang === 'hi' ? 'दूधिया और ग्राहक दोनों को समान रीयल-टाइम रिकॉर्ड' : 'Zero reconciliation disputes between vendor & family'}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Demo Fast Shortcut Notice */}
-        <View style={styles.demoBanner}>
-          <Text style={styles.demoText}>
-            💡 {lang === 'hi' ? 'टेस्टिंग: मोबाइल में ' : 'Testing: Use '}
-            <Text style={styles.demoBold}>1234</Text>
-            {lang === 'hi' ? ' और पिन ' : ' and PIN '}
-            <Text style={styles.demoBold}>1234</Text>
-            {lang === 'hi' ? ' से सीधा लॉगिन करें' : ' for instant login'}
+          <Text style={styles.heroTitle}>
+            {lang === 'hi' 
+              ? 'स्मार्ट दुग्ध बहीखाता,\nहर बूँद का हिसाब।' 
+              : 'Smart Dairy Ledger,\nEvery Drop Accounted.'}
           </Text>
+
+          <Text style={styles.heroSubtitle}>
+            {lang === 'hi' 
+              ? 'कागज़ की डायरी छोड़ें। देसी आवाज़ से 10 सेकंड में डिलीवरी एंट्री, 1-क्लिक WhatsApp बिल और तुरंत UPI भुगतान।' 
+              : 'Say goodbye to paper diaries. Speak naturally to log daily milk, dispatch 1-click WhatsApp bills & collect payments via UPI.'}
+          </Text>
+
+          {/* 3 Netflix-Style Feature Badges */}
+          <View style={styles.featuresRow}>
+            <View style={styles.featurePill}>
+              <Text style={styles.featurePillText}>🎙️ {lang === 'hi' ? 'आवाज़ से एंट्री' : 'Voice AI'}</Text>
+            </View>
+            <View style={styles.featurePill}>
+              <Text style={styles.featurePillText}>📲 {lang === 'hi' ? 'WhatsApp बिल' : 'WhatsApp QR'}</Text>
+            </View>
+            <View style={styles.featurePill}>
+              <Text style={styles.featurePillText}>⚖️ {lang === 'hi' ? '0 विवाद' : 'Zero Disputes'}</Text>
+            </View>
+          </View>
         </View>
 
-        {/* Primary Call-to-Actions */}
-        <View style={styles.actionButtonsWrap}>
-          {/* Login Button */}
+        {/* Bottom Action Dock (Netflix-style Big Get Started / Sign In Buttons) */}
+        <View style={styles.bottomDock}>
+          
+          {/* Quick Demo Hint */}
+          <View style={styles.demoPill}>
+            <Text style={styles.demoPillText}>
+              💡 {lang === 'hi' ? 'त्वरित डेमो: मोबाइल ' : 'Quick Demo: Phone '}
+              <Text style={styles.demoHighlight}>1234</Text>
+              {lang === 'hi' ? ' • पिन ' : ' • PIN '}
+              <Text style={styles.demoHighlight}>1234</Text>
+            </Text>
+          </View>
+
+          {/* Primary Action Button (Sign In) */}
           <TouchableOpacity 
             onPress={() => onGoLogin('vendor')} 
-            style={styles.loginBtn}
+            style={styles.primaryBtn}
             activeOpacity={0.85}
           >
-            <Text style={styles.loginBtnText}>
-              {lang === 'hi' ? 'लॉगिन करें (Login)' : 'Login to Account'} →
+            <Text style={styles.primaryBtnText}>
+              {lang === 'hi' ? 'लॉगिन करें (Sign In)' : 'Sign In'} →
             </Text>
           </TouchableOpacity>
 
-          {/* Register Button */}
+          {/* Secondary Action Button (Register / Get Started) */}
           <TouchableOpacity 
             onPress={() => onGoRegister('vendor')} 
-            style={styles.registerBtn}
+            style={styles.secondaryBtn}
             activeOpacity={0.85}
           >
-            <Text style={styles.registerBtnText}>
-              + {lang === 'hi' ? 'नया खाता बनाएं (Register / Sign Up)' : 'Create New Account'}
+            <Text style={styles.secondaryBtnText}>
+              + {lang === 'hi' ? 'नया खाता बनाएं (Get Started)' : 'Create Free Account'}
             </Text>
           </TouchableOpacity>
-        </View>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            cloud sync • 100% verified • www.milkhisab.in
+          {/* Trust Footer */}
+          <Text style={styles.footerNote}>
+            {lang === 'hi' 
+              ? 'मेहनती दूधियों व लाखों परिवारों का विश्वसनीय डिजिटल साथी' 
+              : 'Trusted by dairy farmers, vendors & households across India'}
           </Text>
         </View>
 
-      </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
-    backgroundColor: '#0a1020',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    padding: 20,
-    justifyContent: 'space-between',
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginBottom: 6,
-  },
-  langPill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-  },
-  langPillText: {
-    color: '#38bdf8',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  heroSection: {
-    alignItems: 'center',
-    marginVertical: 6,
-  },
-  logoContainer: {
-    width: 90,
-    height: 90,
-    borderRadius: 26,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-    shadowColor: '#2563eb',
-    shadowOpacity: 0.4,
-    shadowRadius: 14,
-    elevation: 8,
-    padding: 8,
-  },
-  logoImage: {
-    width: '100%',
-    height: '100%',
-  },
-  appTitle: {
-    fontSize: 30,
-    fontWeight: '900',
-    color: '#ffffff',
-    letterSpacing: -0.5,
-  },
-  appSubtitleHindi: {
-    fontSize: 17,
-    fontWeight: 'bold',
-    color: '#60a5fa',
-    marginTop: 1,
-  },
-  tagline: {
-    fontSize: 13,
-    color: '#94a3b8',
-    textAlign: 'center',
-    marginTop: 6,
-    maxWidth: 290,
-    lineHeight: 18,
-  },
-  pastureBannerCard: {
-    height: 120,
-    borderRadius: 20,
-    overflow: 'hidden',
+    backgroundColor: '#070b14',
     position: 'relative',
-    marginVertical: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
-  pastureBannerImg: {
-    width: '100%',
-    height: '100%',
+  backgroundImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: width,
+    height: height,
+    opacity: 0.45,
   },
-  pastureOverlay: {
+  topVignette: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(10, 16, 32, 0.55)',
-    padding: 12,
-    justifyContent: 'space-between',
+    height: 180,
+    backgroundColor: 'rgba(7, 11, 20, 0.75)',
   },
-  pastureTag: {
-    backgroundColor: 'rgba(16, 185, 129, 0.85)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-  },
-  pastureTagText: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  pastureQuote: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  bannerCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderRadius: 22,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    marginVertical: 8,
-    gap: 10,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  watermarkSplash: {
+  bottomGradient: {
     position: 'absolute',
-    right: -20,
-    bottom: -20,
-    width: 140,
-    height: 140,
-    opacity: 0.15,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: height * 0.75,
+    backgroundColor: 'rgba(7, 11, 20, 0.94)',
   },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  featureIcon: {
-    fontSize: 22,
-  },
-  featureTextWrap: {
+  contentSafeArea: {
     flex: 1,
+    justifyContent: 'space-between',
+    paddingHorizontal: 22,
+    paddingTop: Platform.OS === 'android' ? 40 : 16,
+    paddingBottom: 24,
   },
-  featureTitle: {
-    fontSize: 13,
+  topNavBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  logoBadge: {
+    width: 60,
+    height: 60,
+    borderRadius: 18,
+    backgroundColor: '#ffffff',
+    padding: 6,
+    shadowColor: '#2563eb',
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  logoImg: {
+    width: '100%',
+    height: '100%',
+  },
+  langSwitchPill: {
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.28)',
+  },
+  langSwitchText: {
+    color: '#38bdf8',
+    fontSize: 12,
     fontWeight: 'bold',
-    color: '#ffffff',
   },
-  featureDesc: {
+  centerHero: {
+    marginVertical: 'auto',
+    paddingTop: 20,
+  },
+  taglineBadge: {
+    backgroundColor: 'rgba(37, 99, 235, 0.3)',
+    borderWidth: 1,
+    borderColor: 'rgba(96, 165, 250, 0.4)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    marginBottom: 14,
+  },
+  taglineBadgeText: {
+    color: '#93c5fd',
     fontSize: 11,
-    color: '#94a3b8',
-    marginTop: 1,
-    lineHeight: 15,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
   },
-  demoBanner: {
+  heroTitle: {
+    fontSize: 34,
+    fontWeight: '900',
+    color: '#ffffff',
+    lineHeight: 42,
+    letterSpacing: -0.8,
+  },
+  heroSubtitle: {
+    fontSize: 13,
+    color: '#94a3b8',
+    marginTop: 12,
+    lineHeight: 19,
+    maxWidth: 320,
+  },
+  featuresRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 18,
+    flexWrap: 'wrap',
+  },
+  featurePill: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  featurePillText: {
+    color: '#e2e8f0',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  bottomDock: {
+    gap: 12,
+    paddingBottom: 8,
+  },
+  demoPill: {
     backgroundColor: 'rgba(59, 130, 246, 0.15)',
-    borderRadius: 14,
-    paddingVertical: 8,
+    borderRadius: 12,
+    paddingVertical: 7,
     paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: 'rgba(59, 130, 246, 0.3)',
     alignItems: 'center',
-    marginVertical: 8,
+    marginBottom: 4,
   },
-  demoText: {
+  demoPillText: {
     fontSize: 11,
     color: '#93c5fd',
   },
-  demoBold: {
+  demoHighlight: {
     fontWeight: '900',
     color: '#ffffff',
   },
-  actionButtonsWrap: {
-    gap: 10,
-    marginTop: 6,
-  },
-  loginBtn: {
+  primaryBtn: {
     backgroundColor: '#2563eb',
-    borderRadius: 18,
-    paddingVertical: 15,
+    borderRadius: 20,
+    paddingVertical: 16,
     alignItems: 'center',
     shadowColor: '#2563eb',
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 8,
   },
-  loginBtnText: {
+  primaryBtnText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '900',
+    letterSpacing: 0.3,
   },
-  registerBtn: {
+  secondaryBtn: {
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 18,
-    paddingVertical: 13,
+    borderRadius: 20,
+    paddingVertical: 14,
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    borderColor: 'rgba(255, 255, 255, 0.22)',
   },
-  registerBtnText: {
+  secondaryBtnText: {
     color: '#ffffff',
     fontSize: 14,
     fontWeight: 'bold',
   },
-  footer: {
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  footerText: {
+  footerNote: {
     fontSize: 10,
     color: '#64748b',
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    textAlign: 'center',
+    marginTop: 6,
+    lineHeight: 14,
   },
 });

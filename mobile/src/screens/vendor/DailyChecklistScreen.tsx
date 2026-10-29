@@ -6,6 +6,7 @@ import {
 import { fetchDayChecklistApi, submitBatchLogsApi } from '../../api/client';
 import { DailyLogItem } from '../../types';
 import { useLanguage } from '../../context/LanguageContext';
+import VoiceAssistantModal from '../../components/VoiceAssistantModal';
 
 export default function DailyChecklistScreen() {
   const { t, lang } = useLanguage();
@@ -15,6 +16,7 @@ export default function DailyChecklistScreen() {
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [filterMode, setFilterMode] = useState<'ALL' | 'DELIVERY' | 'COLLECTION'>('ALL');
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
 
   const loadData = useCallback(async (date: string) => {
     setLoading(true);
@@ -23,11 +25,11 @@ export default function DailyChecklistScreen() {
       const res = await fetchDayChecklistApi(date);
       setChecklist(res.checklist);
     } catch (err: any) {
-      Alert.alert('त्रुटि', err.message || 'डेटा लोड नहीं हो सका');
+      Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', err.message || (lang === 'hi' ? 'डेटा लोड नहीं हो सका' : 'Could not load checklist'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [lang]);
 
   useEffect(() => {
     loadData(selectedDate);
@@ -70,6 +72,45 @@ export default function DailyChecklistScreen() {
     );
   };
 
+  const handleApplyVoiceCommand = (parsed: any) => {
+    if (!parsed.matched_customer_id) {
+      Alert.alert(
+        lang === 'hi' ? 'ग्राहक नहीं मिला' : 'Customer Not Matched',
+        lang === 'hi' ? 'आवाज़ में बोला गया नाम किसी ग्राहक से मैच नहीं हुआ।' : 'Could not match customer name in list.'
+      );
+      return;
+    }
+
+    setChecklist((prev) =>
+      prev.map((item) => {
+        if (item.customer_id === parsed.matched_customer_id) {
+          let newQty = item.quantity;
+          let newStatus = 'Delivered';
+
+          if (parsed.action === 'skip') {
+            newQty = 0;
+            newStatus = 'Skipped';
+          } else if (parsed.extracted_quantity !== null) {
+            newQty = parsed.extracted_quantity;
+            newStatus = newQty === 0 ? 'Skipped' : newQty > item.default_quantity ? 'Extra' : 'Delivered';
+          }
+
+          return {
+            ...item,
+            quantity: newQty,
+            status: newStatus as any,
+          };
+        }
+        return item;
+      })
+    );
+
+    Alert.alert(
+      lang === 'hi' ? 'वॉइस एंट्री सफल!' : 'Voice Entry Applied!',
+      `${parsed.matched_customer_name}: ${parsed.action === 'skip' ? (lang === 'hi' ? 'छुट्टी' : 'Skipped') : `${parsed.extracted_quantity}L`}`
+    );
+  };
+
   const handleSaveAll = async () => {
     setSaving(true);
     try {
@@ -87,7 +128,7 @@ export default function DailyChecklistScreen() {
       setTimeout(() => setSaveSuccess(false), 3000);
       loadData(selectedDate);
     } catch (err: any) {
-      Alert.alert('सेव त्रुटि', err.message || 'हिसाब सुरक्षित नहीं हुआ');
+      Alert.alert(lang === 'hi' ? 'सेव त्रुटि' : 'Save Error', err.message || (lang === 'hi' ? 'हिसाब सुरक्षित नहीं हुआ' : 'Could not save entries'));
     } finally {
       setSaving(false);
     }
@@ -118,12 +159,12 @@ export default function DailyChecklistScreen() {
               <Text style={styles.customerName}>{item.customer_name}</Text>
               <View style={[styles.typeBadge, isSupplier ? styles.typeBadgeSupplier : styles.typeBadgeBuyer]}>
                 <Text style={styles.typeBadgeText}>
-                  {isSupplier ? '📥 संकलन' : '📤 वितरण'}
+                  {isSupplier ? (lang === 'hi' ? '📥 संकलन' : '📥 Sourcing') : (lang === 'hi' ? '📤 वितरण' : '📤 Delivery')}
                 </Text>
               </View>
             </View>
             <Text style={styles.customerSub}>
-              तय: {item.default_quantity}L {item.milk_type} • ₹{item.price_per_liter}/L
+              {lang === 'hi' ? 'तय: ' : 'Target: '}{item.default_quantity}L {item.milk_type} • ₹{item.price_per_liter}/L
               {item.address ? ` • ${item.address}` : ''}
             </Text>
           </View>
@@ -133,7 +174,7 @@ export default function DailyChecklistScreen() {
             style={[styles.skipBtn, isSkipped && styles.skipBtnActive]}
           >
             <Text style={[styles.skipBtnText, isSkipped && styles.skipBtnTextActive]}>
-              {isSkipped ? '✓ छुट्टी' : 'छुट्टी'}
+              {isSkipped ? (lang === 'hi' ? '✓ छुट्टी' : '✓ Skipped') : (lang === 'hi' ? 'छुट्टी' : 'Skip')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -142,7 +183,7 @@ export default function DailyChecklistScreen() {
         {item.dispute_status === 'Pending' && (
           <View style={styles.disputeNotice}>
             <Text style={styles.disputeText}>
-              ⚠️ ग्राहक रिपोर्ट: {item.reported_quantity}L मिला ({item.dispute_reason})
+              ⚠️ {lang === 'hi' ? `ग्राहक रिपोर्ट: ${item.reported_quantity}L मिला (${item.dispute_reason})` : `Customer Reported: ${item.reported_quantity}L received (${item.dispute_reason})`}
             </Text>
           </View>
         )}
@@ -185,36 +226,52 @@ export default function DailyChecklistScreen() {
         style={styles.ambientWatermark} 
         resizeMode="contain" 
       />
-      {/* Top Date Navigator */}
-      <View style={styles.dateBar}>
-        <TouchableOpacity onPress={() => changeDateBy(-1)} style={styles.arrowBtn}>
-          <Text style={styles.arrowText}>‹</Text>
-        </TouchableOpacity>
 
-        <View style={styles.dateInfo}>
-          <Text style={styles.dateTitle}>{selectedDate}</Text>
-          <Text style={styles.dateSub}>
-            {selectedDate === new Date().toISOString().split('T')[0] ? '• आज (Today) •' : 'दैनिक हिसाब'}
-          </Text>
+      {/* Top Date Navigator with Voice Assistant Trigger */}
+      <View style={styles.dateBar}>
+        <View style={styles.dateNavGroup}>
+          <TouchableOpacity onPress={() => changeDateBy(-1)} style={styles.arrowBtn}>
+            <Text style={styles.arrowText}>‹</Text>
+          </TouchableOpacity>
+
+          <View style={styles.dateInfo}>
+            <Text style={styles.dateTitle}>{selectedDate}</Text>
+            <Text style={styles.dateSub}>
+              {selectedDate === new Date().toISOString().split('T')[0] ? (lang === 'hi' ? '• आज •' : '• Today •') : (lang === 'hi' ? 'दैनिक हिसाब' : 'Ledger Date')}
+            </Text>
+          </View>
+
+          <TouchableOpacity onPress={() => changeDateBy(1)} style={styles.arrowBtn}>
+            <Text style={styles.arrowText}>›</Text>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity onPress={() => changeDateBy(1)} style={styles.arrowBtn}>
-          <Text style={styles.arrowText}>›</Text>
+        {/* Prominent Voice Assistant Button in Top Bar */}
+        <TouchableOpacity 
+          onPress={() => setIsVoiceModalOpen(true)}
+          style={styles.topVoiceBtn}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.topVoiceText}>🎙️ {lang === 'hi' ? 'बोलकर भरें' : 'Voice Fill'}</Text>
         </TouchableOpacity>
       </View>
 
       {/* Bilateral Balance Cards */}
       <View style={styles.statsGrid}>
         <View style={[styles.statBox, { backgroundColor: '#eff6ff', borderColor: '#bfdbfe' }]}>
-          <Text style={[styles.statLabel, { color: '#1d4ed8' }]}>📥 संकलन</Text>
+          <Text style={[styles.statLabel, { color: '#1d4ed8' }]}>
+            📥 {lang === 'hi' ? 'संकलन' : 'Sourcing'}
+          </Text>
           <Text style={[styles.statValue, { color: '#1e3a8a' }]}>{totalCollected.toFixed(1)} L</Text>
-          <Text style={styles.statCount}>{collectionItems.length} घर</Text>
+          <Text style={styles.statCount}>{collectionItems.length} {lang === 'hi' ? 'घर' : 'homes'}</Text>
         </View>
 
         <View style={[styles.statBox, { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' }]}>
-          <Text style={[styles.statLabel, { color: '#047857' }]}>📤 वितरण</Text>
+          <Text style={[styles.statLabel, { color: '#047857' }]}>
+            📤 {lang === 'hi' ? 'वितरण' : 'Delivery'}
+          </Text>
           <Text style={[styles.statValue, { color: '#064e3b' }]}>{totalDelivered.toFixed(1)} L</Text>
-          <Text style={styles.statCount}>{deliveryItems.length} ग्राहक</Text>
+          <Text style={styles.statCount}>{deliveryItems.length} {lang === 'hi' ? 'ग्राहक' : 'clients'}</Text>
         </View>
 
         <View style={[styles.statBox, { 
@@ -222,12 +279,12 @@ export default function DailyChecklistScreen() {
           borderColor: surplusBalance >= 0 ? '#ddd6fe' : '#fecdd3' 
         }]}>
           <Text style={[styles.statLabel, { color: surplusBalance >= 0 ? '#6d28d9' : '#be123c' }]}>
-            ⚖️ शेष स्टॉक
+            ⚖️ {lang === 'hi' ? 'शेष स्टॉक' : 'Surplus'}
           </Text>
           <Text style={[styles.statValue, { color: surplusBalance >= 0 ? '#4c1d95' : '#881337' }]}>
             {surplusBalance >= 0 ? `+${surplusBalance.toFixed(1)}` : surplusBalance.toFixed(1)} L
           </Text>
-          <Text style={styles.statCount}>{surplusBalance >= 0 ? 'बचत' : 'कमी'}</Text>
+          <Text style={styles.statCount}>{surplusBalance >= 0 ? (lang === 'hi' ? 'बचत' : 'In Stock') : (lang === 'hi' ? 'कमी' : 'Shortage')}</Text>
         </View>
       </View>
 
@@ -238,7 +295,7 @@ export default function DailyChecklistScreen() {
           style={[styles.tabBtn, filterMode === 'ALL' && styles.tabBtnActive]}
         >
           <Text style={[styles.tabText, filterMode === 'ALL' && styles.tabTextActive]}>
-            सभी ({checklist.length})
+            {lang === 'hi' ? 'सभी' : 'All'} ({checklist.length})
           </Text>
         </TouchableOpacity>
 
@@ -247,7 +304,7 @@ export default function DailyChecklistScreen() {
           style={[styles.tabBtn, filterMode === 'DELIVERY' && styles.tabBtnActive]}
         >
           <Text style={[styles.tabText, filterMode === 'DELIVERY' && styles.tabTextActive]}>
-            वितरण ({deliveryItems.length})
+            {lang === 'hi' ? 'वितरण' : 'Delivery'} ({deliveryItems.length})
           </Text>
         </TouchableOpacity>
 
@@ -256,7 +313,7 @@ export default function DailyChecklistScreen() {
           style={[styles.tabBtn, filterMode === 'COLLECTION' && styles.tabBtnActive]}
         >
           <Text style={[styles.tabText, filterMode === 'COLLECTION' && styles.tabTextActive]}>
-            संकलन ({collectionItems.length})
+            {lang === 'hi' ? 'संकलन' : 'Sourcing'} ({collectionItems.length})
           </Text>
         </TouchableOpacity>
       </View>
@@ -265,7 +322,9 @@ export default function DailyChecklistScreen() {
       {loading ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#2563eb" />
-          <Text style={styles.loadingText}>हिसाब लोड हो रहा है...</Text>
+          <Text style={styles.loadingText}>
+            {lang === 'hi' ? 'हिसाब लोड हो रहा है...' : 'Loading daily ledger...'}
+          </Text>
         </View>
       ) : (
         <FlatList
@@ -287,11 +346,20 @@ export default function DailyChecklistScreen() {
             <ActivityIndicator color="#ffffff" />
           ) : (
             <Text style={styles.floatingSaveText}>
-              {saveSuccess ? '✓ आज का हिसाब सुरक्षित हो गया!' : `💾 आज का हिसाब सुरक्षित करें (${checklist.length})`}
+              {saveSuccess 
+                ? (lang === 'hi' ? '✓ आज का पूरा हिसाब सुरक्षित हो गया!' : '✓ Daily ledger saved successfully!') 
+                : (lang === 'hi' ? `💾 आज का हिसाब सुरक्षित करें (${checklist.length})` : `💾 Save Daily Ledger (${checklist.length})`)}
             </Text>
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Voice Assistant Modal */}
+      <VoiceAssistantModal
+        visible={isVoiceModalOpen}
+        onClose={() => setIsVoiceModalOpen(false)}
+        onApplyCommand={handleApplyVoiceCommand}
+      />
     </SafeAreaView>
   );
 }
@@ -309,7 +377,6 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     opacity: 0.12,
-    pointerEvents: 'none',
   },
   dateBar: {
     flexDirection: 'row',
@@ -320,6 +387,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
+  },
+  dateNavGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   arrowBtn: {
     width: 36,
@@ -338,15 +410,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dateTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '900',
     color: '#0f172a',
   },
   dateSub: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#2563eb',
     fontWeight: 'bold',
     marginTop: 1,
+  },
+  topVoiceBtn: {
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 14,
+  },
+  topVoiceText: {
+    color: '#059669',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   statsGrid: {
     flexDirection: 'row',

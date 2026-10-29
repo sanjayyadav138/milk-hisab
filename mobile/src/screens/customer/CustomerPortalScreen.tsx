@@ -4,13 +4,13 @@ import {
   ActivityIndicator, SafeAreaView, Modal, TextInput, Linking, Alert, Image 
 } from 'react-native';
 import { fetchCustomerDashboardApi, raiseDisputeApi, skipMilkDateApi } from '../../api/client';
-import { CustomerDashboardData, Customer } from '../../types';
+import { CustomerDashboardData } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 
 export default function CustomerPortalScreen() {
   const { auth, logout } = useAuth();
-  const { lang, t } = useLanguage();
+  const { lang, toggleLang, t } = useLanguage();
   const [data, setData] = useState<CustomerDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -39,7 +39,7 @@ export default function CustomerPortalScreen() {
       const res = await fetchCustomerDashboardApi(customerId);
       setData(res);
     } catch (err: any) {
-      Alert.alert('त्रुटि', err.message || 'खाता लोड नहीं हुआ');
+      Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', err.message || (lang === 'hi' ? 'खाता लोड नहीं हुआ' : 'Could not load account details'));
     } finally {
       setLoading(false);
     }
@@ -56,8 +56,10 @@ export default function CustomerPortalScreen() {
     const upiUrl = `upi://pay?pa=${upiId}&pn=${payeeName}&am=${amount}&cu=INR&tn=${note}`;
     Linking.openURL(upiUrl).catch(() => {
       Alert.alert(
-        'UPI ऐप नहीं मिला',
-        `कृपया अपने फोन में Google Pay, PhonePe या Paytm खोलें और ${upiId} पर ₹${amount} भेजें।`
+        lang === 'hi' ? 'UPI ऐप नहीं मिला' : 'UPI App Not Found',
+        lang === 'hi' 
+          ? `कृपया अपने फोन में Google Pay, PhonePe या Paytm खोलें और ${upiId} पर ₹${amount} भेजें।`
+          : `Please open Google Pay, PhonePe or Paytm and send ₹${amount} to ${upiId}.`
       );
     });
   };
@@ -65,7 +67,7 @@ export default function CustomerPortalScreen() {
   const handleDisputeSubmit = async () => {
     if (!disputingLog || !auth.customer) return;
     if (!disputeReason.trim()) {
-      Alert.alert('कारण आवश्यक', 'कृपया आपत्ति का कारण लिखें');
+      Alert.alert(lang === 'hi' ? 'कारण आवश्यक' : 'Reason Required', lang === 'hi' ? 'कृपया आपत्ति का कारण लिखें' : 'Please provide a reason');
       return;
     }
 
@@ -79,10 +81,10 @@ export default function CustomerPortalScreen() {
       );
       setDisputingLog(null);
       setDisputeReason('');
-      Alert.alert('सफल', 'आपकी आपत्ति दूधिया को भेज दी गई है!');
+      Alert.alert(lang === 'hi' ? 'सफल' : 'Success', lang === 'hi' ? 'आपकी आपत्ति दूधिया को भेज दी गई है!' : 'Delivery dispute submitted to vendor!');
       loadDashboard(auth.customer.id);
     } catch (err: any) {
-      Alert.alert('त्रुटि', err.message || 'आपत्ति भेजने में समस्या');
+      Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', err.message || 'Error sending dispute');
     } finally {
       setSubmittingDispute(false);
     }
@@ -95,10 +97,10 @@ export default function CustomerPortalScreen() {
       await skipMilkDateApi(auth.customer.id, skipDate, skipReason.trim() || undefined);
       setIsSkipModalOpen(false);
       setSkipReason('');
-      Alert.alert('सफल', `तारीख ${skipDate} के लिए छुट्टी दर्ज हो गई है!`);
+      Alert.alert(lang === 'hi' ? 'सफल' : 'Success', lang === 'hi' ? `तारीख ${skipDate} के लिए छुट्टी दर्ज हो गई है!` : `Delivery skip scheduled for ${skipDate}!`);
       loadDashboard(auth.customer.id);
     } catch (err: any) {
-      Alert.alert('त्रुटि', err.message || 'छुट्टी दर्ज नहीं हो सकी');
+      Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', err.message || 'Error scheduling skip');
     } finally {
       setSubmittingSkip(false);
     }
@@ -108,105 +110,166 @@ export default function CustomerPortalScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#2563eb" />
-        <Text style={styles.loadingText}>आपका दूध खाता लोड हो रहा है...</Text>
+        <Text style={styles.loadingText}>
+          {lang === 'hi' ? 'आपका दूध खाता लोड हो रहा है...' : 'Loading your milk account details...'}
+        </Text>
       </View>
     );
   }
 
   const { customer, vendor, month_summary, today_status, recent_logs } = data;
 
-  const renderLogItem = ({ item }: { item: any }) => (
-    <View style={styles.logCard}>
-      <View style={styles.logLeft}>
-        <Text style={styles.logDate}>📅 {item.date}</Text>
-        <Text style={styles.logAmount}>₹{item.amount}</Text>
-      </View>
+  const renderLogItem = ({ item }: { item: any }) => {
+    const isSkipped = item.status === 'Skipped';
+    const isExtra = item.status === 'Extra';
+    const statusLabel = isSkipped 
+      ? (lang === 'hi' ? 'छुट्टी' : 'Skipped') 
+      : isExtra 
+      ? (lang === 'hi' ? 'अतिरिक्त' : 'Extra') 
+      : (lang === 'hi' ? 'वितरित' : 'Delivered');
 
-      <View style={styles.logCenter}>
-        <Text style={styles.logQty}>{item.quantity.toFixed(1)} L</Text>
-        <Text style={styles.logStatus}>
-          {item.status === 'Skipped' ? 'छुट्टी' : item.status === 'Extra' ? 'अतिरिक्त' : 'वितरित'}
-        </Text>
-      </View>
+    return (
+      <View style={styles.logCard}>
+        <View style={styles.logLeft}>
+          <Text style={styles.logDate}>📅 {item.date}</Text>
+          <Text style={styles.logAmount}>₹{item.amount}</Text>
+        </View>
 
-      <View style={styles.logRight}>
-        {item.dispute_status === 'Pending' ? (
-          <View style={styles.disputePendingBadge}>
-            <Text style={styles.disputePendingText}>आपत्ति दर्ज</Text>
-          </View>
-        ) : (
-          <TouchableOpacity 
-            onPress={() => {
-              setDisputingLog(item);
-              setDisputeQty(String(item.quantity));
-            }}
-            style={styles.queryBtn}
-          >
-            <Text style={styles.queryBtnText}>आपत्ति?</Text>
-          </TouchableOpacity>
-        )}
+        <View style={styles.logCenter}>
+          <Text style={styles.logQty}>{item.quantity.toFixed(1)} L</Text>
+          <Text style={[styles.logStatus, isSkipped && styles.logStatusSkipped]}>
+            {statusLabel}
+          </Text>
+        </View>
+
+        <View style={styles.logRight}>
+          {item.dispute_status === 'Pending' ? (
+            <View style={styles.disputePendingBadge}>
+              <Text style={styles.disputePendingText}>
+                {lang === 'hi' ? 'आपत्ति दर्ज' : 'Dispute Open'}
+              </Text>
+            </View>
+          ) : (
+            <TouchableOpacity 
+              onPress={() => {
+                setDisputingLog(item);
+                setDisputeQty(String(item.quantity));
+              }}
+              style={styles.queryBtn}
+            >
+              <Text style={styles.queryBtnText}>
+                {lang === 'hi' ? 'आपत्ति?' : 'Query?'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Top Banner Card */}
+      {/* Top Banner Card with Official Logo & Language Toggle */}
       <View style={styles.headerCard}>
+        <Image 
+          source={require('../../assets/media/milk-image2.png')} 
+          style={styles.cardMilkWatermark} 
+          resizeMode="contain" 
+        />
         <View style={styles.headerTop}>
-          <View>
-            <Text style={styles.welcomeBadge}>ग्राहक पोर्टल</Text>
-            <Text style={styles.customerName}>{customer.name}</Text>
-            <Text style={styles.vendorInfo}>दूधिया: {vendor.name} ({vendor.business_name})</Text>
+          <View style={styles.headerTitleWrap}>
+            <Image 
+              source={require('../../assets/logo.png')} 
+              style={styles.headerCardLogo} 
+              resizeMode="contain" 
+            />
+            <View>
+              <Text style={styles.welcomeBadge}>
+                {lang === 'hi' ? 'ग्राहक पोर्टल' : 'Customer Portal'}
+              </Text>
+              <Text style={styles.customerName}>{customer.name}</Text>
+              <Text style={styles.vendorInfo}>
+                {lang === 'hi' ? 'दूधिया: ' : 'Milkman: '}
+                <Text style={styles.vendorBold}>{vendor.name}</Text> ({vendor.business_name})
+              </Text>
+            </View>
           </View>
-          <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
-            <Text style={styles.logoutBtnText}>लॉगआउट</Text>
-          </TouchableOpacity>
+
+          {/* Right Header Buttons: Language Toggle & Logout */}
+          <View style={styles.headerRightBtns}>
+            <TouchableOpacity onPress={toggleLang} style={styles.langBtn} activeOpacity={0.8}>
+              <Text style={styles.langBtnText}>{lang === 'hi' ? 'EN' : 'हिन्दी'}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={logout} style={styles.logoutBtn} activeOpacity={0.8}>
+              <Text style={styles.logoutBtnText}>
+                {lang === 'hi' ? 'लॉगआउट' : 'Logout'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* 3 Monthly Stats */}
         <View style={styles.metricsRow}>
           <View style={styles.metricItem}>
-            <Text style={styles.metricLabel}>कुल दूध</Text>
-            <Text style={styles.metricValue}>{month_summary.total_liters.toFixed(1)} <Text style={styles.metricUnit}>L</Text></Text>
+            <Text style={styles.metricLabel}>
+              {lang === 'hi' ? 'कुल दूध' : 'Total Milk'}
+            </Text>
+            <Text style={styles.metricValue}>
+              {month_summary.total_liters.toFixed(1)} <Text style={styles.metricUnit}>L</Text>
+            </Text>
           </View>
 
           <View style={styles.metricItem}>
-            <Text style={styles.metricLabel}>कुल देय राशि</Text>
+            <Text style={styles.metricLabel}>
+              {lang === 'hi' ? 'कुल देय राशि' : 'Total Amount'}
+            </Text>
             <Text style={styles.metricValue}>₹{month_summary.total_amount}</Text>
           </View>
 
           <View style={styles.metricItem}>
-            <Text style={styles.metricLabel}>वितरित दिन</Text>
-            <Text style={styles.metricValue}>{month_summary.days_delivered} <Text style={styles.metricUnit}>दिन</Text></Text>
+            <Text style={styles.metricLabel}>
+              {lang === 'hi' ? 'वितरित दिन' : 'Days Delivered'}
+            </Text>
+            <Text style={styles.metricValue}>
+              {month_summary.days_delivered} <Text style={styles.metricUnit}>{lang === 'hi' ? 'दिन' : 'days'}</Text>
+            </Text>
           </View>
         </View>
       </View>
 
       {/* Action Buttons: Pay UPI & Skip Milk */}
       <View style={styles.actionRow}>
-        <TouchableOpacity onPress={handlePayUpi} style={styles.payUpiBtn}>
-          <Text style={styles.payUpiText}>⚡ UPI भुगतान (₹{month_summary.total_amount})</Text>
+        <TouchableOpacity onPress={handlePayUpi} style={styles.payUpiBtn} activeOpacity={0.85}>
+          <Text style={styles.payUpiText}>
+            ⚡ {lang === 'hi' ? `UPI भुगतान (₹${month_summary.total_amount})` : `Pay via UPI (₹${month_summary.total_amount})`}
+          </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => setIsSkipModalOpen(true)} style={styles.skipScheduleBtn}>
-          <Text style={styles.skipScheduleText}>📅 छुट्टी मार्क करें</Text>
+        <TouchableOpacity onPress={() => setIsSkipModalOpen(true)} style={styles.skipScheduleBtn} activeOpacity={0.85}>
+          <Text style={styles.skipScheduleText}>
+            📅 {lang === 'hi' ? 'छुट्टी मार्क करें' : 'Schedule Skip'}
+          </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Today Status Pill */}
+      {/* Today Status Card */}
       <View style={styles.todayCard}>
-        <Text style={styles.todayTitle}>आज की स्थिति:</Text>
+        <Text style={styles.todayTitle}>
+          {lang === 'hi' ? 'आज की स्थिति:' : "Today's Status:"}
+        </Text>
         <Text style={styles.todayStatusText}>
           {today_status.delivered 
-            ? `✓ आज ${today_status.quantity}L दूध प्राप्त हुआ` 
-            : '⏳ आज की डिलीवरी अभी दर्ज होना बाकी है'}
+            ? (lang === 'hi' ? `✓ आज ${today_status.quantity}L दूध प्राप्त हुआ` : `✓ Received ${today_status.quantity}L milk today`)
+            : (lang === 'hi' ? '⏳ आज की डिलीवरी अभी दर्ज होना बाकी है' : '⏳ Today delivery pending')}
         </Text>
       </View>
 
       {/* Delivery Log History */}
       <View style={styles.historySection}>
-        <Text style={styles.historyTitle}>हाल का डिलीवरी रिकॉर्ड ({recent_logs.length})</Text>
+        <Text style={styles.historyTitle}>
+          {lang === 'hi' ? `हाल का डिलीवरी रिकॉर्ड (${recent_logs.length})` : `Delivery History & Logs (${recent_logs.length})`}
+        </Text>
         <FlatList
           data={recent_logs}
           keyExtractor={(item) => String(item.id)}
@@ -219,12 +282,16 @@ export default function CustomerPortalScreen() {
       <Modal visible={!!disputingLog} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>⚠️ दूध मात्रा में आपत्ति</Text>
+            <Text style={styles.modalTitle}>
+              ⚠️ {lang === 'hi' ? 'दूध मात्रा में आपत्ति' : 'Report Delivery Discrepancy'}
+            </Text>
             <Text style={styles.modalSub}>
-              तारीख: {disputingLog?.date} (दर्ज मात्रा: {disputingLog?.quantity}L)
+              {lang === 'hi' ? `तारीख: ${disputingLog?.date} (दर्ज मात्रा: ${disputingLog?.quantity}L)` : `Date: ${disputingLog?.date} (Logged: ${disputingLog?.quantity}L)`}
             </Text>
 
-            <Text style={styles.inputLabel}>वास्तव में कितना दूध मिला? (Liters)</Text>
+            <Text style={styles.inputLabel}>
+              {lang === 'hi' ? 'वास्तव में कितना दूध मिला? (Liters)' : 'Actual milk quantity received (Liters):'}
+            </Text>
             <TextInput 
               style={styles.modalInput} 
               keyboardType="numeric" 
@@ -232,22 +299,26 @@ export default function CustomerPortalScreen() {
               onChangeText={setDisputeQty} 
             />
 
-            <Text style={styles.inputLabel}>आपत्ति का कारण लिखें:</Text>
+            <Text style={styles.inputLabel}>
+              {lang === 'hi' ? 'आपत्ति का कारण लिखें:' : 'Reason for concern:'}
+            </Text>
             <TextInput 
               style={[styles.modalInput, { height: 70 }]} 
               multiline 
-              placeholder="उदा. आज 1 लीटर ही आया था..." 
+              placeholder={lang === 'hi' ? 'उदा. आज 1 लीटर ही आया था...' : 'e.g. Received 1 liter instead of 2L...'} 
               value={disputeReason} 
               onChangeText={setDisputeReason} 
             />
 
             <View style={styles.modalButtons}>
               <TouchableOpacity onPress={() => setDisputingLog(null)} style={styles.modalCancelBtn}>
-                <Text style={styles.modalCancelText}>रद्द करें</Text>
+                <Text style={styles.modalCancelText}>
+                  {lang === 'hi' ? 'रद्द करें' : 'Cancel'}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={handleDisputeSubmit} disabled={submittingDispute} style={styles.modalSaveBtn}>
-                {submittingDispute ? <ActivityIndicator color="#fff" /> : <Text style={styles.modalSaveText}>आपत्ति भेजें</Text>}
+                {submittingDispute ? <ActivityIndicator color="#fff" /> : <Text style={styles.modalSaveText}>{lang === 'hi' ? 'आपत्ति भेजें' : 'Submit Query'}</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -258,30 +329,36 @@ export default function CustomerPortalScreen() {
       <Modal visible={isSkipModalOpen} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>📅 भविष्य की छुट्टी दर्ज करें</Text>
-            <Text style={styles.modalSub}>जिस दिन दूध नहीं चाहिए, वह तारीख लिखें (YYYY-MM-DD):</Text>
+            <Text style={styles.modalTitle}>
+              📅 {lang === 'hi' ? 'भविष्य की छुट्टी दर्ज करें' : 'Schedule Future Milk Skip'}
+            </Text>
+            <Text style={styles.modalSub}>
+              {lang === 'hi' ? 'जिस दिन दूध नहीं चाहिए, वह तारीख लिखें (YYYY-MM-DD):' : 'Enter date to pause delivery (YYYY-MM-DD):'}
+            </Text>
 
             <TextInput 
               style={styles.modalInput} 
-              placeholder="YYYY-MM-DD (उदा. 2026-10-30)" 
+              placeholder="YYYY-MM-DD" 
               value={skipDate} 
               onChangeText={setSkipDate} 
             />
 
             <TextInput 
               style={styles.modalInput} 
-              placeholder="कारण (वैकल्पिक: बाहर जा रहे हैं...)" 
+              placeholder={lang === 'hi' ? 'कारण (वैकल्पिक: बाहर जा रहे हैं...)' : 'Reason (optional: out of town...)'} 
               value={skipReason} 
               onChangeText={setSkipReason} 
             />
 
             <View style={styles.modalButtons}>
               <TouchableOpacity onPress={() => setIsSkipModalOpen(false)} style={styles.modalCancelBtn}>
-                <Text style={styles.modalCancelText}>रद्द करें</Text>
+                <Text style={styles.modalCancelText}>
+                  {lang === 'hi' ? 'रद्द करें' : 'Cancel'}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={handleSkipSubmit} disabled={submittingSkip} style={styles.modalSaveBtn}>
-                {submittingSkip ? <ActivityIndicator color="#fff" /> : <Text style={styles.modalSaveText}>छुट्टी दर्ज करें</Text>}
+                {submittingSkip ? <ActivityIndicator color="#fff" /> : <Text style={styles.modalSaveText}>{lang === 'hi' ? 'छुट्टी दर्ज करें' : 'Confirm Skip'}</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -316,10 +393,16 @@ const styles = StyleSheet.create({
     height: 150,
     opacity: 0.18,
   },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
   headerTitleWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flex: 1,
   },
   headerCardLogo: {
     width: 38,
@@ -328,13 +411,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     padding: 2,
   },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
   welcomeBadge: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 'bold',
     color: '#93c5fd',
     backgroundColor: 'rgba(255,255,255,0.15)',
@@ -342,23 +420,44 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 8,
     alignSelf: 'flex-start',
-    marginBottom: 4,
+    marginBottom: 2,
+    textTransform: 'uppercase',
   },
   customerName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '900',
     color: '#ffffff',
   },
   vendorInfo: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#bfdbfe',
     marginTop: 2,
   },
+  vendorBold: {
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  headerRightBtns: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  langBtn: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 10,
+  },
+  langBtnText: {
+    color: '#38bdf8',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
   logoutBtn: {
     backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
   },
   logoutBtnText: {
     color: '#ffffff',
@@ -367,7 +466,7 @@ const styles = StyleSheet.create({
   },
   metricsRow: {
     flexDirection: 'row',
-    marginTop: 16,
+    marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.2)',
@@ -384,6 +483,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#bfdbfe',
     fontWeight: 'bold',
+    textTransform: 'uppercase',
   },
   metricValue: {
     fontSize: 16,
@@ -409,7 +509,7 @@ const styles = StyleSheet.create({
   },
   payUpiText: {
     color: '#ffffff',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '900',
   },
   skipScheduleBtn: {
@@ -421,7 +521,7 @@ const styles = StyleSheet.create({
   },
   skipScheduleText: {
     color: '#ffffff',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 'bold',
   },
   todayCard: {
@@ -494,7 +594,11 @@ const styles = StyleSheet.create({
   },
   logStatus: {
     fontSize: 10,
-    color: '#64748b',
+    color: '#059669',
+    fontWeight: '600',
+  },
+  logStatusSkipped: {
+    color: '#b91c1c',
   },
   logRight: {
     flex: 1,
@@ -547,7 +651,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '900',
     color: '#0f172a',
     marginBottom: 4,

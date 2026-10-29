@@ -14,7 +14,7 @@ interface RegisterScreenProps {
 
 export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLogin }: RegisterScreenProps) {
   const { registerVendor, registerCustomer, loading } = useAuth();
-  const { lang } = useLanguage();
+  const { lang, toggleLang } = useLanguage();
   
   const [role, setRole] = useState<'vendor' | 'customer'>(initialRole);
 
@@ -38,28 +38,28 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
     try {
       if (role === 'vendor') {
         if (!vendorName.trim()) {
-          Alert.alert('नाम आवश्यक', 'कृपया अपना पूरा नाम लिखें');
+          Alert.alert(lang === 'hi' ? 'नाम आवश्यक' : 'Name Required', lang === 'hi' ? 'कृपया अपना पूरा नाम लिखें' : 'Please enter your full name');
           return;
         }
         if (!vendorPhone.trim() || vendorPhone.trim().length < 10) {
-          Alert.alert('मोबाइल आवश्यक', '10 अंकों का मान्य मोबाइल नंबर दर्ज करें');
+          Alert.alert(lang === 'hi' ? 'मोबाइल आवश्यक' : 'Mobile Required', lang === 'hi' ? '10 अंकों का मान्य मोबाइल नंबर दर्ज करें' : 'Please enter a valid 10-digit mobile number');
           return;
         }
 
         await registerVendor({
           name: vendorName.trim(),
-          business_name: businessName.trim() || `${vendorName.trim()} डेयरी`,
+          business_name: businessName.trim() || `${vendorName.trim()} Dairy`,
           phone: vendorPhone.trim(),
           upi_id: vendorUpi.trim() || undefined,
           pin: vendorPin.trim() || '1234',
         });
       } else {
         if (!custName.trim()) {
-          Alert.alert('नाम आवश्यक', 'कृपया अपना नाम लिखें');
+          Alert.alert(lang === 'hi' ? 'नाम आवश्यक' : 'Name Required', lang === 'hi' ? 'कृपया अपना नाम लिखें' : 'Please enter your name');
           return;
         }
         if (!custPhone.trim() || custPhone.trim().length < 10) {
-          Alert.alert('मोबाइल आवश्यक', '10 अंकों का मान्य मोबाइल नंबर दर्ज करें');
+          Alert.alert(lang === 'hi' ? 'मोबाइल आवश्यक' : 'Mobile Required', lang === 'hi' ? '10 अंकों का मान्य मोबाइल नंबर दर्ज करें' : 'Please enter a valid 10-digit mobile number');
           return;
         }
 
@@ -74,9 +74,9 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
         });
       }
 
-      Alert.alert('सफल!', 'खाता सफलतापूर्वक बन गया है! आप स्वतः लॉगिन हो गए हैं।');
+      Alert.alert(lang === 'hi' ? 'सफल!' : 'Success!', lang === 'hi' ? 'खाता सफलतापूर्वक बन गया है! आप स्वतः लॉगिन हो गए हैं।' : 'Account registered successfully! You are now logged in.');
     } catch (err: any) {
-      Alert.alert('रजिस्ट्रेशन विफल', err.message || 'कृपया पुनः प्रयास करें');
+      Alert.alert(lang === 'hi' ? 'रजिस्ट्रेशन विफल' : 'Registration Failed', err.message || (lang === 'hi' ? 'कृपया पुनः प्रयास करें' : 'Please try again.'));
     }
   };
 
@@ -88,14 +88,20 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
       >
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           
-          {/* Top Bar with Back Button */}
+          {/* Top Bar with Back and Language Switcher */}
           <View style={styles.topBar}>
-            <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-              <Text style={styles.backBtnText}>‹ वापस (Back)</Text>
+            <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.7}>
+              <Text style={styles.backBtnText}>‹ {lang === 'hi' ? 'वापस' : 'Back'}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={toggleLang} style={styles.langPill} activeOpacity={0.8}>
+              <Text style={styles.langPillText}>
+                🌐 {lang === 'hi' ? 'English' : 'हिन्दी'}
+              </Text>
             </TouchableOpacity>
           </View>
 
-          {/* Header with Official Logo */}
+          {/* Centered Brand Header with Logo */}
           <View style={styles.header}>
             <View style={styles.logoBadgeWrap}>
               <Image 
@@ -105,12 +111,12 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
               />
             </View>
             <Text style={styles.title}>
-              {lang === 'hi' ? 'नया खाता बनाएं' : 'Create New Account'}
+              {lang === 'hi' ? 'नया खाता बनाएं' : 'Create Free Account'}
             </Text>
             <Text style={styles.subtitle}>
               {lang === 'hi' 
                 ? 'डिजिटल बहीखाता शुरू करने हेतु विवरण दर्ज करें' 
-                : 'Enter your details to get started with Milk Hisab'}
+                : 'Start your digital milk ledger in seconds'}
             </Text>
           </View>
 
@@ -121,6 +127,7 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
               <TouchableOpacity
                 onPress={() => setRole('vendor')}
                 style={[styles.roleTab, role === 'vendor' && styles.roleTabActive]}
+                activeOpacity={0.8}
               >
                 <Text style={[styles.roleTabText, role === 'vendor' && styles.roleTabTextActive]}>
                   🥛 {lang === 'hi' ? 'दूधिया / डेयरी' : 'Dairy Vendor'}
@@ -130,6 +137,7 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
               <TouchableOpacity
                 onPress={() => setRole('customer')}
                 style={[styles.roleTab, role === 'customer' && styles.roleTabActive]}
+                activeOpacity={0.8}
               >
                 <Text style={[styles.roleTabText, role === 'customer' && styles.roleTabTextActive]}>
                   🏠 {lang === 'hi' ? 'ग्राहक' : 'Customer'}
@@ -141,10 +149,12 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
             {role === 'vendor' ? (
               <>
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>आपका पूरा नाम</Text>
+                  <Text style={styles.label}>
+                    {lang === 'hi' ? 'आपका पूरा नाम' : 'Full Name'}
+                  </Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="उदा. संजय यादव"
+                    placeholder={lang === 'hi' ? 'उदा. संजय यादव' : 'e.g. Sanjay Yadav'}
                     placeholderTextColor="#94a3b8"
                     value={vendorName}
                     onChangeText={setVendorName}
@@ -152,10 +162,12 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
                 </View>
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>डेयरी / फार्म का नाम</Text>
+                  <Text style={styles.label}>
+                    {lang === 'hi' ? 'डेयरी / फार्म का नाम' : 'Dairy / Farm Name'}
+                  </Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="उदा. श्री कृष्णा डेयरी फार्म"
+                    placeholder={lang === 'hi' ? 'उदा. श्री कृष्णा डेयरी फार्म' : 'e.g. Krishna Dairy Farm'}
                     placeholderTextColor="#94a3b8"
                     value={businessName}
                     onChangeText={setBusinessName}
@@ -163,10 +175,12 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
                 </View>
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>मोबाइल नंबर (लॉगिन हेतु)</Text>
+                  <Text style={styles.label}>
+                    {lang === 'hi' ? 'मोबाइल नंबर (लॉगिन हेतु)' : 'Mobile Number (for login)'}
+                  </Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="10 अंकों का मोबाइल नंबर"
+                    placeholder={lang === 'hi' ? '10 अंकों का मोबाइल नंबर' : '10-digit mobile number'}
                     placeholderTextColor="#94a3b8"
                     keyboardType="phone-pad"
                     maxLength={10}
@@ -176,10 +190,12 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
                 </View>
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>UPI ID (PhonePe/GPay QR बिलिंग हेतु, वैकल्पिक)</Text>
+                  <Text style={styles.label}>
+                    {lang === 'hi' ? 'UPI ID (QR बिलिंग हेतु, वैकल्पिक)' : 'UPI ID (for bill payments, optional)'}
+                  </Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="उदा. 9876543210@paytm"
+                    placeholder={lang === 'hi' ? 'उदा. 9876543210@paytm' : 'e.g. 9876543210@paytm'}
                     placeholderTextColor="#94a3b8"
                     autoCapitalize="none"
                     value={vendorUpi}
@@ -188,10 +204,12 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
                 </View>
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>4-अंकों का गुप्त पिन</Text>
+                  <Text style={styles.label}>
+                    {lang === 'hi' ? '4-अंकों का गुप्त पिन' : '4-Digit Secret PIN'}
+                  </Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="4 अंकों का पिन (उदा. 1234)"
+                    placeholder="1234"
                     placeholderTextColor="#94a3b8"
                     keyboardType="number-pad"
                     secureTextEntry
@@ -205,10 +223,12 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
               /* Customer Form */
               <>
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>पूरा नाम</Text>
+                  <Text style={styles.label}>
+                    {lang === 'hi' ? 'पूरा नाम' : 'Full Name'}
+                  </Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="उदा. राजेश कुमार"
+                    placeholder={lang === 'hi' ? 'उदा. राजेश कुमार' : 'e.g. Rajesh Kumar'}
                     placeholderTextColor="#94a3b8"
                     value={custName}
                     onChangeText={setCustName}
@@ -216,10 +236,12 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
                 </View>
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>मोबाइल नंबर (लॉगिन हेतु)</Text>
+                  <Text style={styles.label}>
+                    {lang === 'hi' ? 'मोबाइल नंबर' : 'Mobile Number'}
+                  </Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="10 अंकों का मोबाइल नंबर"
+                    placeholder={lang === 'hi' ? '10 अंकों का मोबाइल नंबर' : '10-digit mobile number'}
                     placeholderTextColor="#94a3b8"
                     keyboardType="phone-pad"
                     maxLength={10}
@@ -229,10 +251,12 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
                 </View>
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>घर का पता / मकान नं.</Text>
+                  <Text style={styles.label}>
+                    {lang === 'hi' ? 'घर का पता / मकान नं.' : 'Home Address / Flat No.'}
+                  </Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="मकान नं., गली, कॉलोनी"
+                    placeholder={lang === 'hi' ? 'मकान नं., गली, कॉलोनी' : 'House No., Sector, Colony'}
                     placeholderTextColor="#94a3b8"
                     value={custAddress}
                     onChangeText={setCustAddress}
@@ -241,7 +265,9 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
 
                 <View style={styles.row}>
                   <View style={[styles.formGroup, { flex: 1, marginRight: 6 }]}>
-                    <Text style={styles.label}>दैनिक मात्रा (L)</Text>
+                    <Text style={styles.label}>
+                      {lang === 'hi' ? 'दैनिक मात्रा (L)' : 'Daily Qty (L)'}
+                    </Text>
                     <TextInput
                       style={styles.input}
                       placeholder="1.0"
@@ -252,7 +278,9 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
                   </View>
 
                   <View style={[styles.formGroup, { flex: 1, marginLeft: 6 }]}>
-                    <Text style={styles.label}>दर प्रति लीटर (₹)</Text>
+                    <Text style={styles.label}>
+                      {lang === 'hi' ? 'दर (₹/L)' : 'Rate (₹/L)'}
+                    </Text>
                     <TextInput
                       style={styles.input}
                       placeholder="60"
@@ -264,10 +292,12 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
                 </View>
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>4-अंकों का गुप्त पिन</Text>
+                  <Text style={styles.label}>
+                    {lang === 'hi' ? '4-अंकों का गुप्त पिन' : '4-Digit Secret PIN'}
+                  </Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="4 अंकों का पिन (डिफ़ॉल्ट 1234)"
+                    placeholder="1234"
                     placeholderTextColor="#94a3b8"
                     keyboardType="number-pad"
                     secureTextEntry
@@ -290,7 +320,7 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
                 <ActivityIndicator color="#ffffff" />
               ) : (
                 <Text style={styles.submitButtonText}>
-                  {lang === 'hi' ? 'रजिस्टर करें' : 'Create Account'} →
+                  {lang === 'hi' ? 'खाता बनाएं' : 'Create Account'} →
                 </Text>
               )}
             </TouchableOpacity>
@@ -302,7 +332,7 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
               </Text>
               <TouchableOpacity onPress={() => onGoLogin(role)}>
                 <Text style={styles.loginLinkText}>
-                  {lang === 'hi' ? ' लॉगिन करें' : ' Login Here'}
+                  {lang === 'hi' ? ' लॉगिन करें' : ' Sign In Here'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -318,7 +348,7 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0a1020',
+    backgroundColor: '#070b14',
   },
   container: {
     flex: 1,
@@ -330,6 +360,7 @@ const styles = StyleSheet.create({
   },
   topBar: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
   },
@@ -340,6 +371,19 @@ const styles = StyleSheet.create({
   backBtnText: {
     color: '#93c5fd',
     fontSize: 14,
+    fontWeight: 'bold',
+  },
+  langPill: {
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.22)',
+  },
+  langPillText: {
+    color: '#38bdf8',
+    fontSize: 11,
     fontWeight: 'bold',
   },
   header: {
@@ -365,14 +409,16 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '900',
     color: '#ffffff',
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#94a3b8',
     marginTop: 4,
+    textAlign: 'center',
   },
   card: {
     backgroundColor: '#ffffff',
@@ -416,6 +462,7 @@ const styles = StyleSheet.create({
     color: '#334155',
     marginBottom: 4,
     textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   input: {
     backgroundColor: '#f8fafc',
@@ -434,7 +481,7 @@ const styles = StyleSheet.create({
   submitButton: {
     backgroundColor: '#2563eb',
     borderRadius: 18,
-    paddingVertical: 14,
+    paddingVertical: 15,
     alignItems: 'center',
     marginTop: 8,
     shadowColor: '#2563eb',

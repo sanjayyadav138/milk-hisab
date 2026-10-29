@@ -20,6 +20,17 @@ from ..services.notifications import (
 
 router = APIRouter(prefix="/api/portal", tags=["Portal & Auth"])
 
+class SendOtpRequest(BaseModel):
+    phone: str
+    role: Optional[str] = "vendor"
+
+class VerifyOtpRequest(BaseModel):
+    phone: str
+    otp: str
+    role: Optional[str] = "vendor"
+
+OTP_STORE = {}
+
 class LoginRequest(BaseModel):
     phone: str
     pin: Optional[str] = "1234"
@@ -120,6 +131,36 @@ class MessageCreate(BaseModel):
     sender_name: str
     sender_role: str = "customer"  # "customer" or "vendor"
     message: str
+
+@router.post("/auth/send-otp")
+def send_otp(req: SendOtpRequest, db: Session = Depends(get_db)):
+    clean_phone = req.phone.strip().replace(" ", "").replace("+91", "").replace("-", "")
+    if len(clean_phone) < 4:
+        raise HTTPException(status_code=400, detail="Invalid mobile number. Please enter a valid 10-digit number.")
+    
+    otp = "1234"
+    OTP_STORE[clean_phone] = {
+        "otp": otp,
+        "timestamp": datetime.datetime.utcnow()
+    }
+    return {
+        "success": True,
+        "message": f"OTP successfully sent to {clean_phone} (Demo OTP: {otp})",
+        "phone": clean_phone,
+        "otp_preview": otp
+    }
+
+@router.post("/auth/verify-otp")
+def verify_otp(req: VerifyOtpRequest, db: Session = Depends(get_db)):
+    clean_phone = req.phone.strip().replace(" ", "").replace("+91", "").replace("-", "")
+    req_otp = req.otp.strip()
+    
+    stored = OTP_STORE.get(clean_phone)
+    if req_otp != "1234" and (not stored or stored.get("otp") != req_otp):
+        raise HTTPException(status_code=400, detail="Invalid OTP! Please enter 1234.")
+    
+    login_req = LoginRequest(phone=clean_phone, pin="1234", role=req.role or "vendor")
+    return login(login_req, db)
 
 @router.post("/auth/login")
 def login(req: LoginRequest, db: Session = Depends(get_db)):

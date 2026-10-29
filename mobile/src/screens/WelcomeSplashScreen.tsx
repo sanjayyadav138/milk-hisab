@@ -248,11 +248,11 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   primaryBtn: {
-    backgroundColor: '#E50914',
-    borderRadius: 4,
+    backgroundColor: '#2563EB', // Deep Dairy Blue (Strictly NO RED BUTTONS)
+    borderRadius: 8,
     paddingVertical: 15,
     alignItems: 'center',
-    shadowColor: '#E50914',
+    shadowColor: '#2563EB',
     shadowOpacity: 0.4,
     shadowRadius: 10,
     elevation: 6,

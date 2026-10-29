@@ -215,10 +215,10 @@ export default function App() {
 const styles = StyleSheet.create({
   appContainer: {
     flex: 1,
-    backgroundColor: '#090D16', // Deep Midnight
+    backgroundColor: '#F8FAFC', // Soft Milky Cream Aesthetic
   },
   headerSafeArea: {
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
   },
   topHeader: {
     flexDirection: 'row',
@@ -226,9 +226,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
+    borderBottomColor: '#E2E8F0',
   },
   brandRow: {
     flexDirection: 'row',
@@ -242,11 +242,11 @@ const styles = StyleSheet.create({
   brandTitle: {
     fontSize: 16,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: '#0F172A',
   },
   brandSub: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: '#64748B',
     fontWeight: '600',
   },
   headerRight: {
@@ -255,9 +255,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   langBtn: {
-    backgroundColor: 'rgba(37, 99, 235, 0.2)',
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.5)',
+    borderColor: '#CBD5E1',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
@@ -265,12 +265,12 @@ const styles = StyleSheet.create({
   langBtnText: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#38BDF8',
+    color: '#0F172A',
   },
   logoutBtn: {
-    backgroundColor: 'rgba(244, 63, 94, 0.15)',
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: 'rgba(244, 63, 94, 0.4)',
+    borderColor: '#CBD5E1',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
   logoutBtnText: {
     fontSize: 11,
     fontWeight: 'bold',
-    color: '#FB7185',
+    color: '#0F172A',
   },
   screenContent: {
     flex: 1,
@@ -286,14 +286,14 @@ const styles = StyleSheet.create({
   bottomNav: {
     flexDirection: 'row',
     height: 64,
-    backgroundColor: '#0F172A', // Dark Navy Footer
+    backgroundColor: '#FFFFFF', // Pure White Bottom Nav
     borderTopWidth: 1,
-    borderTopColor: '#1E293B',
+    borderTopColor: '#E2E8F0',
     paddingBottom: 4,
     shadowColor: '#000',
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 4,
   },
   navTab: {
     flex: 1,
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
   },
   navTabActive: {
     borderTopWidth: 2,
-    borderTopColor: '#2563EB', // Dairy Blue Active Indicator
+    borderTopColor: '#2563EB', // Deep Dairy Blue Indicator
   },
   navIcon: {
     fontSize: 20,
@@ -311,11 +311,11 @@ const styles = StyleSheet.create({
   navLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: 2,
   },
   navLabelActive: {
-    color: '#38BDF8',
+    color: '#2563EB',
     fontWeight: '900',
   },
 });

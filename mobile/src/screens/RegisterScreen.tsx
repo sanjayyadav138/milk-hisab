@@ -176,15 +176,21 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
                   <Text style={styles.label}>
                     {lang === 'hi' ? 'मोबाइल नंबर (लॉगिन हेतु)' : 'Mobile Number (for login)'}
                   </Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder={lang === 'hi' ? '10 अंकों का मोबाइल नंबर' : '10-digit mobile number'}
-                    placeholderTextColor="#94a3b8"
-                    keyboardType="phone-pad"
-                    maxLength={10}
-                    value={vendorPhone}
-                    onChangeText={setVendorPhone}
-                  />
+                  <View style={styles.phoneInputRow}>
+                    <View style={styles.countryPrefixBox}>
+                      <Text style={styles.countryFlag}>🇮🇳</Text>
+                      <Text style={styles.countryPrefixText}>+91</Text>
+                    </View>
+                    <TextInput
+                      style={styles.phoneInput}
+                      placeholder={lang === 'hi' ? '10 अंकों का मोबाइल नंबर' : '10-digit mobile number'}
+                      placeholderTextColor="#94a3b8"
+                      keyboardType="phone-pad"
+                      maxLength={10}
+                      value={vendorPhone}
+                      onChangeText={setVendorPhone}
+                    />
+                  </View>
                 </View>
 
                 <View style={styles.formGroup}>
@@ -237,15 +243,21 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
                   <Text style={styles.label}>
                     {lang === 'hi' ? 'मोबाइल नंबर' : 'Mobile Number'}
                   </Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder={lang === 'hi' ? '10 अंकों का मोबाइल नंबर' : '10-digit mobile number'}
-                    placeholderTextColor="#94a3b8"
-                    keyboardType="phone-pad"
-                    maxLength={10}
-                    value={custPhone}
-                    onChangeText={setCustPhone}
-                  />
+                  <View style={styles.phoneInputRow}>
+                    <View style={styles.countryPrefixBox}>
+                      <Text style={styles.countryFlag}>🇮🇳</Text>
+                      <Text style={styles.countryPrefixText}>+91</Text>
+                    </View>
+                    <TextInput
+                      style={styles.phoneInput}
+                      placeholder={lang === 'hi' ? '10 अंकों का मोबाइल नंबर' : '10-digit mobile number'}
+                      placeholderTextColor="#94a3b8"
+                      keyboardType="phone-pad"
+                      maxLength={10}
+                      value={custPhone}
+                      onChangeText={setCustPhone}
+                    />
+                  </View>
                 </View>
 
                 <View style={styles.formGroup}>
@@ -346,7 +358,7 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#070b14',
+    backgroundColor: '#F8FAFC', // Soft Milky Cream Background
   },
   container: {
     flex: 1,
@@ -363,26 +375,30 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   backBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 8,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   backBtnText: {
-    color: '#93c5fd',
-    fontSize: 14,
-    fontWeight: 'bold',
+    color: '#0F172A',
+    fontSize: 13,
+    fontWeight: '700',
   },
   langPill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.22)',
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
   langPillText: {
-    color: '#38bdf8',
-    fontSize: 11,
-    fontWeight: 'bold',
+    color: '#0F172A',
+    fontSize: 12,
+    fontWeight: '700',
   },
   header: {
     marginBottom: 14,
@@ -396,23 +412,25 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '900',
-    color: '#ffffff',
+    color: '#0F172A',
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: '#64748B',
     marginTop: 4,
     textAlign: 'center',
   },
   card: {
     backgroundColor: '#ffffff',
-    borderRadius: 26,
+    borderRadius: 20,
     padding: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     shadowColor: '#000000',
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
   },
   roleTabs: {
     flexDirection: 'row',
@@ -459,6 +477,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#0f172a',
     fontWeight: '600',
+  },
+  phoneInputRow: {
+    flexDirection: 'row',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+  },
+  countryPrefixBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 10,
+    borderRightWidth: 1,
+    borderRightColor: '#CBD5E1',
+    gap: 4,
+  },
+  countryFlag: {
+    fontSize: 15,
+  },
+  countryPrefixText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  phoneInput: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
   },
   row: {
     flexDirection: 'row',

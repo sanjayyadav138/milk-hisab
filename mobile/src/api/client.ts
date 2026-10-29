@@ -40,6 +40,26 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 }
 
 // 1. Authentication APIs (Uses exact same database & portal routes as Web)
+export async function sendOtpApi(phone: string, role: 'vendor' | 'customer' = 'vendor') {
+  return request<{ success: boolean; message: string; phone: string; otp_preview: string }>('/portal/auth/send-otp', {
+    method: 'POST',
+    body: JSON.stringify({ phone, role }),
+  });
+}
+
+export async function verifyOtpApi(phone: string, otp: string, role: 'vendor' | 'customer' = 'vendor') {
+  return request<{
+    role: 'vendor' | 'customer';
+    token: string;
+    expires_at: number;
+    user?: any;
+    customer?: Customer;
+  }>('/portal/auth/verify-otp', {
+    method: 'POST',
+    body: JSON.stringify({ phone, otp, role }),
+  });
+}
+
 export async function loginApi(phone: string, role: 'vendor' | 'customer', pin: string = '1234') {
   return request<{
     role: 'vendor' | 'customer';

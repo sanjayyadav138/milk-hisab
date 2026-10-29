@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { 
   StyleSheet, View, Text, TouchableOpacity, ScrollView, 
-  Image, Dimensions, Platform, Modal, Alert 
+  Image, Dimensions, Platform, Modal, Alert, TextInput 
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
@@ -19,28 +19,132 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
   const { auth, logout } = useAuth();
   const { lang, toggleLang } = useLanguage();
 
-  // Profile Dropdown Modal State
+  // Modals State
   const [profileModalVisible, setProfileModalVisible] = useState(false);
-  // Voice Assistant Modal State
   const [voiceModalVisible, setVoiceModalVisible] = useState(false);
-  // Quick Skip Modal State
   const [skipModalVisible, setSkipModalVisible] = useState(false);
-  const [selectedSkipDate, setSelectedSkipDate] = useState('Tomorrow (30 Oct)');
+  const [disputeModalVisible, setDisputeModalVisible] = useState(false);
+  const [chatModalVisible, setChatModalVisible] = useState(false);
 
-  // Quick Action Notification
-  const handleQuickAction = (actionTitle: string, actionDesc: string) => {
-    Alert.alert(actionTitle, actionDesc, [{ text: 'OK' }]);
-  };
+  // Skip Delivery State
+  const [selectedSkipDate, setSelectedSkipDate] = useState('Tomorrow (30 Oct)');
+  const [skipReason, setSkipReason] = useState('');
+
+  // Dispute Management State
+  const [activeDispute, setActiveDispute] = useState<{
+    id: number;
+    customerName: string;
+    date: string;
+    loggedQty: number;
+    claimedQty: number;
+    reason: string;
+    status: 'Pending' | 'Resolved';
+  }>({
+    id: 101,
+    customerName: 'राजेश शर्मा (House 12)',
+    date: '28 Oct 2026',
+    loggedQty: 2.0,
+    claimedQty: 1.5,
+    reason: 'गलती से 2L लिखा गया, जबकि कल 1.5L ही लिया था।',
+    status: 'Pending',
+  });
+
+  // Direct Messaging / Chat State
+  const [chatMessages, setChatMessages] = useState<Array<{
+    id: number;
+    sender: 'vendor' | 'customer';
+    senderName: string;
+    text: string;
+    time: string;
+  }>>([
+    {
+      id: 1,
+      sender: 'customer',
+      senderName: 'राजेश शर्मा',
+      text: 'नमस्ते यादव जी, कल सुबह 1.5L गाय का दूध चाहिए।',
+      time: '07:30 AM',
+    },
+    {
+      id: 2,
+      sender: 'vendor',
+      senderName: 'कृष्णा डेयरी (यादव जी)',
+      text: 'नमस्ते शर्मा जी! 1.5L नोट कर लिया है, सुबह 6:30 बजे मिल जाएगा।',
+      time: '07:45 AM',
+    },
+  ]);
+  const [newChatText, setNewChatText] = useState('');
 
   const isVendor = auth.role === 'vendor';
-  const userName = auth.user?.business_name || auth.user?.name || (lang === 'hi' ? 'डेयरी संचालक' : 'Dairy Vendor');
-  const userPhone = auth.user?.phone || '9876543210';
+  const userName = isVendor 
+    ? (auth.user?.business_name || auth.user?.name || (lang === 'hi' ? 'श्री कृष्णा डेयरी फार्म' : 'Krishna Dairy Farm'))
+    : (auth.customer?.name || (lang === 'hi' ? 'राजेश शर्मा' : 'Rajesh Sharma'));
+  const userPhone = auth.user?.phone || auth.customer?.phone || '9876543210';
+
+  // Handle Delivery Pause / Skip Selection (Strict Same-Day Block)
+  const handleSelectSkipDate = (dateLabel: string) => {
+    setSelectedSkipDate(dateLabel);
+    if (dateLabel.toLowerCase().includes('today') || dateLabel.includes('आज')) {
+      Alert.alert(
+        lang === 'hi' ? '🚫 आज की छुट्टी संभव नहीं' : '🚫 Same-Day Cancellation Blocked',
+        lang === 'hi'
+          ? 'आज की डिलीवरी की सप्लाई व वितरण शुरू हो चुका है। दूध का नुकसान रोकने हेतु आज की छुट्टी ऐप से नहीं हो सकती। कृपया सीधे दूधिया से संपर्क करें।'
+          : 'Same-day cancellation is blocked to avoid dairy waste as deliveries are already in route. Please contact your milkman directly.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
+  const handleConfirmSkip = () => {
+    if (selectedSkipDate.toLowerCase().includes('today') || selectedSkipDate.includes('आज')) {
+      Alert.alert(
+        lang === 'hi' ? 'अमान्य अनुरोध' : 'Invalid Request',
+        lang === 'hi' ? 'आज की तारीख के लिए छुट्टी नहीं दी जा सकती।' : 'Cannot skip for today.'
+      );
+      return;
+    }
+
+    setSkipModalVisible(false);
+    Alert.alert(
+      lang === 'hi' ? '✓ छुट्टी दर्ज हो गई' : '✓ Milk Delivery Paused',
+      lang === 'hi'
+        ? `${selectedSkipDate} के लिए दूध छुट्टी दर्ज कर दी गई है। बहीखाते में 0L दर्ज रहेगा।`
+        : `Milk delivery has been paused for ${selectedSkipDate}. ₹0 recorded in your ledger.`
+    );
+  };
+
+  // Handle Dispute Resolution
+  const handleResolveDispute = () => {
+    setActiveDispute(prev => ({ ...prev, status: 'Resolved', loggedQty: prev.claimedQty }));
+    setDisputeModalVisible(false);
+    Alert.alert(
+      lang === 'hi' ? '✓ आपत्ति का समाधान संपन्न' : '✓ Dispute Resolved',
+      lang === 'hi'
+        ? 'मात्रा को सुधारकर 1.5L कर दिया गया है। ग्राहक का खाता सत्यापित और शून्य विवाद में है।'
+        : 'Quantity adjusted to 1.5L. Customer ledger verified with zero disputes.'
+    );
+  };
+
+  // Handle Send Direct Chat Message
+  const handleSendMessage = () => {
+    if (!newChatText.trim()) return;
+
+    const newMessage = {
+      id: Date.now(),
+      sender: isVendor ? ('vendor' as const) : ('customer' as const),
+      senderName: isVendor ? 'कृष्णा डेयरी' : 'राजेश शर्मा',
+      text: newChatText.trim(),
+      time: 'अभी (Just now)',
+    };
+
+    setChatMessages(prev => [...prev, newMessage]);
+    setNewChatText('');
+  };
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
 
-      {/* TOP HEADER: Milk Hisab Logo on Left, User Profile Avatar on Right */}
+      {/* TOP HEADER: Clean Milk Banner Aesthetic (No Red Buttons) */}
       <View style={styles.headerBar}>
         <View style={styles.headerLeft}>
           <Image 
@@ -51,10 +155,10 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
         </View>
 
         <View style={styles.headerRight}>
-          {/* 1-Tap Language Toggle */}
-          <TouchableOpacity onPress={toggleLang} style={styles.langBadge} activeOpacity={0.8}>
-            <Text style={styles.langBadgeText}>
-              🌐 {lang === 'hi' ? 'EN' : 'हिन्दी'}
+          {/* 1-Tap Language Switcher */}
+          <TouchableOpacity onPress={toggleLang} style={styles.langPill} activeOpacity={0.8}>
+            <Text style={styles.langPillText}>
+              🌐 {lang === 'hi' ? 'English' : 'हिन्दी'}
             </Text>
           </TouchableOpacity>
 
@@ -74,14 +178,14 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
         </View>
       </View>
 
-      {/* MAIN STREAMING DASHBOARD SCROLL VIEW */}
+      {/* MAIN DASHBOARD SCROLL CONTENT */}
       <ScrollView 
         style={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         {/* ========================================================
-            HERO FEATURED BANNER (Cinematic Netflix "Hero Movie" Style)
+            HERO FEATURED BANNER (Cinematic Dairy Blue Milk Banner)
             ======================================================== */}
         <View style={styles.heroCardContainer}>
           <Image 
@@ -90,60 +194,56 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
             resizeMode="cover"
           />
 
-          {/* Dark Navy Cinematic Gradient Overlay */}
+          {/* Deep Dairy Blue Gradient Overlay */}
           <LinearGradient
             colors={[
-              'rgba(15, 23, 42, 0.25)',
-              'rgba(15, 23, 42, 0.70)',
-              '#090D16'
+              'rgba(30, 58, 138, 0.45)',
+              'rgba(30, 58, 138, 0.88)',
+              '#1E3A8A'
             ]}
             locations={[0, 0.55, 1.0]}
             style={StyleSheet.absoluteFill}
           />
 
-          {/* Hero Content Overlay */}
           <View style={styles.heroContent}>
-            {/* Live Status Chip */}
+            {/* Top Live Badges */}
             <View style={styles.heroTopRow}>
               <View style={styles.liveChip}>
                 <View style={styles.livePulseDot} />
                 <Text style={styles.liveChipText}>
-                  {lang === 'hi' ? 'आज का लाइव हिसाब' : "TODAY'S LIVE SUMMARY"}
+                  {lang === 'hi' ? 'आज का लाइव हिसाब' : "TODAY'S LIVE LEDGER"}
                 </Text>
               </View>
 
               <View style={styles.statusBadgeGreen}>
                 <Text style={styles.statusBadgeGreenText}>
-                  ● {lang === 'hi' ? 'सक्रिय व सुरक्षित' : 'Settled & Verified'}
+                  ● {lang === 'hi' ? 'सक्रिय बहीखाता' : 'Active & Verified'}
                 </Text>
               </View>
             </View>
 
-            {/* Key Delivery Headline */}
+            {/* Role-Based Summary Headline */}
             <Text style={styles.heroHeadline}>
               {isVendor
-                ? (lang === 'hi' ? 'आज 48.5L दूध वितरण पूरा' : "Today's Delivery: 48.5L Distributed")
-                : (lang === 'hi' ? 'आज का दूध: 1.5L प्राप्त' : "Today's Delivery: 1.5L Delivered")}
+                ? (lang === 'hi' ? 'आज का वितरण: 48.5L संपन्न' : "Today's Delivery: 48.5L Distributed")
+                : (lang === 'hi' ? 'आज का दूध: 1.5L प्राप्त | स्थिति: चुकता' : "Today's Delivery: 1.5L Delivered | Status: Settled")}
             </Text>
 
             <Text style={styles.heroSubHeadline}>
               {isVendor 
-                ? (lang === 'hi' ? '24 परिवारों में वितरण संपन्न • कुल संकलन: ₹3,880 • 0 विवाद' : '24 Homes Delivered • Total Billed: ₹3,880 • 0 Disputes')
-                : (lang === 'hi' ? 'शुद्ध देसी गाय का दूध (A2 Gir) • सुबह की शिफ्ट • स्थिति: चुकता' : 'Pure Cow Milk (A2 Gir) • Morning Shift • Status: Settled')}
+                ? (lang === 'hi' ? '24 सक्रिय ग्राहक • संकलन: ₹3,880 • 1 आपत्ति समीक्षाधीन' : '24 Active Homes • Collected: ₹3,880 • 1 Dispute Pending')
+                : (lang === 'hi' ? 'शुद्ध गाय का दूध (A2 Gir) • सुबह 6:45 बजे प्राप्त • बिल: ₹90.00' : 'Pure Cow Milk (A2 Gir) • Received at 6:45 AM • Bill: ₹90.00')}
             </Text>
 
-            {/* Hero Interactive Action Buttons (Dairy Blue & Sleek Translucent) */}
+            {/* Hero Action Buttons (Deep Dairy Blue & Crisp White, NO RED) */}
             <View style={styles.heroButtonsRow}>
               <TouchableOpacity 
-                onPress={() => onNavigateTab ? onNavigateTab('DAILY') : handleQuickAction(
-                  lang === 'hi' ? 'दैनिक एंट्री' : 'Daily Entry',
-                  lang === 'hi' ? 'दैनिक बहीखाता सूची खुल रही है...' : 'Opening daily delivery checklist...'
-                )}
+                onPress={() => onNavigateTab ? onNavigateTab('DAILY') : null}
                 style={styles.heroPrimaryBtn}
                 activeOpacity={0.85}
               >
                 <Text style={styles.heroPrimaryBtnText}>
-                  ▶ {lang === 'hi' ? 'तुरंत दूध एंट्री करें' : 'Log Delivery Entry'}
+                  ▶ {isVendor ? (lang === 'hi' ? 'तुरंत दूध एंट्री करें' : 'Log Delivery Entry') : (lang === 'hi' ? 'मासिक पर्ची देखें' : 'View Monthly Slip')}
                 </Text>
               </TouchableOpacity>
 
@@ -161,15 +261,44 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
         </View>
 
         {/* ========================================================
-            ROW 1: QUICK ACTIONS (Netflix "Top Picks" Horizontal Row)
+            PENDING DISPUTE ALERT (Vendor & Customer Notice)
+            ======================================================== */}
+        {activeDispute.status === 'Pending' && (
+          <View style={styles.disputeAlertCard}>
+            <View style={styles.disputeAlertLeft}>
+              <Text style={styles.disputeAlertIcon}>⚠️</Text>
+              <View style={styles.disputeAlertTextWrap}>
+                <Text style={styles.disputeAlertTitle}>
+                  {lang === 'hi' ? 'आपत्ति सूचना: 1 एंट्री पर समीक्षा आवश्यक' : 'Dispute Alert: 1 Entry Under Review'}
+                </Text>
+                <Text style={styles.disputeAlertDesc}>
+                  {activeDispute.customerName} ({activeDispute.date}): {activeDispute.reason}
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity 
+              onPress={() => setDisputeModalVisible(true)}
+              style={styles.disputeResolveBtn}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.disputeResolveBtnText}>
+                {isVendor ? (lang === 'hi' ? 'सुलझाएं' : 'Resolve') : (lang === 'hi' ? 'स्थिति' : 'Status')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ========================================================
+            ROW 1: QUICK ACTIONS (Netflix Horizontal Scroll)
             ======================================================== */}
         <View style={styles.sectionRow}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              {lang === 'hi' ? '⚡ त्वरित सुविधाएं' : '⚡ Quick Actions'}
+              {lang === 'hi' ? '⚡ त्वरित सुविधाएं (Quick Actions)' : '⚡ Quick Actions'}
             </Text>
             <Text style={styles.sectionSubtitle}>
-              {lang === 'hi' ? '1-क्लिक आसान कार्य' : 'Tap for instant operations'}
+              {lang === 'hi' ? 'दैनिक बहीखाता व ग्राहक संचालन' : '1-tap essential operations'}
             </Text>
           </View>
 
@@ -180,21 +309,18 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
           >
             {/* Quick Action 1: Log Daily Entry */}
             <TouchableOpacity 
-              onPress={() => onNavigateTab ? onNavigateTab('DAILY') : handleQuickAction(
-                lang === 'hi' ? 'दैनिक एंट्री' : 'Daily Entry',
-                lang === 'hi' ? 'दैनिक दूध एंट्री स्क्रीन पर जा रहे हैं' : 'Navigating to daily checklist'
-              )}
+              onPress={() => onNavigateTab ? onNavigateTab('DAILY') : null}
               style={[styles.quickActionCard, { borderColor: '#2563EB' }]}
               activeOpacity={0.8}
             >
-              <View style={[styles.actionIconBadge, { backgroundColor: 'rgba(37, 99, 235, 0.2)' }]}>
+              <View style={[styles.actionIconBadge, { backgroundColor: 'rgba(37, 99, 235, 0.12)' }]}>
                 <Text style={styles.actionIconText}>📝</Text>
               </View>
               <Text style={styles.actionTitle}>
                 {lang === 'hi' ? 'दूध एंट्री भरें' : 'Log Daily Entry'}
               </Text>
               <Text style={styles.actionDesc}>
-                {lang === 'hi' ? '10 सेकंड में हिसाब' : 'Record today milk'}
+                {lang === 'hi' ? '10 सेकंड में हिसाब' : 'Record milk volume'}
               </Text>
             </TouchableOpacity>
 
@@ -204,89 +330,83 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
               style={[styles.quickActionCard, { borderColor: '#38BDF8' }]}
               activeOpacity={0.8}
             >
-              <View style={[styles.actionIconBadge, { backgroundColor: 'rgba(56, 189, 248, 0.2)' }]}>
+              <View style={[styles.actionIconBadge, { backgroundColor: 'rgba(56, 189, 248, 0.15)' }]}>
                 <Text style={styles.actionIconText}>🎙️</Text>
               </View>
               <Text style={styles.actionTitle}>
                 {lang === 'hi' ? 'बोलकर भरें' : 'Voice Assistant'}
               </Text>
               <Text style={styles.actionDesc}>
-                {lang === 'hi' ? 'देसी आवाज़ से एंट्री' : 'Hands-free logging'}
+                {lang === 'hi' ? 'देसी आवाज़ से एंट्री' : 'Hands-free voice entry'}
               </Text>
             </TouchableOpacity>
 
-            {/* Quick Action 3: Skip Delivery */}
+            {/* Quick Action 3: Skip Delivery (With Same-Day Block) */}
             <TouchableOpacity 
               onPress={() => setSkipModalVisible(true)}
               style={[styles.quickActionCard, { borderColor: '#F59E0B' }]}
               activeOpacity={0.8}
             >
-              <View style={[styles.actionIconBadge, { backgroundColor: 'rgba(245, 158, 11, 0.2)' }]}>
+              <View style={[styles.actionIconBadge, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
                 <Text style={styles.actionIconText}>⏸️</Text>
               </View>
               <Text style={styles.actionTitle}>
                 {lang === 'hi' ? 'छुट्टी दर्ज करें' : 'Skip Delivery'}
               </Text>
               <Text style={styles.actionDesc}>
-                {lang === 'hi' ? 'कल का दूध रोकें' : 'Pause for date'}
+                {lang === 'hi' ? 'भविष्य की तारीखें' : 'Pause future dates'}
               </Text>
             </TouchableOpacity>
 
-            {/* Quick Action 4: Direct WhatsApp Chat */}
+            {/* Quick Action 4: In-App Direct Chat */}
             <TouchableOpacity 
-              onPress={() => handleQuickAction(
-                lang === 'hi' ? 'WhatsApp संदेश' : 'Direct WhatsApp',
-                lang === 'hi' ? 'दैनिक बहीखाता पर्ची WhatsApp पर भेजी जा रही है...' : 'Dispatching daily milk slip to WhatsApp...'
-              )}
+              onPress={() => setChatModalVisible(true)}
               style={[styles.quickActionCard, { borderColor: '#10B981' }]}
               activeOpacity={0.8}
             >
-              <View style={[styles.actionIconBadge, { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
+              <View style={[styles.actionIconBadge, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
                 <Text style={styles.actionIconText}>💬</Text>
               </View>
               <Text style={styles.actionTitle}>
-                {lang === 'hi' ? 'WhatsApp पर्ची' : 'WhatsApp Slip'}
+                {lang === 'hi' ? 'सीधा संदेश / चैट' : 'Direct Chat'}
               </Text>
               <Text style={styles.actionDesc}>
-                {lang === 'hi' ? '1-क्लिक शेयर करें' : 'Instant balance bill'}
+                {lang === 'hi' ? 'दूधिया-ग्राहक संवाद' : 'In-app milk notes'}
               </Text>
             </TouchableOpacity>
 
-            {/* Quick Action 5: Raise Query */}
+            {/* Quick Action 5: Raise Query / Dispute */}
             <TouchableOpacity 
-              onPress={() => handleQuickAction(
-                lang === 'hi' ? 'आपत्ति दर्ज' : 'Raise Query',
-                lang === 'hi' ? 'दूध की मात्रा या हिसाब से जुड़ी आपत्ति दर्ज करें। 0 विवाद नीति।' : 'Log a ledger inquiry. 0-dispute transparent audit.'
-              )}
+              onPress={() => setDisputeModalVisible(true)}
               style={[styles.quickActionCard, { borderColor: '#F43F5E' }]}
               activeOpacity={0.8}
             >
-              <View style={[styles.actionIconBadge, { backgroundColor: 'rgba(244, 63, 94, 0.2)' }]}>
+              <View style={[styles.actionIconBadge, { backgroundColor: 'rgba(244, 63, 94, 0.12)' }]}>
                 <Text style={styles.actionIconText}>⚖️</Text>
               </View>
               <Text style={styles.actionTitle}>
-                {lang === 'hi' ? 'आपत्ति दर्ज करें' : 'Raise Query'}
+                {lang === 'hi' ? 'आपत्ति समाधान' : 'Dispute Center'}
               </Text>
               <Text style={styles.actionDesc}>
-                {lang === 'hi' ? '0 विवाद गारंटी' : 'Dispute resolution'}
+                {lang === 'hi' ? '0 विवाद गारंटी' : 'Transparent audit'}
               </Text>
             </TouchableOpacity>
 
-            {/* Quick Action 6: Manage Customers */}
+            {/* Quick Action 6: Manage Customers (Vendor Only) */}
             {isVendor && (
               <TouchableOpacity 
                 onPress={() => onNavigateTab ? onNavigateTab('CUSTOMERS') : null}
                 style={[styles.quickActionCard, { borderColor: '#8B5CF6' }]}
                 activeOpacity={0.8}
               >
-                <View style={[styles.actionIconBadge, { backgroundColor: 'rgba(139, 92, 246, 0.2)' }]}>
+                <View style={[styles.actionIconBadge, { backgroundColor: 'rgba(139, 92, 246, 0.12)' }]}>
                   <Text style={styles.actionIconText}>👥</Text>
                 </View>
                 <Text style={styles.actionTitle}>
                   {lang === 'hi' ? 'ग्राहक सूची' : 'Customer List'}
                 </Text>
                 <Text style={styles.actionDesc}>
-                  {lang === 'hi' ? 'संपर्क व रेट कार्ड' : 'Rates & balances'}
+                  {lang === 'hi' ? '24 परिवार सक्रिय' : 'Rates & balances'}
                 </Text>
               </TouchableOpacity>
             )}
@@ -294,7 +414,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
         </View>
 
         {/* =================================================================
-            ROW 2: RECENT DELIVERIES & LEDGERS (Netflix "Continue Watching" Row)
+            ROW 2: RECENT DELIVERIES & LEDGERS (Netflix Horizontal Scroll)
             ================================================================= */}
         <View style={styles.sectionRow}>
           <View style={styles.sectionHeader}>
@@ -302,7 +422,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
               {lang === 'hi' ? '🥛 हालिया दूध डिलीवरी व बहीखाता' : '🥛 Recent Deliveries & Ledgers'}
             </Text>
             <Text style={styles.sectionSubtitle}>
-              {lang === 'hi' ? 'दैनिक दूध मात्रा व भुगतान स्थिति' : 'Daily quantities & settlement status'}
+              {lang === 'hi' ? 'दैनिक दूध मात्रा व निपटान स्थिति' : 'Daily quantities & settlement status'}
             </Text>
           </View>
 
@@ -311,7 +431,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalListPadding}
           >
-            {/* Delivery Card 1: Today */}
+            {/* Card 1: Today */}
             <View style={styles.deliveryCard}>
               <View style={styles.deliveryTopRow}>
                 <Text style={styles.deliveryDate}>
@@ -331,21 +451,18 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
                 {lang === 'hi' ? 'गाय का दूध @ ₹60/L • ₹90.00' : 'Cow Milk @ ₹60/L • ₹90.00'}
               </Text>
 
-              <View style={styles.deliveryBadgeRow}>
-                <View style={styles.badgeGreen}>
-                  <Text style={styles.badgeGreenText}>
-                    ✓ {lang === 'hi' ? 'प्राप्त व चुकता' : 'Settled & Verified'}
-                  </Text>
-                </View>
+              <View style={styles.badgeGreen}>
+                <Text style={styles.badgeGreenText}>
+                  ✓ {lang === 'hi' ? 'प्राप्त व चुकता' : 'Settled & Verified'}
+                </Text>
               </View>
 
-              {/* Netflix-style Progress Bar at bottom (Dairy Blue) */}
               <View style={styles.cardProgressBarTrack}>
                 <View style={[styles.cardProgressBarFill, { width: '100%', backgroundColor: '#10B981' }]} />
               </View>
             </View>
 
-            {/* Delivery Card 2: Yesterday */}
+            {/* Card 2: Yesterday */}
             <View style={styles.deliveryCard}>
               <View style={styles.deliveryTopRow}>
                 <Text style={styles.deliveryDate}>
@@ -365,12 +482,10 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
                 {lang === 'hi' ? 'गाय का दूध @ ₹60/L • ₹90.00' : 'Cow Milk @ ₹60/L • ₹90.00'}
               </Text>
 
-              <View style={styles.deliveryBadgeRow}>
-                <View style={styles.badgeGreen}>
-                  <Text style={styles.badgeGreenText}>
-                    ✓ {lang === 'hi' ? 'प्राप्त व चुकता' : 'Settled & Verified'}
-                  </Text>
-                </View>
+              <View style={styles.badgeGreen}>
+                <Text style={styles.badgeGreenText}>
+                  ✓ {lang === 'hi' ? 'प्राप्त व चुकता' : 'Settled & Verified'}
+                </Text>
               </View>
 
               <View style={styles.cardProgressBarTrack}>
@@ -378,7 +493,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
               </View>
             </View>
 
-            {/* Delivery Card 3: 27 Oct (Evening - Amber Pending) */}
+            {/* Card 3: 27 Oct (Evening - Amber Pending) */}
             <View style={styles.deliveryCard}>
               <View style={styles.deliveryTopRow}>
                 <Text style={styles.deliveryDate}>
@@ -398,20 +513,18 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
                 {lang === 'hi' ? 'भैंस का दूध @ ₹70/L • ₹140.00' : 'Buffalo Milk @ ₹70/L • ₹140.00'}
               </Text>
 
-              <View style={styles.deliveryBadgeRow}>
-                <View style={styles.badgeAmber}>
-                  <Text style={styles.badgeAmberText}>
-                    ⏳ {lang === 'hi' ? 'माह अंत में देय' : 'Pending in Monthly Bill'}
-                  </Text>
-                </View>
+              <View style={styles.badgeAmber}>
+                <Text style={styles.badgeAmberText}>
+                  ⏳ {lang === 'hi' ? 'माह अंत में देय' : 'Pending in Monthly Bill'}
+                </Text>
               </View>
 
               <View style={styles.cardProgressBarTrack}>
-                <View style={[styles.cardProgressBarFill, { width: '65%', backgroundColor: '#F59E0B' }]} />
+                <View style={[styles.cardProgressBarFill, { width: '70%', backgroundColor: '#F59E0B' }]} />
               </View>
             </View>
 
-            {/* Delivery Card 4: 26 Oct (Skipped) */}
+            {/* Card 4: 26 Oct (Skipped) */}
             <View style={styles.deliveryCard}>
               <View style={styles.deliveryTopRow}>
                 <Text style={styles.deliveryDate}>
@@ -423,31 +536,29 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
               </View>
 
               <View style={styles.qtyRow}>
-                <Text style={[styles.qtyHeroText, { color: '#64748B' }]}>0.0</Text>
+                <Text style={[styles.qtyHeroText, { color: '#94A3B8' }]}>0.0</Text>
                 <Text style={styles.qtyUnitText}>Litre</Text>
               </View>
 
               <Text style={styles.rateDetailText}>
-                {lang === 'hi' ? 'ग्राहक द्वारा पूर्व सूचित अवकाश • ₹0' : 'Pre-notified leave • ₹0.00'}
+                {lang === 'hi' ? 'पूर्व सूचित अवकाश • ₹0.00' : 'Pre-notified leave • ₹0.00'}
               </Text>
 
-              <View style={styles.deliveryBadgeRow}>
-                <View style={styles.badgeMuted}>
-                  <Text style={styles.badgeMutedText}>
-                    ⏸️ {lang === 'hi' ? 'कोई शुल्क नहीं' : 'No Charge Recorded'}
-                  </Text>
-                </View>
+              <View style={styles.badgeMuted}>
+                <Text style={styles.badgeMutedText}>
+                  ⏸️ {lang === 'hi' ? 'कोई शुल्क नहीं' : 'No Charge Recorded'}
+                </Text>
               </View>
 
               <View style={styles.cardProgressBarTrack}>
-                <View style={[styles.cardProgressBarFill, { width: '0%', backgroundColor: '#64748B' }]} />
+                <View style={[styles.cardProgressBarFill, { width: '0%', backgroundColor: '#94A3B8' }]} />
               </View>
             </View>
           </ScrollView>
         </View>
 
         {/* =================================================================
-            ROW 3: MONTHLY BILLS & PAYMENTS (Netflix "Trending Now" Row)
+            ROW 3: MONTHLY BILLS & PAYMENTS (Netflix Horizontal Scroll)
             ================================================================= */}
         <View style={styles.sectionRow}>
           <View style={styles.sectionHeader}>
@@ -464,15 +575,15 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalListPadding}
           >
-            {/* Bill Card 1: Current Month Running */}
+            {/* Bill Card 1: October 2026 Running */}
             <View style={styles.billCard}>
               <View style={styles.billHeader}>
                 <Text style={styles.billMonthTitle}>
-                  {lang === 'hi' ? 'अक्टूबर 2026 (चालू माह)' : 'October 2026 (Current)'}
+                  {lang === 'hi' ? 'अक्टूबर 2026 (चालू माह)' : 'October 2026 (Running)'}
                 </Text>
                 <View style={styles.badgeGreen}>
                   <Text style={styles.badgeGreenText}>
-                    {lang === 'hi' ? 'चुकता' : 'All Clear'}
+                    {lang === 'hi' ? 'पूर्ण चुकता' : 'All Clear'}
                   </Text>
                 </View>
               </View>
@@ -496,13 +607,13 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
 
               <View style={styles.billFooterRow}>
                 <Text style={styles.billDueText}>
-                  📅 {lang === 'hi' ? 'बिल चक्र: 01 - 31 अक्टूबर' : 'Cycle: 01 Oct - 31 Oct'}
+                  📅 {lang === 'hi' ? 'चक्र: 01 - 31 अक्टूबर' : 'Cycle: 01 - 31 Oct'}
                 </Text>
 
                 <TouchableOpacity 
-                  onPress={() => handleQuickAction(
-                    lang === 'hi' ? 'मासिक पर्ची' : 'Monthly Slip',
-                    lang === 'hi' ? 'अक्टूबर माह का सत्यापित हिसाब पत्र तैयार है।' : 'October verified monthly slip is ready for download.'
+                  onPress={() => Alert.alert(
+                    lang === 'hi' ? 'WhatsApp बिल पर्ची' : 'WhatsApp Slip',
+                    lang === 'hi' ? 'अक्टूबर माह का सत्यापित हिसाब पत्र WhatsApp पर शेयर करने हेतु तैयार है।' : 'October verified monthly slip is ready for WhatsApp sharing.'
                   )}
                   style={styles.billActionBtn}
                   activeOpacity={0.8}
@@ -518,11 +629,11 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
             <View style={[styles.billCard, { borderColor: '#F59E0B' }]}>
               <View style={styles.billHeader}>
                 <Text style={styles.billMonthTitle}>
-                  {lang === 'hi' ? 'पुराना बकाया हिसाब' : 'Pending Ledger Balance'}
+                  {lang === 'hi' ? 'पिछला बकाया बिल' : 'Pending Ledger Balance'}
                 </Text>
                 <View style={styles.badgeAmber}>
                   <Text style={styles.badgeAmberText}>
-                    {lang === 'hi' ? 'देय 3 दिन में' : 'Due in 3 Days'}
+                    {lang === 'hi' ? '3 दिन में देय' : 'Due in 3 Days'}
                   </Text>
                 </View>
               </View>
@@ -546,18 +657,18 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
 
               <View style={styles.billFooterRow}>
                 <Text style={styles.billDueText}>
-                  ⚠️ {lang === 'hi' ? 'कृपया समय पर भुगतान करें' : 'Zero interest on UPI payment'}
+                  ⚡ {lang === 'hi' ? 'शून्य ब्याज तुरंत भुगतान' : 'Zero fee on direct UPI'}
                 </Text>
 
                 <TouchableOpacity 
-                  onPress={() => handleQuickAction(
+                  onPress={() => Alert.alert(
                     lang === 'hi' ? 'UPI भुगतान' : 'UPI Payment',
-                    lang === 'hi' ? '₹850 के लिए UPI QR कोड लोड हो रहा है...' : 'Opening direct UPI app for ₹850 settlement...'
+                    lang === 'hi' ? '₹850 के लिए UPI QR कोड लोड हो रहा है...' : 'Opening direct UPI payment gateway for ₹850...'
                   )}
                   style={[styles.billActionBtn, { backgroundColor: '#F59E0B' }]}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.billActionBtnText, { color: '#090D16' }]}>
+                  <Text style={[styles.billActionBtnText, { color: '#0F172A' }]}>
                     ⚡ {lang === 'hi' ? 'UPI से भरें' : 'Pay via UPI'}
                   </Text>
                 </TouchableOpacity>
@@ -568,7 +679,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
             <View style={styles.billCard}>
               <View style={styles.billHeader}>
                 <Text style={styles.billMonthTitle}>
-                  {lang === 'hi' ? 'सितम्बर 2026 (सफल)' : 'September 2026'}
+                  {lang === 'hi' ? 'सितम्बर 2026 (पूर्ण)' : 'September 2026'}
                 </Text>
                 <View style={styles.badgeGreen}>
                   <Text style={styles.badgeGreenText}>
@@ -584,7 +695,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
                 </View>
                 <View style={styles.metricDivider} />
                 <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>{lang === 'hi' ? 'भुगतान किया' : 'Amount Paid'}</Text>
+                  <Text style={styles.metricLabel}>{lang === 'hi' ? 'भुगतान किया' : 'Paid'}</Text>
                   <Text style={[styles.metricValue, { color: '#10B981' }]}>₹2,790</Text>
                 </View>
                 <View style={styles.metricDivider} />
@@ -596,13 +707,13 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
 
               <View style={styles.billFooterRow}>
                 <Text style={styles.billDueText}>
-                  ✓ {lang === 'hi' ? '02 अक्टूबर को पूर्ण भुगतान' : 'Settled on 02 Oct 2026'}
+                  ✓ {lang === 'hi' ? '02 अक्टूबर को चुकता' : 'Settled on 02 Oct'}
                 </Text>
 
                 <TouchableOpacity 
-                  onPress={() => handleQuickAction(
-                    lang === 'hi' ? 'रसीद देखें' : 'Receipt Slip',
-                    lang === 'hi' ? 'सितम्बर 2026 की डिजिटल रसीद PDF खुल रही है।' : 'Viewing September 2026 verified receipt slip.'
+                  onPress={() => Alert.alert(
+                    lang === 'hi' ? 'रसीद पर्ची' : 'Receipt Slip',
+                    lang === 'hi' ? 'सितम्बर 2026 की डिजिटल रसीद PDF तैयार है।' : 'September 2026 verified receipt slip is ready.'
                   )}
                   style={styles.billActionBtn}
                   activeOpacity={0.8}
@@ -616,21 +727,21 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
           </ScrollView>
         </View>
 
-        {/* TRUST BADGE FOOTER */}
+        {/* TRUST FOOTER */}
         <View style={styles.footerBrandBox}>
           <Text style={styles.footerBrandTitle}>
             🥛 Milk Hisab Cloud Engine
           </Text>
           <Text style={styles.footerBrandDesc}>
             {lang === 'hi' 
-              ? 'दूध वितरण, दैनिक बहीखाता व पारदर्शी बिलिंग का आधुनिक मंच' 
-              : 'Cinematic dairy ledger, automated daily delivery & instant billing platform'}
+              ? 'मेहनती दूधियों व परिवारों का विश्वसनीय डिजिटल बहीखाता साथी' 
+              : 'Rural and semi-urban dairy distribution and transparent ledger platform'}
           </Text>
         </View>
       </ScrollView>
 
       {/* ========================================================
-          USER PROFILE & SETTINGS MODAL (Triggered from Avatar)
+          USER PROFILE & SETTINGS MODAL
           ======================================================== */}
       <Modal
         visible={profileModalVisible}
@@ -661,7 +772,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
 
             <View style={styles.modalDivider} />
 
-            {/* Menu Options */}
+            {/* Switch Language */}
             <TouchableOpacity 
               onPress={() => {
                 setProfileModalVisible(false);
@@ -680,36 +791,17 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
               </View>
             </TouchableOpacity>
 
-            {isVendor && onNavigateTab && (
-              <TouchableOpacity 
-                onPress={() => {
-                  setProfileModalVisible(false);
-                  onNavigateTab('CUSTOMERS');
-                }}
-                style={styles.modalMenuItem}
-              >
-                <Text style={styles.modalMenuIcon}>👥</Text>
-                <View style={styles.modalMenuTextWrap}>
-                  <Text style={styles.modalMenuTitle}>
-                    {lang === 'hi' ? 'ग्राहक प्रबंधन' : 'Customer Ledger Management'}
-                  </Text>
-                  <Text style={styles.modalMenuSub}>
-                    {lang === 'hi' ? 'ग्राहकों की सूची व मासिक रेट' : 'View all customers & monthly rates'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            )}
-
+            {/* Logout Option (NO HARSH RED) */}
             <TouchableOpacity 
               onPress={() => {
                 setProfileModalVisible(false);
                 logout();
               }}
-              style={[styles.modalMenuItem, styles.modalLogoutItem]}
+              style={[styles.modalMenuItem, { borderBottomWidth: 0 }]}
             >
               <Text style={styles.modalMenuIcon}>🚪</Text>
               <View style={styles.modalMenuTextWrap}>
-                <Text style={[styles.modalMenuTitle, { color: '#F43F5E' }]}>
+                <Text style={[styles.modalMenuTitle, { color: '#0F172A' }]}>
                   {lang === 'hi' ? 'लॉगआउट करें (Sign Out)' : 'Sign Out'}
                 </Text>
                 <Text style={styles.modalMenuSub}>
@@ -731,7 +823,143 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
       </Modal>
 
       {/* ========================================================
-          QUICK SKIP MODAL (Triggered from Quick Action)
+          DISPUTE & QUERY RESOLUTION MODAL
+          ======================================================== */}
+      <Modal
+        visible={disputeModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setDisputeModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCardWide}>
+            <Text style={styles.modalTitle}>
+              ⚖️ {lang === 'hi' ? 'दूध एंट्री आपत्ति व समाधान' : 'Ledger Dispute Resolution'}
+            </Text>
+            <Text style={styles.modalSubtitle}>
+              {lang === 'hi' 
+                ? 'पारदर्शी डिजिटल बहीखाता: 0 विवाद नीति' 
+                : 'Zero-dispute transparent ledger audit'}
+            </Text>
+
+            <View style={styles.disputeDetailsBox}>
+              <View style={styles.disputeDetailRow}>
+                <Text style={styles.disputeLabel}>{lang === 'hi' ? 'ग्राहक' : 'Customer'}:</Text>
+                <Text style={styles.disputeValue}>{activeDispute.customerName}</Text>
+              </View>
+              <View style={styles.disputeDetailRow}>
+                <Text style={styles.disputeLabel}>{lang === 'hi' ? 'तारीख' : 'Date'}:</Text>
+                <Text style={styles.disputeValue}>{activeDispute.date}</Text>
+              </View>
+              <View style={styles.disputeDetailRow}>
+                <Text style={styles.disputeLabel}>{lang === 'hi' ? 'दर्ज मात्रा' : 'Logged Qty'}:</Text>
+                <Text style={[styles.disputeValue, { color: '#F59E0B' }]}>{activeDispute.loggedQty} L</Text>
+              </View>
+              <View style={styles.disputeDetailRow}>
+                <Text style={styles.disputeLabel}>{lang === 'hi' ? 'ग्राहक दावा' : 'Claimed Qty'}:</Text>
+                <Text style={[styles.disputeValue, { color: '#10B981' }]}>{activeDispute.claimedQty} L</Text>
+              </View>
+              <View style={styles.disputeDetailRow}>
+                <Text style={styles.disputeLabel}>{lang === 'hi' ? 'कारण' : 'Reason'}:</Text>
+                <Text style={styles.disputeValueText}>{activeDispute.reason}</Text>
+              </View>
+            </View>
+
+            <View style={styles.modalActionRow}>
+              <TouchableOpacity 
+                onPress={() => setDisputeModalVisible(false)} 
+                style={styles.modalCancelBtn}
+              >
+                <Text style={styles.modalCancelBtnText}>{lang === 'hi' ? 'रद्द करें' : 'Close'}</Text>
+              </TouchableOpacity>
+
+              {isVendor && activeDispute.status === 'Pending' ? (
+                <TouchableOpacity 
+                  onPress={handleResolveDispute}
+                  style={styles.modalConfirmDairyBlueBtn}
+                >
+                  <Text style={styles.modalConfirmDairyBlueBtnText}>
+                    ✓ {lang === 'hi' ? '1.5L सुधारें व समाधान करें' : 'Correct to 1.5L & Resolve'}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.resolvedBadgeBox}>
+                  <Text style={styles.resolvedBadgeText}>
+                    ✓ {lang === 'hi' ? 'समाधान संपन्न' : 'Resolved'}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ========================================================
+          DIRECT MESSAGING / IN-APP CHAT MODAL
+          ======================================================== */}
+      <Modal
+        visible={chatModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setChatModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCardWide, { maxHeight: '85%' }]}>
+            <View style={styles.chatHeader}>
+              <Text style={styles.modalTitle}>
+                💬 {lang === 'hi' ? 'दूधिया-ग्राहक संवाद (Direct Chat)' : 'Direct Communication Channel'}
+              </Text>
+              <TouchableOpacity onPress={() => setChatModalVisible(false)}>
+                <Text style={styles.chatCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalSubtitle}>
+              {lang === 'hi' 
+                ? 'दूध की मात्रा व समय से जुड़े सीधे नोट्स व निर्देश' 
+                : 'Direct messaging channel for milk delivery instructions'}
+            </Text>
+
+            {/* Chat Messages List */}
+            <ScrollView style={styles.chatListScroll}>
+              {chatMessages.map(msg => (
+                <View 
+                  key={msg.id} 
+                  style={[
+                    styles.chatBubble, 
+                    msg.sender === (isVendor ? 'vendor' : 'customer') ? styles.chatBubbleMe : styles.chatBubbleOther
+                  ]}
+                >
+                  <Text style={styles.chatSenderName}>{msg.senderName} • {msg.time}</Text>
+                  <Text style={styles.chatMessageText}>{msg.text}</Text>
+                </View>
+              ))}
+            </ScrollView>
+
+            {/* Chat Input Row */}
+            <View style={styles.chatInputRow}>
+              <TextInput
+                style={styles.chatInput}
+                placeholder={lang === 'hi' ? 'संदेश लिखें (उदा. कल 2L दूध चाहिए)...' : 'Type a message...'}
+                placeholderTextColor="#94A3B8"
+                value={newChatText}
+                onChangeText={setNewChatText}
+              />
+              <TouchableOpacity 
+                onPress={handleSendMessage}
+                style={styles.chatSendBtn}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.chatSendBtnText}>
+                  {lang === 'hi' ? 'भेजें' : 'Send'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ========================================================
+          DELIVERY PAUSE / SKIP MODAL (Same-Day Block Enforced)
           ======================================================== */}
       <Modal
         visible={skipModalVisible}
@@ -740,59 +968,65 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
         onRequestClose={() => setSkipModalVisible(false)}
       >
         <View style={styles.modalBackdrop}>
-          <View style={styles.skipModalCard}>
-            <Text style={styles.skipModalTitle}>
-              ⏸️ {lang === 'hi' ? 'दूध डिलीवरी छुट्टी दर्ज करें' : 'Pause / Skip Delivery'}
+          <View style={styles.modalCardWide}>
+            <Text style={styles.modalTitle}>
+              ⏸️ {lang === 'hi' ? 'दूध छुट्टी दर्ज करें (Skip Delivery)' : 'Pause / Skip Delivery'}
             </Text>
-            <Text style={styles.skipModalDesc}>
+            <Text style={styles.modalSubtitle}>
               {lang === 'hi' 
-                ? 'जिस तारीख को दूध नहीं चाहिए, उसे चुनें। बहीखाते में ₹0 और छुट्टी दर्ज होगी।' 
-                : 'Select the date to pause milk. Your ledger will automatically record ₹0 and zero dispute.'}
+                ? 'दूध का नुकसान रोकने हेतु आज की छुट्टी ऐप से बंद है। भविष्य की तारीख चुनें।' 
+                : 'Same-day cancellation is blocked to avoid dairy waste. Please select future dates.'}
             </Text>
 
-            <View style={styles.skipOptionsRow}>
-              {['Tomorrow (30 Oct)', 'Day After (31 Oct)', '1 Nov'].map((d) => (
+            {/* Date Pills */}
+            <View style={styles.skipDatesGrid}>
+              {[
+                { label: 'Today (29 Oct) [Blocked]', isBlocked: true },
+                { label: 'Tomorrow (30 Oct)', isBlocked: false },
+                { label: 'Day After (31 Oct)', isBlocked: false },
+                { label: '01 Nov 2026', isBlocked: false },
+              ].map((item) => (
                 <TouchableOpacity
-                  key={d}
-                  onPress={() => setSelectedSkipDate(d)}
+                  key={item.label}
+                  onPress={() => handleSelectSkipDate(item.label)}
                   style={[
-                    styles.skipOptionPill,
-                    selectedSkipDate === d && styles.skipOptionPillActive
+                    styles.skipDatePill,
+                    selectedSkipDate === item.label && styles.skipDatePillActive,
+                    item.isBlocked && styles.skipDatePillBlocked
                   ]}
                 >
                   <Text style={[
-                    styles.skipOptionPillText,
-                    selectedSkipDate === d && styles.skipOptionPillTextActive
+                    styles.skipDatePillText,
+                    selectedSkipDate === item.label && styles.skipDatePillTextActive,
+                    item.isBlocked && styles.skipDatePillTextBlocked
                   ]}>
-                    {d}
+                    {item.label}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <View style={styles.skipModalActions}>
+            <TextInput
+              style={styles.skipNoteInput}
+              placeholder={lang === 'hi' ? 'कारण (वैकल्पिक, उदा. बाहर जा रहे हैं)...' : 'Reason (optional)...'}
+              placeholderTextColor="#94A3B8"
+              value={skipReason}
+              onChangeText={setSkipReason}
+            />
+
+            <View style={styles.modalActionRow}>
               <TouchableOpacity 
                 onPress={() => setSkipModalVisible(false)} 
-                style={styles.skipCancelBtn}
+                style={styles.modalCancelBtn}
               >
-                <Text style={styles.skipCancelBtnText}>
-                  {lang === 'hi' ? 'रद्द करें' : 'Cancel'}
-                </Text>
+                <Text style={styles.modalCancelBtnText}>{lang === 'hi' ? 'रद्द करें' : 'Cancel'}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
-                onPress={() => {
-                  setSkipModalVisible(false);
-                  Alert.alert(
-                    lang === 'hi' ? 'छुट्टी दर्ज हो गई' : 'Delivery Paused',
-                    lang === 'hi' 
-                      ? `${selectedSkipDate} के लिए दूध छुट्टी दर्ज कर दी गई है।`
-                      : `Milk delivery has been paused for ${selectedSkipDate}.`
-                  );
-                }} 
-                style={styles.skipConfirmBtn}
+                onPress={handleConfirmSkip}
+                style={styles.modalConfirmDairyBlueBtn}
               >
-                <Text style={styles.skipConfirmBtnText}>
+                <Text style={styles.modalConfirmDairyBlueBtnText}>
                   ✓ {lang === 'hi' ? 'छुट्टी पक्की करें' : 'Confirm Skip'}
                 </Text>
               </TouchableOpacity>
@@ -821,7 +1055,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090D16', // Deep Midnight
+    backgroundColor: '#F8FAFC', // Soft Milky Cream Aesthetic
   },
   headerBar: {
     flexDirection: 'row',
@@ -830,16 +1064,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'android' ? 44 : 16,
     paddingBottom: 12,
-    backgroundColor: '#0F172A', // Dark Navy Header
+    backgroundColor: '#FFFFFF', // Pure White Top Nav
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(51, 65, 85, 0.4)',
+    borderBottomColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   headerLogo: {
-    width: 135,
+    width: 140,
     height: 38,
   },
   headerRight: {
@@ -847,16 +1085,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  langBadge: {
-    backgroundColor: 'rgba(37, 99, 235, 0.15)',
+  langPill: {
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.4)',
+    borderColor: '#CBD5E1',
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: 8,
   },
-  langBadgeText: {
-    color: '#38BDF8',
+  langPillText: {
+    color: '#0F172A',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -867,11 +1105,11 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#2563EB', // Dairy Blue
+    backgroundColor: '#2563EB', // Deep Dairy Blue
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#38BDF8',
+    borderColor: '#93C5FD',
   },
   avatarInitials: {
     color: '#FFFFFF',
@@ -887,7 +1125,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: '#10B981', // Ledger Green
     borderWidth: 1.5,
-    borderColor: '#0F172A',
+    borderColor: '#FFFFFF',
   },
   scrollContainer: {
     flex: 1,
@@ -895,7 +1133,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 36,
   },
-  // HERO CARD
+  // HERO CARD (Clean Milk Banner)
   heroCardContainer: {
     marginHorizontal: 14,
     marginTop: 14,
@@ -903,9 +1141,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: '#0F172A',
+    backgroundColor: '#1E3A8A',
     borderWidth: 1,
-    borderColor: 'rgba(51, 65, 85, 0.6)',
+    borderColor: '#CBD5E1',
+    shadowColor: '#1E3A8A',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 4,
   },
   heroCardImage: {
     width: '100%',
@@ -930,12 +1172,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(15, 23, 42, 0.8)',
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.5)',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   livePulseDot: {
     width: 7,
@@ -950,7 +1192,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   statusBadgeGreen: {
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    backgroundColor: 'rgba(16, 185, 129, 0.25)',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -958,19 +1200,19 @@ const styles = StyleSheet.create({
     borderColor: '#10B981',
   },
   statusBadgeGreenText: {
-    color: '#10B981',
+    color: '#D1FAE5',
     fontSize: 11,
     fontWeight: '800',
   },
   heroHeadline: {
-    fontSize: 21,
+    fontSize: 20,
     fontWeight: '900',
     color: '#FFFFFF',
     letterSpacing: -0.3,
   },
   heroSubHeadline: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: '#E0E7FF',
     marginTop: 4,
     lineHeight: 16,
   },
@@ -981,7 +1223,7 @@ const styles = StyleSheet.create({
   },
   heroPrimaryBtn: {
     flex: 1,
-    backgroundColor: '#2563EB', // Dairy Blue
+    backgroundColor: '#2563EB', // Deep Dairy Blue (Strictly NO RED)
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -992,13 +1234,13 @@ const styles = StyleSheet.create({
   },
   heroPrimaryBtnText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
   },
   heroSecondaryBtn: {
-    backgroundColor: 'rgba(30, 41, 59, 0.85)',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.4)',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 8,
@@ -1010,40 +1252,88 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
+  // DISPUTE ALERT CARD
+  disputeAlertCard: {
+    marginHorizontal: 14,
+    marginTop: 12,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1.5,
+    borderColor: '#F59E0B',
+    borderRadius: 12,
+    padding: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  disputeAlertLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  disputeAlertIcon: {
+    fontSize: 22,
+  },
+  disputeAlertTextWrap: {
+    flex: 1,
+  },
+  disputeAlertTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#92400E',
+  },
+  disputeAlertDesc: {
+    fontSize: 11,
+    color: '#78350F',
+    marginTop: 2,
+    lineHeight: 14,
+  },
+  disputeResolveBtn: {
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  disputeResolveBtnText: {
+    color: '#0F172A',
+    fontSize: 12,
+    fontWeight: '900',
+  },
   // SECTIONS & ROWS
   sectionRow: {
-    marginTop: 22,
+    marginTop: 20,
   },
   sectionHeader: {
     paddingHorizontal: 16,
     marginBottom: 10,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: '#0F172A',
     letterSpacing: -0.2,
   },
   sectionSubtitle: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: 2,
   },
   horizontalListPadding: {
     paddingHorizontal: 14,
     gap: 12,
   },
-  // QUICK ACTIONS CARDS (ROW 1)
+  // QUICK ACTIONS (ROW 1)
   quickActionCard: {
     width: 135,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     padding: 14,
     borderWidth: 1.5,
     shadowColor: '#000000',
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.05,
     shadowRadius: 6,
-    elevation: 3,
+    elevation: 2,
   },
   actionIconBadge: {
     width: 44,
@@ -1059,24 +1349,28 @@ const styles = StyleSheet.create({
   actionTitle: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#0F172A',
     marginBottom: 3,
   },
   actionDesc: {
     fontSize: 10,
-    color: '#94A3B8',
+    color: '#64748B',
     lineHeight: 13,
   },
-  // RECENT DELIVERIES CARDS (ROW 2)
+  // RECENT DELIVERIES (ROW 2)
   deliveryCard: {
     width: 200,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(51, 65, 85, 0.7)',
+    borderColor: '#E2E8F0',
     position: 'relative',
     overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   deliveryTopRow: {
     flexDirection: 'row',
@@ -1086,19 +1380,19 @@ const styles = StyleSheet.create({
   },
   deliveryDate: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: '#475569',
     fontWeight: '700',
   },
   shiftTag: {
-    backgroundColor: 'rgba(15, 23, 42, 0.8)',
+    backgroundColor: '#F1F5F9',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
   },
   shiftTagText: {
-    color: '#E2E8F0',
+    color: '#0F172A',
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   qtyRow: {
     flexDirection: 'row',
@@ -1107,26 +1401,23 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   qtyHeroText: {
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: '900',
-    color: '#FFFFFF',
-    lineHeight: 34,
+    color: '#0F172A',
+    lineHeight: 32,
   },
   qtyUnitText: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#38BDF8',
+    fontWeight: '800',
+    color: '#2563EB',
   },
   rateDetailText: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: '#64748B',
     marginBottom: 8,
   },
-  deliveryBadgeRow: {
-    marginBottom: 6,
-  },
   badgeGreen: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
     borderWidth: 1,
     borderColor: 'rgba(16, 185, 129, 0.4)',
     paddingHorizontal: 8,
@@ -1135,7 +1426,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   badgeGreenText: {
-    color: '#10B981',
+    color: '#065F46',
     fontSize: 10,
     fontWeight: '800',
   },
@@ -1149,21 +1440,21 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   badgeAmberText: {
-    color: '#F59E0B',
+    color: '#B45309',
     fontSize: 10,
     fontWeight: '800',
   },
   badgeMuted: {
-    backgroundColor: 'rgba(100, 116, 139, 0.15)',
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: 'rgba(100, 116, 139, 0.4)',
+    borderColor: '#CBD5E1',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
     alignSelf: 'flex-start',
   },
   badgeMutedText: {
-    color: '#94A3B8',
+    color: '#64748B',
     fontSize: 10,
     fontWeight: '700',
   },
@@ -1173,19 +1464,23 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 3,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#E2E8F0',
   },
   cardProgressBarFill: {
     height: '100%',
   },
-  // MONTHLY BILL CARDS (ROW 3)
+  // MONTHLY BILLS (ROW 3)
   billCard: {
     width: 250,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(51, 65, 85, 0.7)',
+    borderColor: '#E2E8F0',
+    shadowColor: '#000000',
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   billHeader: {
     flexDirection: 'row',
@@ -1196,16 +1491,18 @@ const styles = StyleSheet.create({
   billMonthTitle: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#0F172A',
   },
   billMetricsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#0F172A',
+    backgroundColor: '#F8FAFC',
     borderRadius: 8,
     padding: 10,
     marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   metricItem: {
     alignItems: 'center',
@@ -1213,18 +1510,18 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 10,
-    color: '#94A3B8',
+    color: '#64748B',
     marginBottom: 2,
   },
   metricValue: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: '#0F172A',
   },
   metricDivider: {
     width: 1,
     height: 20,
-    backgroundColor: 'rgba(51, 65, 85, 0.6)',
+    backgroundColor: '#CBD5E1',
   },
   billFooterRow: {
     flexDirection: 'row',
@@ -1233,11 +1530,11 @@ const styles = StyleSheet.create({
   },
   billDueText: {
     fontSize: 10,
-    color: '#94A3B8',
+    color: '#64748B',
     maxWidth: 120,
   },
   billActionBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#2563EB', // Deep Dairy Blue
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
@@ -1261,14 +1558,14 @@ const styles = StyleSheet.create({
   },
   footerBrandDesc: {
     fontSize: 11,
-    color: '#475569',
+    color: '#94A3B8',
     textAlign: 'center',
     lineHeight: 15,
   },
-  // MODAL STYLES
+  // MODALS
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(9, 13, 22, 0.85)',
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -1276,15 +1573,15 @@ const styles = StyleSheet.create({
   profileModalCard: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#E2E8F0',
     shadowColor: '#000',
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.15,
     shadowRadius: 16,
-    elevation: 10,
+    elevation: 8,
   },
   modalProfileHeader: {
     flexDirection: 'row',
@@ -1292,17 +1589,15 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   modalAvatarCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#2563EB',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#38BDF8',
   },
   modalAvatarInitials: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '900',
     color: '#FFFFFF',
   },
@@ -1312,21 +1607,22 @@ const styles = StyleSheet.create({
   modalUserName: {
     fontSize: 16,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: '#0F172A',
   },
   modalUserRole: {
     fontSize: 12,
-    color: '#38BDF8',
+    color: '#2563EB',
     marginTop: 2,
+    fontWeight: '700',
   },
   modalUserPhone: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: 2,
   },
   modalDivider: {
     height: 1,
-    backgroundColor: '#334155',
+    backgroundColor: '#E2E8F0',
     marginVertical: 16,
   },
   modalMenuItem: {
@@ -1335,11 +1631,7 @@ const styles = StyleSheet.create({
     gap: 14,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(51, 65, 85, 0.3)',
-  },
-  modalLogoutItem: {
-    borderBottomWidth: 0,
-    marginTop: 4,
+    borderBottomColor: '#F1F5F9',
   },
   modalMenuIcon: {
     fontSize: 20,
@@ -1350,102 +1642,233 @@ const styles = StyleSheet.create({
   modalMenuTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#0F172A',
   },
   modalMenuSub: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: 1,
   },
   modalCloseBtn: {
     marginTop: 14,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#F8FAFC',
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#E2E8F0',
   },
   modalCloseBtnText: {
-    color: '#94A3B8',
+    color: '#0F172A',
     fontSize: 13,
     fontWeight: '700',
   },
-  // SKIP MODAL
-  skipModalCard: {
+  modalCardWide: {
     width: '100%',
-    maxWidth: 360,
-    backgroundColor: '#1E293B',
+    maxWidth: 380,
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#F59E0B',
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  skipModalTitle: {
-    fontSize: 17,
+  modalTitle: {
+    fontSize: 16,
     fontWeight: '900',
-    color: '#FFFFFF',
-    marginBottom: 6,
+    color: '#0F172A',
+    marginBottom: 4,
   },
-  skipModalDesc: {
+  modalSubtitle: {
     fontSize: 12,
-    color: '#94A3B8',
-    lineHeight: 17,
+    color: '#64748B',
     marginBottom: 16,
+    lineHeight: 16,
   },
-  skipOptionsRow: {
-    gap: 8,
-    marginBottom: 20,
-  },
-  skipOptionPill: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    backgroundColor: '#0F172A',
+  disputeDetailsBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 12,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#E2E8F0',
+    marginBottom: 16,
+    gap: 6,
   },
-  skipOptionPillActive: {
-    backgroundColor: 'rgba(245, 158, 11, 0.2)',
-    borderColor: '#F59E0B',
+  disputeDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
-  skipOptionPillText: {
-    color: '#94A3B8',
-    fontSize: 13,
+  disputeLabel: {
+    fontSize: 12,
     fontWeight: '700',
+    color: '#64748B',
   },
-  skipOptionPillTextActive: {
-    color: '#F59E0B',
-    fontWeight: '900',
+  disputeValue: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#0F172A',
   },
-  skipModalActions: {
+  disputeValueText: {
+    fontSize: 11,
+    color: '#0F172A',
+    maxWidth: 220,
+    textAlign: 'right',
+  },
+  modalActionRow: {
     flexDirection: 'row',
     gap: 10,
   },
-  skipCancelBtn: {
+  modalCancelBtn: {
     flex: 1,
     paddingVertical: 12,
     borderRadius: 10,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#334155',
   },
-  skipCancelBtnText: {
-    color: '#94A3B8',
+  modalCancelBtnText: {
+    color: '#0F172A',
     fontSize: 13,
     fontWeight: '700',
   },
-  skipConfirmBtn: {
+  modalConfirmDairyBlueBtn: {
     flex: 1.5,
     paddingVertical: 12,
     borderRadius: 10,
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#2563EB', // Deep Dairy Blue (Strictly NO RED)
     alignItems: 'center',
   },
-  skipConfirmBtnText: {
-    color: '#090D16',
+  modalConfirmDairyBlueBtnText: {
+    color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '900',
+  },
+  resolvedBadgeBox: {
+    flex: 1.5,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: '#D1FAE5',
+    alignItems: 'center',
+  },
+  resolvedBadgeText: {
+    color: '#065F46',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  // CHAT MODAL
+  chatHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  chatCloseText: {
+    fontSize: 18,
+    color: '#64748B',
+    fontWeight: 'bold',
+  },
+  chatListScroll: {
+    maxHeight: 240,
+    marginBottom: 14,
+  },
+  chatBubble: {
+    padding: 10,
+    borderRadius: 12,
+    marginBottom: 8,
+    maxWidth: '85%',
+  },
+  chatBubbleMe: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#DBEAFE',
+    borderBottomRightRadius: 2,
+  },
+  chatBubbleOther: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#F1F5F9',
+    borderBottomLeftRadius: 2,
+  },
+  chatSenderName: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#64748B',
+    marginBottom: 2,
+  },
+  chatMessageText: {
+    fontSize: 13,
+    color: '#0F172A',
+    lineHeight: 17,
+  },
+  chatInputRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  chatInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 13,
+    color: '#0F172A',
+    backgroundColor: '#F8FAFC',
+  },
+  chatSendBtn: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chatSendBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 13,
+  },
+  // SKIP MODAL
+  skipDatesGrid: {
+    gap: 8,
+    marginBottom: 12,
+  },
+  skipDatePill: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+  },
+  skipDatePillActive: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#F59E0B',
+  },
+  skipDatePillBlocked: {
+    backgroundColor: '#F1F5F9',
+    borderColor: '#CBD5E1',
+    opacity: 0.6,
+  },
+  skipDatePillText: {
+    color: '#0F172A',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  skipDatePillTextActive: {
+    color: '#B45309',
+    fontWeight: '900',
+  },
+  skipDatePillTextBlocked: {
+    color: '#94A3B8',
+  },
+  skipNoteInput: {
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 13,
+    color: '#0F172A',
+    backgroundColor: '#F8FAFC',
+    marginBottom: 16,
   },
 });

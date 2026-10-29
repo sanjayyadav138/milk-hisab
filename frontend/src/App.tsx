@@ -11,6 +11,7 @@ import CustomersView from './components/CustomersView';
 import LedgerBillingView from './components/LedgerBillingView';
 import VendorInboxView from './components/VendorInboxView';
 import CustomerPortal from './components/CustomerPortal';
+import DashboardSideBanners from './components/DashboardSideBanners';
 import AboutUsView from './components/AboutUsView';
 import ContactUsView from './components/ContactUsView';
 import TermsConditionsView from './components/TermsConditionsView';
@@ -493,17 +494,21 @@ function MainApp() {
 
             {/* Customer Portal (DSH-02) */}
             {auth.role === 'customer' && auth.customer && (
-              <CustomerPortal 
-                customer={auth.customer} 
-                onLogout={() => handleLogout(false)} 
-                onOpenChangePin={() => handleOpenChangePin()}
-                onOpenFindMilkman={() => handleOpenFindMilkman('')}
-              />
+              <div className="relative min-h-[calc(100vh-64px)]">
+                <DashboardSideBanners role="customer" />
+                <CustomerPortal 
+                  customer={auth.customer} 
+                  onLogout={() => handleLogout(false)} 
+                  onOpenChangePin={() => handleOpenChangePin()}
+                  onOpenFindMilkman={() => handleOpenFindMilkman('')}
+                />
+              </div>
             )}
 
             {/* Vendor Control Panel (DSH-01) */}
             {auth.role === 'vendor' && auth.user && (
-              <div className="pb-20 sm:pb-8">
+              <div className="pb-20 sm:pb-8 relative min-h-[calc(100vh-64px)]">
+                <DashboardSideBanners role="vendor" />
                 {vendorTab === 'DAILY' && <DailyChecklist />}
                 {vendorTab === 'CUSTOMERS' && <CustomersView onResetCustomerPin={(id, name) => handleOpenChangePin('customer', id, name)} />}
                 {vendorTab === 'LEDGER' && <LedgerBillingView />}

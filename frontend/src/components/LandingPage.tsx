@@ -3,7 +3,7 @@ import {
   Sparkles, Zap, Users, Star, Award, 
   MapPin, Phone, MessageCircle, ArrowRight, Headphones,
   ShieldCheck, HelpCircle, FileText, CheckCircle, CheckCircle2,
-  Calendar, Milk, Clock, Mic, Check, ChevronRight, Play, Film, Smartphone
+  Calendar, Milk, Clock, Mic, Check, ChevronRight, Smartphone
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { PublicPageType } from './Navbar';
@@ -18,7 +18,6 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
   const [localSearch, setLocalSearch] = useState('');
   const { t, lang } = useLanguage();
   const [activeFeatureTab, setActiveFeatureTab] = useState<number>(0);
-  const [heroRightTab, setHeroRightTab] = useState<'APP_PREVIEW' | 'FARM_VIDEO'>('APP_PREVIEW');
 
   const featureTabs = [
     {
@@ -161,40 +160,9 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
 
           </div>
 
-          {/* Right Hero: Interactive Dual-Mode Showcase (App Simulation OR Real Dairy Farm Video) */}
+          {/* Right Hero: Interactive Live App Simulation Showcase */}
           <div className="lg:col-span-5 relative">
-            
-            {/* View Mode Switcher Header */}
-            <div className="flex items-center justify-center gap-1 mb-2 bg-slate-200/60 p-1 rounded-2xl w-fit mx-auto text-xs font-bold shadow-2xs">
-              <button
-                type="button"
-                onClick={() => setHeroRightTab('APP_PREVIEW')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition ${
-                  heroRightTab === 'APP_PREVIEW'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Smartphone className="w-3.5 h-3.5 text-blue-600" />
-                <span>{lang === 'hi' ? 'ऐप लाइव प्रिव्यू' : 'App Preview'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setHeroRightTab('FARM_VIDEO')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition ${
-                  heroRightTab === 'FARM_VIDEO'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Film className="w-3.5 h-3.5 text-emerald-600" />
-                <span>{lang === 'hi' ? 'डेयरी फार्म वीडियो' : 'Farm Video Tour'}</span>
-              </button>
-            </div>
-
-            {/* TAB 1: App Simulation */}
-            {heroRightTab === 'APP_PREVIEW' && (
-              <div className="relative mx-auto max-w-md bg-white rounded-3xl p-5 shadow-2xl border border-slate-200 ring-1 ring-slate-900/5 transition hover:shadow-3xl animate-in fade-in duration-200">
+            <div className="relative mx-auto max-w-md bg-white rounded-3xl p-5 shadow-2xl border border-slate-200 ring-1 ring-slate-900/5 transition hover:shadow-3xl animate-in fade-in duration-200">
                 
                 {/* Mock App Header */}
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -281,39 +249,6 @@ export default function LandingPage({ onOpenAuth, onOpenFindMilkman, onNavigateP
                 </div>
 
               </div>
-            )}
-
-            {/* TAB 2: Real Dairy Farm Video Showcase */}
-            {heroRightTab === 'FARM_VIDEO' && (
-              <div className="relative mx-auto max-w-md bg-white rounded-3xl p-3 shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in duration-200">
-                <div className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-slate-950">
-                  <video
-                    src="/media/video.mp4"
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-4">
-                    <div className="text-white">
-                      <span className="text-[10px] font-bold bg-emerald-600/90 text-white px-2 py-0.5 rounded-full inline-flex items-center gap-1 mb-1">
-                        <Check className="w-3 h-3" />
-                        <span>स्वस्थ पशु, शुद्ध दूध</span>
-                      </span>
-                      <h4 className="font-black text-sm">आधुनिक डेयरी फार्मिंग एवं पशु स्वास्थ्य</h4>
-                      <p className="text-[11px] text-slate-300">स्वच्छ वातावरण से लेकर घर-घर ताज़ा दूध पहुंचाने का डिजिटल साथी</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-3 text-center">
-                  <p className="text-xs font-bold text-slate-700">
-                    {lang === 'hi' ? 'भारतीय डेयरी किसानों और स्थानीय दूधियों का सच्चा डिजिटल साथी' : 'Dedicated to India’s hardworking dairy farmers and milkmen'}
-                  </p>
-                </div>
-              </div>
-            )}
-
           </div>
 
         </div>

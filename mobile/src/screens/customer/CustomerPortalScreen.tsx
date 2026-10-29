@@ -172,14 +172,14 @@ export default function CustomerPortalScreen() {
       {/* Top Banner Card with Official Logo & Language Toggle */}
       <View style={styles.headerCard}>
         <Image 
-          source={require('../../assets/media/milk-image2.png')} 
+          source={require('../../../assets/media/milk-image2.png')} 
           style={styles.cardMilkWatermark} 
           resizeMode="contain" 
         />
         <View style={styles.headerTop}>
           <View style={styles.headerTitleWrap}>
             <Image 
-              source={require('../../assets/logo.png')} 
+              source={require('../../../assets/logo.png')} 
               style={styles.headerCardLogo} 
               resizeMode="contain" 
             />

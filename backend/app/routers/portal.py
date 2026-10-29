@@ -96,6 +96,7 @@ class ForgotPinRequest(BaseModel):
 class DisputeCreateRequest(BaseModel):
     log_id: int
     reason: str
+    actual_quantity: Optional[float] = None
 
 class ResolveDisputeRequest(BaseModel):
     log_id: int
@@ -567,7 +568,7 @@ def get_vendors_list(db: Session = Depends(get_db)):
     return [{"id": v.id, "name": v.name, "business_name": v.business_name, "phone": v.phone} for v in vendors]
 
 @router.get("/customer/{customer_id}/dashboard")
-def get_customer_dashboard(customer_id: int, month_year: Optional[str] = None, db: Session = Depends(get_db)):
+def get_customer_dashboard(customer_id: int, month_year: Optional[str] = None, selected_date: Optional[str] = None, db: Session = Depends(get_db)):
     customer = db.query(Customer).filter(Customer.id == customer_id).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
@@ -597,10 +598,30 @@ def get_customer_dashboard(customer_id: int, month_year: Optional[str] = None, d
     balance_due = round(total_amount - amount_paid, 2)
 
     today = datetime.date.today()
+    if selected_date:
+        try:
+            sel_d = datetime.date.fromisoformat(selected_date)
+        except Exception:
+            sel_d = today
+    else:
+        sel_d = today
+
+    sel_log = db.query(DailyLog).filter(
+        DailyLog.customer_id == customer_id,
+        DailyLog.date == sel_d
+    ).first()
+
     today_log = db.query(DailyLog).filter(
         DailyLog.customer_id == customer_id,
         DailyLog.date == today
     ).first()
+
+    sel_reported_qty = None
+    if sel_log and sel_log.notes and sel_log.notes.startswith("CUSTOMER_REPORTED:"):
+        try:
+            sel_reported_qty = float(sel_log.notes.split(":", 2)[1])
+        except Exception:
+            pass
 
     return {
         "customer": {
@@ -634,6 +655,17 @@ def get_customer_dashboard(customer_id: int, month_year: Optional[str] = None, d
             "is_recorded": today_log is not None,
             "quantity": today_log.quantity_delivered if today_log else customer.default_quantity,
             "status": today_log.status if today_log else "Pending Delivery"
+        },
+        "selected_date_status": {
+            "date": sel_d.isoformat(),
+            "is_recorded": sel_log is not None,
+            "quantity": sel_log.quantity_delivered if sel_log else customer.default_quantity,
+            "status": sel_log.status if sel_log else "Pending Delivery",
+            "dispute_status": getattr(sel_log, 'dispute_status', 'None') or 'None' if sel_log else "None",
+            "dispute_reason": getattr(sel_log, 'dispute_reason', None) if sel_log else None,
+            "reported_quantity": sel_reported_qty,
+            "log_id": sel_log.id if sel_log else None,
+            "notes": sel_log.notes if sel_log else None
         },
         "recent_logs": [
             {
@@ -697,9 +729,30 @@ def raise_dispute(customer_id: int, req: DisputeCreateRequest, db: Session = Dep
     if not log:
         raise HTTPException(status_code=404, detail="Delivery log entry not found")
 
+    customer = db.query(Customer).filter(Customer.id == customer_id).first()
+    vendor_id = customer.vendor_id if (customer and customer.vendor_id) else 1
+    cust_name = customer.name if customer else "ग्राहक"
+
     log.dispute_status = "Pending"
-    log.dispute_reason = req.reason.strip()
+    claimed_str = f" (दावा: {req.actual_quantity}L)" if req.actual_quantity is not None else ""
+    log.dispute_reason = f"{req.reason.strip()}{claimed_str}"
     log.status = "Disputed"
+    if req.actual_quantity is not None:
+        log.notes = f"CUSTOMER_REPORTED:{req.actual_quantity}:{req.reason.strip()}"
+
+    # Automated notification message to Vendor (Vice Versa Notification)
+    try:
+        claimed_info = f"{req.actual_quantity}L" if req.actual_quantity is not None else "अलग मात्रा"
+        notify_msg = CustomerMessage(
+            customer_id=customer_id,
+            vendor_id=vendor_id,
+            sender="CUSTOMER",
+            message=f"⚠️ दूध मात्रा आपत्ति ({log.date.isoformat()}): {cust_name} ने दर्ज {log.quantity_delivered}L के बदले {claimed_info} बताया। कारण: {req.reason.strip()}"
+        )
+        db.add(notify_msg)
+    except Exception as e:
+        print("Could not create customer dispute message:", e)
+
     db.commit()
     db.refresh(log)
     return {
@@ -721,11 +774,31 @@ def resolve_dispute(req: ResolveDisputeRequest, db: Session = Depends(get_db)):
     if not log:
         raise HTTPException(status_code=404, detail="Delivery log entry not found")
 
+    customer = db.query(Customer).filter(Customer.id == log.customer_id).first()
+    vendor_id = customer.vendor_id if (customer and customer.vendor_id) else 1
+    vendor = db.query(User).filter(User.id == vendor_id).first()
+    vendor_name = vendor.name if vendor else "दूधिया"
+
+    old_qty = log.quantity_delivered
     log.quantity_delivered = req.resolved_quantity
     log.dispute_status = "Resolved"
     log.status = "Resolved" if req.resolved_quantity > 0 else "Skipped"
-    if req.resolution_note:
-        log.notes = f"Resolved: {req.resolution_note.strip()}"
+    res_note = req.resolution_note.strip() if req.resolution_note else "मात्रा स्वीकृत"
+    log.notes = f"सुलझाया गया: {req.resolved_quantity}L ({res_note})"
+
+    # Automated notification message to Customer (Vice Versa Notification)
+    if customer:
+        try:
+            res_msg = CustomerMessage(
+                customer_id=customer.id,
+                vendor_id=vendor_id,
+                sender="VENDOR",
+                message=f"✓ दूध हिसाब अपडेट ({log.date.isoformat()}): {vendor_name} ने हिसाब {old_qty}L से संशोधित करके {req.resolved_quantity}L कर दिया है। ({res_note})"
+            )
+            db.add(res_msg)
+        except Exception as e:
+            print("Could not create resolution notification:", e)
+
     db.commit()
     db.refresh(log)
     return {
@@ -746,6 +819,12 @@ def get_vendor_disputes(db: Session = Depends(get_db)):
     results = []
     for l in logs:
         cust = db.query(Customer).filter(Customer.id == l.customer_id).first()
+        reported_qty = None
+        if l.notes and l.notes.startswith("CUSTOMER_REPORTED:"):
+            try:
+                reported_qty = float(l.notes.split(":", 2)[1])
+            except Exception:
+                pass
         results.append({
             "log_id": l.id,
             "customer_id": l.customer_id,
@@ -755,6 +834,7 @@ def get_vendor_disputes(db: Session = Depends(get_db)):
             "quantity": l.quantity_delivered,
             "status": l.status,
             "dispute_reason": l.dispute_reason,
+            "reported_quantity": reported_qty,
             "notes": l.notes
         })
     return results

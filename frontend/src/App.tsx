@@ -16,7 +16,7 @@ import ContactUsView from './components/ContactUsView';
 import TermsConditionsView from './components/TermsConditionsView';
 import PrivacyPolicyView from './components/PrivacyPolicyView';
 import { AuthState } from './types';
-import { validateSessionApi } from './services/api';
+import { validateSessionApi, fetchVendorDisputesApi, fetchVendorRequestsApi } from './services/api';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
 const AUTH_STORAGE_KEY = 'doodh_ledger_auth_session';
@@ -90,7 +90,31 @@ function MainApp() {
     setChangePinModalOpen(true);
   };
   const [vendorTab, setVendorTab] = useState<'DAILY' | 'CUSTOMERS' | 'LEDGER' | 'INBOX'>('DAILY');
+  const [inboxBadgeCount, setInboxBadgeCount] = useState<number>(0);
   const [notice, setNotice] = useState<Notice | null>(null);
+
+  useEffect(() => {
+    if (auth.role === 'vendor' && auth.user) {
+      const checkInbox = async () => {
+        try {
+          const [disputes, reqs] = await Promise.all([
+            fetchVendorDisputesApi(),
+            fetchVendorRequestsApi(auth.user?.id || 1)
+          ]);
+          const pendingDisputes = disputes.filter(d => d.dispute_status === 'Pending').length;
+          const pendingReqs = reqs.filter(r => r.status === 'Pending').length;
+          setInboxBadgeCount(pendingDisputes + pendingReqs);
+        } catch (e) {
+          // ignore
+        }
+      };
+      checkInbox();
+      const interval = setInterval(checkInbox, 30000);
+      return () => clearInterval(interval);
+    } else {
+      setInboxBadgeCount(0);
+    }
+  }, [auth.role, auth.user, vendorTab]);
   const [findMilkmanQuery, setFindMilkmanQuery] = useState(() => {
     try {
       const parts = window.location.hash.split('?');
@@ -538,8 +562,13 @@ function MainApp() {
                           : 'text-slate-500 font-medium hover:text-slate-800'
                       }`}
                     >
-                      <div className={`p-1 rounded-xl ${vendorTab === 'INBOX' ? 'bg-blue-100' : ''}`}>
+                      <div className={`p-1 rounded-xl relative ${vendorTab === 'INBOX' ? 'bg-blue-100' : ''}`}>
                         <MessageSquare className="w-5 h-5" />
+                        {inboxBadgeCount > 0 && (
+                          <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-600 text-white text-[9px] font-black rounded-full flex items-center justify-center animate-pulse">
+                            {inboxBadgeCount > 9 ? '9+' : inboxBadgeCount}
+                          </span>
+                        )}
                       </div>
                       <span className="text-[10px] mt-0.5">{t('navInbox')}</span>
                     </button>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Calendar, CheckCircle2, XCircle, Plus, Minus, RotateCcw, 
-  Sparkles, Save, MapPin, Milk, ArrowDownCircle, ArrowUpCircle, Scale 
+  Sparkles, Save, MapPin, Milk, ArrowDownCircle, ArrowUpCircle, Scale, AlertTriangle 
 } from 'lucide-react';
 import { fetchDayChecklist, submitBatchLogs } from '../services/api';
 import { DailyLogItem } from '../types';
@@ -21,7 +21,7 @@ export default function DailyChecklist() {
   
   // Bilateral flow filter: ALL | DELIVERY (बिक्री) | COLLECTION (खरीद/4 घर)
   const [flowFilter, setFlowFilter] = useState<'ALL' | 'DELIVERY' | 'COLLECTION'>('ALL');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'SKIPPED' | 'EXTRA'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'SKIPPED' | 'EXTRA' | 'DISPUTES'>('ALL');
 
   useEffect(() => {
     loadChecklist(selectedDate);
@@ -116,6 +116,52 @@ export default function DailyChecklist() {
     }));
   };
 
+  const handleAcceptDiscrepancy = async (customerId: number, reportedQty: number) => {
+    setChecklist(prev => prev.map(item => {
+      if (item.customer_id === customerId) {
+        return {
+          ...item,
+          quantity: reportedQty,
+          status: reportedQty === 0 ? "Skipped" : reportedQty > item.default_quantity ? "Extra" : "Delivered",
+          dispute_status: 'Resolved'
+        };
+      }
+      return item;
+    }));
+
+    setSaving(true);
+    try {
+      const payload = {
+        date: selectedDate,
+        entries: checklist.map(item => {
+          if (item.customer_id === customerId) {
+            const st = reportedQty === 0 ? "Skipped" : reportedQty > item.default_quantity ? "Extra" : "Delivered";
+            return {
+              customer_id: item.customer_id,
+              quantity_delivered: reportedQty,
+              status: st,
+              notes: `सुलझाया गया: ग्राहक द्वारा बताई मात्रा ${reportedQty}L स्वीकार की गई`
+            };
+          }
+          return {
+            customer_id: item.customer_id,
+            quantity_delivered: item.quantity,
+            status: item.status,
+            notes: item.notes || (item.status === "Skipped" ? "छुट्टी" : item.status === "Extra" ? "अतिरिक्त" : null)
+          };
+        })
+      };
+      await submitBatchLogs(payload);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+      loadChecklist(selectedDate);
+    } catch (err: any) {
+      alert("अपडेट करने में समस्या आई: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSaveAll = async () => {
     setSaving(true);
     try {
@@ -147,6 +193,8 @@ export default function DailyChecklist() {
   const totalDelivered = deliveryItems.reduce((sum, item) => sum + item.quantity, 0);
   const surplusBalance = Math.round((totalCollected - totalDelivered) * 10) / 10;
 
+  const pendingDisputesCount = checklist.filter(item => item.dispute_status === 'Pending').length;
+
   // Filtered List based on Bilateral flow + Status
   const filteredChecklist = checklist.filter(item => {
     // 1. Flow Filter
@@ -156,6 +204,7 @@ export default function DailyChecklist() {
     // 2. Status Filter
     if (statusFilter === 'SKIPPED') return item.quantity === 0;
     if (statusFilter === 'EXTRA') return item.quantity > item.default_quantity;
+    if (statusFilter === 'DISPUTES') return item.dispute_status === 'Pending';
 
     return true;
   });
@@ -329,6 +378,19 @@ export default function DailyChecklist() {
           >
             {t('filterExtra')}
           </button>
+          {pendingDisputesCount > 0 && (
+            <button
+              onClick={() => setStatusFilter(statusFilter === 'DISPUTES' ? 'ALL' : 'DISPUTES')}
+              className={`px-3 py-1 rounded-xl transition flex items-center gap-1.5 ${
+                statusFilter === 'DISPUTES' 
+                  ? 'bg-amber-600 text-white shadow-xs' 
+                  : 'bg-amber-100 text-amber-900 hover:bg-amber-200'
+              }`}
+            >
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+              <span>{lang === 'hi' ? 'आपत्तियां' : 'Disputes'} ({pendingDisputesCount})</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -422,6 +484,40 @@ export default function DailyChecklist() {
                     </div>
                   </div>
                 </div>
+
+                {/* Pending Dispute Alert Banner */}
+                {item.dispute_status === 'Pending' && (
+                  <div className="mt-3 p-3 bg-amber-50 border border-amber-300 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 animate-in fade-in">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-black text-amber-900">
+                          {lang === 'hi' ? '⚠️ ग्राहक ने दूध मात्रा पर आपत्ति दर्ज की है' : '⚠️ Customer Reported Milk Discrepancy'}
+                        </p>
+                        <p className="text-xs text-amber-800 mt-0.5">
+                          {lang === 'hi' ? 'ग्राहक का दावा:' : 'Customer claim:'}{' '}
+                          <span className="font-black bg-amber-200/80 px-1.5 py-0.5 rounded text-amber-950">
+                            {item.reported_quantity !== null && item.reported_quantity !== undefined 
+                              ? `${item.reported_quantity}L मिला` 
+                              : 'मात्रा गलत है'}
+                          </span>
+                          {item.dispute_reason && <span className="ml-1 opacity-90">({item.dispute_reason})</span>}
+                        </p>
+                      </div>
+                    </div>
+                    {item.reported_quantity !== null && item.reported_quantity !== undefined && (
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={() => handleAcceptDiscrepancy(item.customer_id, item.reported_quantity!)}
+                        className="w-full sm:w-auto px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-black shadow-xs transition active:scale-95 shrink-0 flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>{lang === 'hi' ? `✓ ${item.reported_quantity}L स्वीकार करें` : `✓ Accept ${item.reported_quantity}L`}</span>
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {/* Actions */}
                 <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">

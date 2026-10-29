@@ -43,6 +43,12 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin, on
   const [newMsgText, setNewMsgText] = useState('');
   const [sendingMsg, setSendingMsg] = useState(false);
 
+  // Selected date for viewing milk supplied & filter
+  const todayDateStr = new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState<string>(todayDateStr);
+  const [filterMode, setFilterMode] = useState<'SELECTED_DATE' | 'ALL_DAYS'>('SELECTED_DATE');
+  const [reportedActualQty, setReportedActualQty] = useState<number>(1.0);
+
   // Dispute state (DIS-01)
   const [disputingLog, setDisputingLog] = useState<{ id: number; date: string; quantity: number } | null>(null);
   const [disputeReason, setDisputeReason] = useState('');
@@ -144,7 +150,7 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin, on
 
     setSubmittingDispute(true);
     try {
-      await raiseDisputeApi(activeCustomer.id, disputingLog.id, disputeReason.trim());
+      await raiseDisputeApi(activeCustomer.id, disputingLog.id, disputeReason.trim(), reportedActualQty);
       setDisputingLog(null);
       setDisputeReason('');
       showFeedback('success', lang === 'hi' ? 'आपकी आपत्ति सफलतापूर्वक दूधिया को भेज दी गई है!' : 'Query submitted to vendor successfully!');
@@ -343,174 +349,385 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin, on
       </div>
 
       {/* TAB 1: MY MILK LEDGER & TODAY STATUS */}
-      {activeTab === 'MY_MILK' && (
-        <div className="space-y-4">
-          {/* Today's Live Delivery Status */}
-          <div className="bg-white rounded-3xl p-5 shadow-xs border border-slate-200">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('todayMilkTitle')}</span>
-              <span className="text-xs bg-slate-100 text-slate-700 font-bold px-2 py-0.5 rounded-full">
-                {new Date().toLocaleDateString('hi-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-              </span>
-            </div>
+      {activeTab === 'MY_MILK' && (() => {
+        const selectedLog = recent_logs.find(l => l.date === selectedDate);
+        const filteredLogs = filterMode === 'SELECTED_DATE' 
+          ? (selectedLog ? [selectedLog] : [])
+          : recent_logs;
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                  today_status.status === 'Skipped' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-800'
-                }`}>
-                  <Milk className="w-6 h-6" />
+        // Check if there is an update from vendor regarding milk ledger
+        const latestVendorMsg = [...messages].reverse().find(m => m.sender_role === 'vendor' && m.message.includes('हिसाब'));
+
+        return (
+          <div className="space-y-4">
+
+            {/* Notification Alert from Vendor (Vice Versa Sync) */}
+            {latestVendorMsg && (
+              <div className="bg-emerald-50 border border-emerald-300 rounded-3xl p-4 shadow-xs flex items-start gap-3 animate-in fade-in">
+                <div className="p-2 bg-emerald-100 text-emerald-800 rounded-2xl shrink-0 mt-0.5">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-700" />
                 </div>
-                <div>
-                  <h4 className="text-lg font-black text-slate-900">
-                    {today_status.quantity} {lang === 'hi' ? 'लीटर' : 'Liters'} {customer.milk_type} {lang === 'hi' ? 'दूध' : 'Milk'}
-                  </h4>
-                  <p className="text-xs text-slate-500 font-medium">
-                    {lang === 'hi' ? 'दैनिक तय मात्रा:' : 'Daily Target:'} {customer.default_quantity}L • {lang === 'hi' ? 'रेट:' : 'Rate:'} ₹{customer.price_per_liter}/L
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-black text-emerald-950 uppercase tracking-wider">
+                    {lang === 'hi' ? 'दूधिया द्वारा हिसाब अपडेट सूचना' : 'Update from Milkman'}
+                  </p>
+                  <p className="text-xs text-emerald-900 font-medium mt-0.5">
+                    {latestVendorMsg.message}
                   </p>
                 </div>
-              </div>
-
-              <div>
-                <span className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase ${
-                  today_status.status === 'Skipped'
-                    ? 'bg-rose-100 text-rose-700'
-                    : today_status.status === 'Extra'
-                    ? 'bg-amber-100 text-amber-800'
-                    : 'bg-emerald-100 text-emerald-800'
-                }`}>
-                  {today_status.status === 'Skipped' 
-                    ? (lang === 'hi' ? 'छुट्टी (OFF)' : 'Skipped (OFF)') 
-                    : today_status.status === 'Extra' 
-                    ? (lang === 'hi' ? 'अतिरिक्त' : 'Extra') 
-                    : (lang === 'hi' ? 'वितरित' : 'Delivered')}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Supplier Receivable Banner OR Buyer Instant UPI Pay Button */}
-          {customer.customer_type === 'SUPPLIER' ? (
-            month_summary.balance_due > 0 && (
-              <div className="bg-gradient-to-r from-blue-700 to-indigo-800 rounded-3xl p-5 text-white shadow-lg flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-wider text-blue-200">
-                    {lang === 'hi' ? 'दूधिया की तरफ से आपको मिलने योग्य राशि' : 'Amount Due to You from Vendor'}
-                  </p>
-                  <h4 className="text-2xl font-black mt-0.5">₹{month_summary.balance_due.toFixed(0)}</h4>
-                  <p className="text-xs text-blue-100 mt-0.5">
-                    {lang === 'hi' ? `${vendor.name} (${vendor.phone}) द्वारा देय` : `Payable by ${vendor.name}`}
-                  </p>
-                </div>
-                <div className="bg-white/20 backdrop-blur-md px-3.5 py-2 rounded-2xl text-xs font-bold">
-                  📥 {lang === 'hi' ? 'संकलन हिसाब' : 'Procurement'}
-                </div>
-              </div>
-            )
-          ) : (
-            month_summary.balance_due > 0 && (
-              <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-3xl p-5 text-white shadow-lg flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-wider text-emerald-100">{t('instantPayTitle')}</p>
-                  <h4 className="text-2xl font-black mt-0.5">₹{month_summary.balance_due.toFixed(0)}</h4>
-                  <p className="text-xs text-emerald-100 mt-0.5">UPI ID: {vendor.upi_id}</p>
-                </div>
-
-                <a
-                  href={`upi://pay?pa=${vendor.upi_id}&pn=${encodeURIComponent(vendor.business_name)}&am=${month_summary.balance_due}&cu=INR`}
-                  className="bg-white text-emerald-900 hover:bg-emerald-50 px-4 py-3 rounded-2xl font-black text-sm shadow-md active:scale-95 transition flex items-center gap-1.5"
-                >
-                  <span>Google Pay / PhonePe</span>
-                  <ArrowUpRight className="w-4 h-4" />
-                </a>
-              </div>
-            )
-          )}
-
-          {/* Delivery Actions: Pre-schedule Skip Milk (SKP-01, SKP-02) */}
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-3xl p-4 border border-amber-200 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-black shrink-0 shadow-xs">
-                <CalendarOff className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="text-sm font-black text-amber-950">{t('skipMilkTitle')}</h4>
-                <p className="text-xs text-amber-800 font-medium">{t('skipMilkSub')}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => { setSkipError(''); setIsSkipModalOpen(true); }}
-              className="bg-amber-500 hover:bg-amber-600 text-white px-3.5 py-2 rounded-xl text-xs font-black shadow-xs transition active:scale-95 shrink-0"
-            >
-              {lang === 'hi' ? 'छुट्टी तय करें' : 'Schedule Off'}
-            </button>
-          </div>
-
-          {/* Delivery History List */}
-          <div className="bg-white rounded-3xl p-5 shadow-xs border border-slate-200">
-            <h4 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-3">
-              {lang === 'hi' ? 'तारीख अनुसार दूध डिलीवरी विवरण' : 'Daily Delivery History & Logs'}
-            </h4>
-
-            {recent_logs.length === 0 ? (
-              <p className="text-xs text-slate-500 py-4 text-center">
-                {lang === 'hi' ? 'अभी तक कोई रिकॉर्ड दर्ज नहीं है।' : 'No delivery logs recorded yet.'}
-              </p>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {recent_logs.map(log => (
-                  <div key={log.id} className="py-3 flex items-center justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold text-slate-900">{log.date}</p>
-                        {log.dispute_status === 'Pending' && (
-                          <span className="bg-rose-100 text-rose-800 text-[10px] font-black px-2 py-0.5 rounded-full">
-                            {t('disputedBadge')}
-                          </span>
-                        )}
-                        {log.dispute_status === 'Resolved' && (
-                          <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded-full">
-                            {t('resolvedBadge')}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-500 font-medium truncate">
-                        {log.dispute_status === 'Pending' && log.dispute_reason ? (
-                          <span className="text-rose-700 font-bold">आपत्ति: "{log.dispute_reason}"</span>
-                        ) : (
-                          log.notes || (log.quantity === 0 ? (lang === 'hi' ? "छुट्टी / बंद" : "Skipped / Off") : (lang === 'hi' ? "नियमित सप्लाई" : "Regular Supply"))
-                        )}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`px-2.5 py-1 rounded-xl text-xs font-black ${
-                        log.quantity === 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-900'
-                      }`}>
-                        {log.quantity} {lang === 'hi' ? 'लीटर' : 'L'}
-                      </span>
-
-                      {/* DIS-01: Raise Query action for delivered days */}
-                      {log.quantity > 0 && log.dispute_status !== 'Pending' && (
-                        <button
-                          onClick={() => {
-                            setDisputingLog({ id: log.id, date: log.date, quantity: log.quantity });
-                            setDisputeReason('');
-                          }}
-                          title={t('raiseDispute')}
-                          className="p-1.5 rounded-xl border border-slate-200 text-slate-500 hover:text-rose-600 hover:border-rose-300 hover:bg-rose-50 transition"
-                        >
-                          <HelpCircle className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
               </div>
             )}
+
+            {/* Date Selector & View Mode Switcher */}
+            <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-xs border border-slate-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="p-2.5 bg-blue-50 text-blue-700 rounded-2xl shrink-0">
+                    <Calendar className="w-5 h-5" />
+                  </span>
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {lang === 'hi' ? 'सप्लाई तारीख चुनें (Select Date)' : 'Select Supply Date'}
+                    </p>
+                    <input 
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      className="text-base sm:text-lg font-black text-slate-900 bg-transparent outline-none cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {/* Quick Date Shortcuts */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDate(todayDateStr)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 ${
+                      selectedDate === todayDateStr 
+                        ? 'bg-blue-600 text-white shadow-xs' 
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {lang === 'hi' ? 'आज (Today)' : 'Today'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const y = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+                      setSelectedDate(y);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 ${
+                      selectedDate === new Date(Date.now() - 86400000).toISOString().split('T')[0]
+                        ? 'bg-blue-600 text-white shadow-xs' 
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {lang === 'hi' ? 'कल (Yesterday)' : 'Yesterday'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDate('2026-10-27')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 ${
+                      selectedDate === '2026-10-27'
+                        ? 'bg-blue-600 text-white shadow-xs' 
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    27 Oct
+                  </button>
+                </div>
+              </div>
+
+              {/* View Mode Toggle: Selected Date vs All Days */}
+              <div className="grid grid-cols-2 gap-1.5 mt-3 pt-3 border-t border-slate-100 text-xs font-black">
+                <button
+                  type="button"
+                  onClick={() => setFilterMode('SELECTED_DATE')}
+                  className={`py-2 px-2 rounded-xl transition text-center truncate ${
+                    filterMode === 'SELECTED_DATE'
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  📅 {lang === 'hi' ? `केवल चयनित तारीख (${selectedDate})` : `Selected Date Only (${selectedDate})`}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterMode('ALL_DAYS')}
+                  className={`py-2 px-2 rounded-xl transition text-center truncate ${
+                    filterMode === 'ALL_DAYS'
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  📋 {lang === 'hi' ? `पूरा महीना देखें (${recent_logs.length} दिन)` : `All Month Logs (${recent_logs.length})`}
+                </button>
+              </div>
+            </div>
+
+            {/* Selected Date Milk Supply Status Card */}
+            <div className="bg-white rounded-3xl p-5 shadow-xs border border-slate-200">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  {lang === 'hi' ? 'दूध सप्लाई विवरण' : 'Milk Supply Status'} ({selectedDate})
+                </span>
+                <span className="text-xs bg-slate-100 text-slate-700 font-bold px-2.5 py-1 rounded-full">
+                  {new Date(selectedDate).toLocaleDateString('hi-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
+              </div>
+
+              {selectedLog ? (
+                <div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+                        selectedLog.quantity === 0 || selectedLog.status === 'Skipped' 
+                          ? 'bg-rose-100 text-rose-700' 
+                          : selectedLog.dispute_status === 'Pending'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-emerald-100 text-emerald-800'
+                      }`}>
+                        <Milk className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-black text-slate-900">
+                          {selectedLog.quantity} {lang === 'hi' ? 'लीटर' : 'Liters'} {customer.milk_type} {lang === 'hi' ? 'दूध' : 'Milk'}
+                        </h4>
+                        <p className="text-xs text-slate-500 font-medium">
+                          {lang === 'hi' ? 'तय नियमित मात्रा:' : 'Regular Target:'} {customer.default_quantity}L • {lang === 'hi' ? 'रेट:' : 'Rate:'} ₹{customer.price_per_liter}/L
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase ${
+                        selectedLog.dispute_status === 'Pending'
+                          ? 'bg-amber-100 text-amber-800'
+                          : selectedLog.dispute_status === 'Resolved'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : selectedLog.quantity === 0 || selectedLog.status === 'Skipped'
+                          ? 'bg-rose-100 text-rose-700'
+                          : selectedLog.status === 'Extra'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-emerald-100 text-emerald-800'
+                      }`}>
+                        {selectedLog.dispute_status === 'Pending'
+                          ? (lang === 'hi' ? 'आपत्ति दर्ज' : 'Under Review')
+                          : selectedLog.dispute_status === 'Resolved'
+                          ? (lang === 'hi' ? 'सुलझाया गया ✓' : 'Resolved ✓')
+                          : selectedLog.quantity === 0 || selectedLog.status === 'Skipped'
+                          ? (lang === 'hi' ? 'छुट्टी (OFF)' : 'Skipped (OFF)')
+                          : selectedLog.status === 'Extra'
+                          ? (lang === 'hi' ? 'अतिरिक्त' : 'Extra')
+                          : (lang === 'hi' ? 'वितरित' : 'Delivered')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Discrepancy Active Notice */}
+                  {selectedLog.dispute_status === 'Pending' && (
+                    <div className="mt-3 p-3.5 bg-amber-50 border border-amber-300 rounded-2xl text-xs">
+                      <p className="font-bold text-amber-900 flex items-center gap-1.5">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span>आपकी दर्ज आपत्ति समीक्षाधीन है:</span>
+                      </p>
+                      <p className="text-amber-800 mt-1 font-semibold">"{selectedLog.dispute_reason}"</p>
+                      <p className="text-[11px] text-amber-700 mt-1">दूधिया को इसकी सूचना भेज दी गई है। जैसे ही वे अपडेट करेंगे, आपको यहाँ सूचना मिल जाएगी।</p>
+                    </div>
+                  )}
+
+                  {/* Resolution Notice */}
+                  {selectedLog.dispute_status === 'Resolved' && (
+                    <div className="mt-3 p-3.5 bg-emerald-50 border border-emerald-300 rounded-2xl text-xs">
+                      <p className="font-bold text-emerald-900 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>दूधिया द्वारा हिसाब सुलझाया गया:</span>
+                      </p>
+                      <p className="text-emerald-800 mt-1 font-semibold">{selectedLog.notes || 'मात्रा अपडेट कर दी गई है'}</p>
+                    </div>
+                  )}
+
+                  {/* Raise Discrepancy Action Button */}
+                  {selectedLog.quantity > 0 && selectedLog.dispute_status !== 'Pending' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDisputingLog({ id: selectedLog.id, date: selectedLog.date, quantity: selectedLog.quantity });
+                        setReportedActualQty(selectedLog.quantity === 2 ? 1 : Math.max(0, Math.round((selectedLog.quantity - 0.5) * 10) / 10));
+                        setDisputeReason(lang === 'hi' ? 'मुझे आज कम दूध मिला था' : 'Received less milk today');
+                      }}
+                      className="mt-3 w-full py-2.5 px-3 rounded-2xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-800 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95"
+                    >
+                      <AlertCircle className="w-4 h-4 text-rose-600" />
+                      <span>{lang === 'hi' ? 'दूध की मात्रा गलत है? आपत्ति / संशोधन दर्ज करें' : 'Quantity discrepancy? Raise concern'}</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-5">
+                  <Clock className="w-10 h-10 text-amber-500 mx-auto mb-2" />
+                  <h4 className="font-bold text-slate-800 text-sm">
+                    {lang === 'hi' ? `तारीख ${selectedDate} का दूध हिसाब अभी दर्ज नहीं हुआ है` : `No delivery recorded for ${selectedDate} yet`}
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {lang === 'hi' ? `स्थिति: डिलीवरी प्रतीक्षारत (Pending Delivery) • दैनिक तय मात्रा: ${customer.default_quantity}L` : `Status: Pending Delivery • Target: ${customer.default_quantity}L`}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Supplier Receivable Banner OR Buyer Instant UPI Pay Button */}
+            {customer.customer_type === 'SUPPLIER' ? (
+              month_summary.balance_due > 0 && (
+                <div className="bg-gradient-to-r from-blue-700 to-indigo-800 rounded-3xl p-5 text-white shadow-lg flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wider text-blue-200">
+                      {lang === 'hi' ? 'दूधिया की तरफ से आपको मिलने योग्य राशि' : 'Amount Due to You from Vendor'}
+                    </p>
+                    <h4 className="text-2xl font-black mt-0.5">₹{month_summary.balance_due.toFixed(0)}</h4>
+                    <p className="text-xs text-blue-100 mt-0.5">
+                      {lang === 'hi' ? `${vendor.name} (${vendor.phone}) द्वारा देय` : `Payable by ${vendor.name}`}
+                    </p>
+                  </div>
+                  <div className="bg-white/20 backdrop-blur-md px-3.5 py-2 rounded-2xl text-xs font-bold">
+                    📥 {lang === 'hi' ? 'संकलन हिसाब' : 'Procurement'}
+                  </div>
+                </div>
+              )
+            ) : (
+              month_summary.balance_due > 0 && (
+                <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-3xl p-5 text-white shadow-lg flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wider text-emerald-100">{t('instantPayTitle')}</p>
+                    <h4 className="text-2xl font-black mt-0.5">₹{month_summary.balance_due.toFixed(0)}</h4>
+                    <p className="text-xs text-emerald-100 mt-0.5">UPI ID: {vendor.upi_id}</p>
+                  </div>
+
+                  <a
+                    href={`upi://pay?pa=${vendor.upi_id}&pn=${encodeURIComponent(vendor.business_name)}&am=${month_summary.balance_due}&cu=INR`}
+                    className="bg-white text-emerald-900 hover:bg-emerald-50 px-4 py-3 rounded-2xl font-black text-sm shadow-md active:scale-95 transition flex items-center gap-1.5"
+                  >
+                    <span>Google Pay / PhonePe</span>
+                    <ArrowUpRight className="w-4 h-4" />
+                  </a>
+                </div>
+              )
+            )}
+
+            {/* Delivery Actions: Pre-schedule Skip Milk (SKP-01, SKP-02) */}
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-3xl p-4 border border-amber-200 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-black shrink-0 shadow-xs">
+                  <CalendarOff className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-amber-950">{t('skipMilkTitle')}</h4>
+                  <p className="text-xs text-amber-800 font-medium">{t('skipMilkSub')}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setSkipError(''); setIsSkipModalOpen(true); }}
+                className="bg-amber-500 hover:bg-amber-600 text-white px-3.5 py-2 rounded-xl text-xs font-black shadow-xs transition active:scale-95 shrink-0"
+              >
+                {lang === 'hi' ? 'छुट्टी तय करें' : 'Schedule Off'}
+              </button>
+            </div>
+
+            {/* Delivery History List */}
+            <div className="bg-white rounded-3xl p-5 shadow-xs border border-slate-200">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                  {filterMode === 'SELECTED_DATE' 
+                    ? (lang === 'hi' ? `तारीख ${selectedDate} का डिलीवरी रिकॉर्ड` : `Record for Date ${selectedDate}`)
+                    : (lang === 'hi' ? 'तारीख अनुसार दूध डिलीवरी विवरण' : 'Daily Delivery History & Logs')}
+                </h4>
+                <span className="text-xs text-slate-500 font-bold">
+                  {filteredLogs.length} {lang === 'hi' ? 'रिकॉर्ड' : 'records'}
+                </span>
+              </div>
+
+              {filteredLogs.length === 0 ? (
+                <div className="py-6 text-center">
+                  <p className="text-xs text-slate-500">
+                    {filterMode === 'SELECTED_DATE'
+                      ? (lang === 'hi' ? `तारीख ${selectedDate} के लिए कोई दूध डिलीवरी दर्ज नहीं है।` : `No delivery log found for ${selectedDate}.`)
+                      : (lang === 'hi' ? 'अभी तक कोई रिकॉर्ड दर्ज नहीं है।' : 'No delivery logs recorded yet.')}
+                  </p>
+                  {filterMode === 'SELECTED_DATE' && (
+                    <button
+                      type="button"
+                      onClick={() => setFilterMode('ALL_DAYS')}
+                      className="mt-2 text-xs font-bold text-blue-600 hover:underline"
+                    >
+                      {lang === 'hi' ? 'पूरे महीने के रिकॉर्ड देखें' : 'View all month logs'}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {filteredLogs.map(log => (
+                    <div key={log.id} className="py-3 flex items-center justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedDate(log.date)}
+                            className="text-sm font-bold text-slate-900 hover:text-blue-600 transition"
+                            title="इस तारीख का स्टेटस देखें"
+                          >
+                            {log.date}
+                          </button>
+                          {log.dispute_status === 'Pending' && (
+                            <span className="bg-rose-100 text-rose-800 text-[10px] font-black px-2 py-0.5 rounded-full">
+                              {t('disputedBadge')}
+                            </span>
+                          )}
+                          {log.dispute_status === 'Resolved' && (
+                            <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded-full">
+                              {t('resolvedBadge')}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 font-medium truncate">
+                          {log.dispute_status === 'Pending' && log.dispute_reason ? (
+                            <span className="text-rose-700 font-bold">आपत्ति: "{log.dispute_reason}"</span>
+                          ) : (
+                            log.notes || (log.quantity === 0 ? (lang === 'hi' ? "छुट्टी / बंद" : "Skipped / Off") : (lang === 'hi' ? "नियमित सप्लाई" : "Regular Supply"))
+                          )}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`px-2.5 py-1 rounded-xl text-xs font-black ${
+                          log.quantity === 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-900'
+                        }`}>
+                          {log.quantity} {lang === 'hi' ? 'लीटर' : 'L'}
+                        </span>
+
+                        {/* DIS-01: Raise Query action for delivered days */}
+                        {log.quantity > 0 && log.dispute_status !== 'Pending' && (
+                          <button
+                            onClick={() => {
+                              setDisputingLog({ id: log.id, date: log.date, quantity: log.quantity });
+                              setReportedActualQty(log.quantity === 2 ? 1 : Math.max(0, Math.round((log.quantity - 0.5) * 10) / 10));
+                              setDisputeReason(lang === 'hi' ? 'मुझे आज 1L ही मिला था' : 'Got less milk today');
+                            }}
+                            title={t('raiseDispute')}
+                            className="p-1.5 rounded-xl border border-slate-200 text-slate-500 hover:text-rose-600 hover:border-rose-300 hover:bg-rose-50 transition"
+                          >
+                            <HelpCircle className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* TAB 2: FAMILY MEMBERS / SUB-USERS */}
       {activeTab === 'FAMILY_USERS' && (
@@ -697,43 +914,115 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin, on
         </div>
       )}
 
-      {/* DIS-01: Raise Dispute Modal */}
+      {/* DIS-01: Enhanced Quantity Concern & Discrepancy Modal */}
       {disputingLog && (
         <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="bg-rose-600 px-6 py-4 text-white flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-white" />
+                <AlertCircle className="w-5 h-5 text-white" />
                 <div>
-                  <h4 className="font-black text-base">{t('disputeModalTitle')}</h4>
-                  <p className="text-xs text-rose-100">{disputingLog.date} • {disputingLog.quantity}L</p>
+                  <h4 className="font-black text-base">
+                    {lang === 'hi' ? 'दूध मात्रा में अंतर? आपत्ति दर्ज करें' : 'Raise Quantity Discrepancy'}
+                  </h4>
+                  <p className="text-xs text-rose-100">
+                    {lang === 'hi' ? `तारीख: ${disputingLog.date} • दूधिया ने दर्ज किया: ${disputingLog.quantity}L` : `Date: ${disputingLog.date} • Logged: ${disputingLog.quantity}L`}
+                  </p>
                 </div>
               </div>
-              <button onClick={() => setDisputingLog(null)} className="p-1 rounded-full hover:bg-white/20 text-white">
+              <button 
+                onClick={() => setDisputingLog(null)}
+                className="p-1 rounded-full hover:bg-white/20 text-white"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleDisputeSubmit} className="p-5 space-y-4">
-              <p className="text-xs text-slate-600 font-medium">
-                {t('disputeModalSub')}
-              </p>
+              {/* Actual received quantity selector */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  {lang === 'hi' ? 'आपको वास्तव में कितना दूध मिला था? (Actual Received)' : 'How much milk did you actually receive?'}
+                </label>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+                      <button
+                        type="button"
+                        onClick={() => setReportedActualQty(prev => Math.max(0, Math.round((prev - 0.5) * 10) / 10))}
+                        className="w-8 h-8 rounded-lg bg-white shadow-xs font-black text-slate-700 hover:bg-slate-50 transition active:scale-95"
+                      >
+                        -
+                      </button>
+                      <span className="w-16 text-center font-black text-slate-900 text-sm">
+                        {reportedActualQty.toFixed(1)} L
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setReportedActualQty(prev => Math.round((prev + 0.5) * 10) / 10)}
+                        className="w-8 h-8 rounded-lg bg-white shadow-xs font-black text-slate-700 hover:bg-slate-50 transition active:scale-95"
+                      >
+                        +
+                      </button>
+                    </div>
 
+                    {/* Quick selection chips */}
+                    <div className="flex flex-wrap gap-1">
+                      {[0, 0.5, 1, 1.5, 2].map(q => (
+                        <button
+                          key={q}
+                          type="button"
+                          onClick={() => setReportedActualQty(q)}
+                          className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition ${
+                            reportedActualQty === q 
+                              ? 'bg-rose-600 text-white shadow-xs' 
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                        >
+                          {q === 0 ? (lang === 'hi' ? '0L (नहीं मिला)' : '0L') : `${q}L`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    {lang === 'hi' ? `दूधिया ने ${disputingLog.quantity}L लिखा है, आप इसे ${reportedActualQty}L करने का अनुरोध कर रहे हैं।` : `Vendor logged ${disputingLog.quantity}L, you are requesting ${reportedActualQty}L.`}
+                  </p>
+                </div>
+              </div>
+
+              {/* Quick reason chips */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  {t('disputeReasonLabel')}
+                  {lang === 'hi' ? 'कारण चुनें या लिखें (Reason):' : 'Reason / Note:'}
                 </label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {[
+                    lang === 'hi' ? 'मुझे 1L ही मिला था' : 'Got 1L only',
+                    lang === 'hi' ? 'आज दूध नहीं आया' : 'Did not get milk',
+                    lang === 'hi' ? 'आधा लीटर कम था' : '0.5L shortage',
+                    lang === 'hi' ? 'दूध फटा हुआ था' : 'Milk spoiled'
+                  ].map(chip => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => setDisputeReason(chip)}
+                      className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition"
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
                 <textarea 
                   required
-                  rows={3}
+                  rows={2}
                   value={disputeReason}
                   onChange={(e) => setDisputeReason(e.target.value)}
-                  placeholder={t('disputeReasonPlaceholder')}
+                  placeholder={lang === 'hi' ? "उदा. मुझे आज 2L नहीं केवल 1L दूध मिला है..." : "e.g. I got only 1L today instead of 2L..."}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500"
                 />
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 pt-1">
                 <button
                   type="button"
                   onClick={() => setDisputingLog(null)}
@@ -746,7 +1035,7 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin, on
                   disabled={submittingDispute || !disputeReason.trim()}
                   className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs rounded-xl shadow-xs transition active:scale-95 disabled:opacity-50"
                 >
-                  {submittingDispute ? (lang === 'hi' ? 'भेजा जा रहा है...' : 'Submitting...') : t('submitDispute')}
+                  {submittingDispute ? (lang === 'hi' ? 'भेजा जा रहा है...' : 'Submitting...') : (lang === 'hi' ? 'दूधिया को सूचित करें' : 'Notify Milkman')}
                 </button>
               </div>
             </form>

@@ -178,10 +178,12 @@ export async function registerCustomerApi(payload: {
 }
 
 // --- Customer Portal Endpoints ---
-export async function fetchCustomerDashboard(customerId: number, monthYear?: string): Promise<CustomerDashboardData> {
-  const url = monthYear 
-    ? `${API_BASE}/portal/customer/${customerId}/dashboard?month_year=${monthYear}`
-    : `${API_BASE}/portal/customer/${customerId}/dashboard`;
+export async function fetchCustomerDashboard(customerId: number, monthYear?: string, selectedDate?: string): Promise<CustomerDashboardData> {
+  const params = new URLSearchParams();
+  if (monthYear) params.append('month_year', monthYear);
+  if (selectedDate) params.append('selected_date', selectedDate);
+  const qStr = params.toString() ? `?${params.toString()}` : '';
+  const url = `${API_BASE}/portal/customer/${customerId}/dashboard${qStr}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("ग्राहक डैशबोर्ड लोड नहीं हो सका");
   return res.json();
@@ -302,11 +304,11 @@ export async function fetchVendorsList(): Promise<VendorInfo[]> {
 }
 
 // --- Module 4: Dispute & Query Resolution (DIS-01, DIS-02) ---
-export async function raiseDisputeApi(customerId: number, logId: number, reason: string) {
+export async function raiseDisputeApi(customerId: number, logId: number, reason: string, actualQuantity?: number) {
   const res = await fetch(`${API_BASE}/portal/customer/${customerId}/raise-dispute`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ log_id: logId, reason })
+    body: JSON.stringify({ log_id: logId, reason, actual_quantity: actualQuantity })
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: "आपत्ति दर्ज नहीं हो सकी" }));

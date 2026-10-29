@@ -5,7 +5,7 @@ from datetime import date as dt_date
 from typing import List, Optional
 from pydantic import BaseModel
 from ..database import get_db
-from ..models import Customer, DailyLog
+from ..models import Customer, DailyLog, CustomerMessage
 from ..schemas import DailyLogResponse, DailyBatchSubmit
 
 router = APIRouter(prefix="/api/logs", tags=["Daily Logs"])
@@ -35,39 +35,53 @@ def get_day_checklist(date_str: Optional[str] = None, date: Optional[str] = None
     log_map = {log.customer_id: log for log in logs}
 
     result = []
-    for c in customers:
-        ctype = getattr(c, "customer_type", "BUYER") or "BUYER"
-        if c.id in log_map:
-            log = log_map[c.id]
+    for c_item in customers:
+        ctype = getattr(c_item, "customer_type", "BUYER") or "BUYER"
+        if c_item.id in log_map:
+            log = log_map[c_item.id]
+            reported_qty = None
+            if log.notes and log.notes.startswith("CUSTOMER_REPORTED:"):
+                try:
+                    reported_qty = float(log.notes.split(":", 2)[1])
+                except Exception:
+                    pass
             result.append({
-                "customer_id": c.id,
-                "name": c.name,
-                "phone": c.phone,
-                "address": c.address,
-                "default_quantity": c.default_quantity,
-                "milk_type": c.milk_type,
-                "price_per_liter": c.price_per_liter,
+                "customer_id": c_item.id,
+                "name": c_item.name,
+                "phone": c_item.phone,
+                "address": c_item.address,
+                "default_quantity": c_item.default_quantity,
+                "milk_type": c_item.milk_type,
+                "price_per_liter": c_item.price_per_liter,
                 "customer_type": ctype,
                 "log_id": log.id,
                 "date": log.date.isoformat(),
                 "quantity": log.quantity_delivered,
                 "status": log.status,
+                "dispute_status": getattr(log, 'dispute_status', 'None') or 'None',
+                "dispute_reason": getattr(log, 'dispute_reason', None),
+                "reported_quantity": reported_qty,
+                "notes": log.notes,
                 "is_recorded": True
             })
         else:
             result.append({
-                "customer_id": c.id,
-                "name": c.name,
-                "phone": c.phone,
-                "address": c.address,
-                "default_quantity": c.default_quantity,
-                "milk_type": c.milk_type,
-                "price_per_liter": c.price_per_liter,
+                "customer_id": c_item.id,
+                "name": c_item.name,
+                "phone": c_item.phone,
+                "address": c_item.address,
+                "default_quantity": c_item.default_quantity,
+                "milk_type": c_item.milk_type,
+                "price_per_liter": c_item.price_per_liter,
                 "customer_type": ctype,
                 "log_id": None,
                 "date": target_date.isoformat(),
-                "quantity": c.default_quantity,
+                "quantity": c_item.default_quantity,
                 "status": "Pending",  # Not explicitly confirmed yet
+                "dispute_status": "None",
+                "dispute_reason": None,
+                "reported_quantity": None,
+                "notes": None,
                 "is_recorded": False
             })
     return {"date": target_date.isoformat(), "checklist": result}
@@ -83,9 +97,31 @@ def submit_batch_logs(batch: DailyBatchSubmit, db: Session = Depends(get_db)):
         ).first()
 
         if existing:
+            old_qty = existing.quantity_delivered
             existing.quantity_delivered = entry.quantity_delivered
             existing.status = entry.status
             existing.notes = entry.notes
+            
+            # If a dispute was pending on this entry, mark it resolved
+            if getattr(existing, 'dispute_status', 'None') == "Pending":
+                existing.dispute_status = "Resolved"
+                existing.status = "Resolved" if entry.quantity_delivered > 0 else "Skipped"
+                existing.notes = f"सुलझाया गया: {entry.quantity_delivered}L (दूधिया द्वारा अपडेट)"
+
+            # Create automated notification message for Customer if quantity changed
+            if old_qty != entry.quantity_delivered:
+                try:
+                    c_obj = db.query(Customer).filter(Customer.id == entry.customer_id).first()
+                    v_id = c_obj.vendor_id if (c_obj and c_obj.vendor_id) else 1
+                    msg = CustomerMessage(
+                        customer_id=entry.customer_id,
+                        vendor_id=v_id,
+                        sender="VENDOR",
+                        message=f"✓ दूध हिसाब अपडेट ({batch.date}): दूधिया ने दूध मात्रा {old_qty}L से बदलकर {entry.quantity_delivered}L कर दी है।"
+                    )
+                    db.add(msg)
+                except Exception as e:
+                    print("Error creating customer notification:", e)
             updated.append(existing)
         else:
             new_log = DailyLog(

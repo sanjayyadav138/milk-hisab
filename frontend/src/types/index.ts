@@ -44,6 +44,10 @@ export interface DailyLogItem {
   quantity: number;
   status: string; // "Delivered" | "Skipped" | "Extra" | "Pending"
   is_recorded: boolean;
+  dispute_status?: string;
+  dispute_reason?: string;
+  reported_quantity?: number | null;
+  notes?: string | null;
 }
 
 export interface MonthlyBill {
@@ -104,6 +108,17 @@ export interface CustomerDashboardData {
     quantity: number;
     status: string;
   };
+  selected_date_status?: {
+    date: string;
+    is_recorded: boolean;
+    quantity: number;
+    status: string;
+    dispute_status?: string;
+    dispute_reason?: string | null;
+    reported_quantity?: number | null;
+    log_id?: number | null;
+    notes?: string | null;
+  };
   recent_logs: Array<{
     id: number;
     date: string;
@@ -124,6 +139,7 @@ export interface VendorDisputeItem {
   quantity: number;
   status: string;
   dispute_reason?: string;
+  reported_quantity?: number | null;
   notes?: string;
 }
 

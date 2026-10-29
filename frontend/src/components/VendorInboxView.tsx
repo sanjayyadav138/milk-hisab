@@ -400,13 +400,43 @@ export default function VendorInboxView() {
                     <div className="mt-3 p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-950 font-medium">
                       <span className="font-bold text-rose-900">{t('reasonLabel')}:</span> "{d.dispute_reason}"
                     </div>
+
+                    {d.reported_quantity !== null && d.reported_quantity !== undefined && (
+                      <div className="mt-2.5 p-3 bg-amber-50 border border-amber-300 rounded-2xl text-xs text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                        <div>
+                          <span className="font-bold text-amber-900">{lang === 'hi' ? 'ग्राहक का दावा:' : 'Customer Claim:'}</span>
+                          <span className="ml-1 font-black bg-amber-200/80 px-2 py-0.5 rounded text-amber-950">
+                            {d.reported_quantity}L {lang === 'hi' ? 'दूध मिला' : 'received'}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={submittingResolve}
+                          onClick={async () => {
+                            setSubmittingResolve(true);
+                            try {
+                              await resolveDisputeApi(d.log_id, d.reported_quantity!, 'ग्राहक द्वारा दर्ज मात्रा स्वीकार की गई');
+                              loadData();
+                            } catch (err: any) {
+                              alert(err.message || 'त्रुटि आई');
+                            } finally {
+                              setSubmittingResolve(false);
+                            }
+                          }}
+                          className="w-full sm:w-auto px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-xs transition active:scale-95 shrink-0 flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          <span>{lang === 'hi' ? `✓ ${d.reported_quantity}L तुरंत स्वीकार करें` : `✓ Accept ${d.reported_quantity}L`}</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="sm:self-center shrink-0">
                     <button
                       onClick={() => {
                         setResolvingId(d.log_id);
-                        setResolvedQty(String(d.quantity));
+                        setResolvedQty(String(d.reported_quantity !== null && d.reported_quantity !== undefined ? d.reported_quantity : d.quantity));
                       }}
                       className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-xs active:scale-95 transition"
                     >

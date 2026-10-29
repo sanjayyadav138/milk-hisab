@@ -321,7 +321,7 @@ export default function DailyChecklistScreen() {
       {/* Main Checklist List */}
       {loading ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#2563eb" />
+          <ActivityIndicator size="large" color="#1E3A8A" />
           <Text style={styles.loadingText}>
             {lang === 'hi' ? 'हिसाब लोड हो रहा है...' : 'Loading daily ledger...'}
           </Text>
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
   },
   dateSub: {
     fontSize: 10,
-    color: '#2563eb',
+    color: '#1E3A8A',
     fontWeight: 'bold',
     marginTop: 1,
   },
@@ -622,7 +622,7 @@ const styles = StyleSheet.create({
   qtyNumber: {
     fontSize: 20,
     fontWeight: '900',
-    color: '#2563eb',
+    color: '#1E3A8A',
   },
   qtyNumberZero: {
     color: '#94a3b8',

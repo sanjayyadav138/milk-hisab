@@ -210,7 +210,7 @@ export default function CustomersScreen() {
       {/* Customer List */}
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#2563eb" />
+          <ActivityIndicator size="large" color="#1E3A8A" />
           <Text style={styles.loadingText}>
             {lang === 'hi' ? 'ग्राहक लोड हो रहे हैं...' : 'Loading contacts...'}
           </Text>
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   addBtn: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#1E3A8A',
     borderRadius: 14,
     paddingHorizontal: 16,
     justifyContent: 'center',
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f1f5f9',
   },
   pillActive: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#1E3A8A',
   },
   pillText: {
     fontSize: 11,
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   typeOptionActive: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#1E3A8A',
   },
   typeOptionText: {
     fontSize: 11,
@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     borderRadius: 14,
-    backgroundColor: '#2563eb',
+    backgroundColor: '#1E3A8A',
     alignItems: 'center',
   },
   modalSaveText: {

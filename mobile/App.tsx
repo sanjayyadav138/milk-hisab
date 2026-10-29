@@ -6,9 +6,8 @@ import {
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { LanguageProvider, useLanguage } from './src/context/LanguageContext';
 import WelcomeSplashScreen from './src/screens/WelcomeSplashScreen';
+import AuthScreen from './src/screens/AuthScreen';
 import NetflixDashboardHomeScreen from './src/screens/NetflixDashboardHomeScreen';
-import LoginScreen from './src/screens/LoginScreen';
-import RegisterScreen from './src/screens/RegisterScreen';
 import DailyChecklistScreen from './src/screens/vendor/DailyChecklistScreen';
 import CustomersScreen from './src/screens/vendor/CustomersScreen';
 import CustomerPortalScreen from './src/screens/customer/CustomerPortalScreen';
@@ -16,64 +15,30 @@ import CustomerPortalScreen from './src/screens/customer/CustomerPortalScreen';
 function MainNavigator() {
   const { auth, logout } = useAuth();
   const { lang, toggleLang } = useLanguage();
-  
-  // Navigation State for Unauthenticated flow: 'SPLASH' | 'LOGIN' | 'REGISTER'
-  const [unauthScreen, setUnauthScreen] = useState<'SPLASH' | 'LOGIN' | 'REGISTER'>('SPLASH');
-  const [selectedRole, setSelectedRole] = useState<'vendor' | 'customer'>('vendor');
-  
+
+  // Splash Screen State: Shows central Milkman logo with watermarks for 1.5 seconds
+  const [isSplash, setIsSplash] = useState(true);
+
   // Navigation State for Vendor Tabs: 'HOME' | 'DAILY' | 'CUSTOMERS'
   const [vendorTab, setVendorTab] = useState<'HOME' | 'DAILY' | 'CUSTOMERS'>('HOME');
 
   // Navigation State for Customer Tabs: 'HOME' | 'PORTAL'
   const [customerTab, setCustomerTab] = useState<'HOME' | 'PORTAL'>('HOME');
 
-  // 1. Not Authenticated: Flow between Splash, Login, and Register
-  if (!auth.token || !auth.role) {
-    if (unauthScreen === 'LOGIN') {
-      return (
-        <LoginScreen 
-          initialRole={selectedRole}
-          onBack={() => setUnauthScreen('SPLASH')}
-          onGoRegister={(role) => {
-            setSelectedRole(role);
-            setUnauthScreen('REGISTER');
-          }}
-        />
-      );
-    }
-
-    if (unauthScreen === 'REGISTER') {
-      return (
-        <RegisterScreen 
-          initialRole={selectedRole}
-          onBack={() => setUnauthScreen('SPLASH')}
-          onGoLogin={(role) => {
-            setSelectedRole(role);
-            setUnauthScreen('LOGIN');
-          }}
-        />
-      );
-    }
-
-    // Default: Splash / Welcome Screen
-    return (
-      <WelcomeSplashScreen 
-        onGoLogin={(role) => {
-          if (role) setSelectedRole(role);
-          setUnauthScreen('LOGIN');
-        }}
-        onGoRegister={(role) => {
-          if (role) setSelectedRole(role);
-          setUnauthScreen('REGISTER');
-        }}
-      />
-    );
+  // 1. Initial 1.5-second cinematic Splash Screen
+  if (isSplash) {
+    return <WelcomeSplashScreen onFinish={() => setIsSplash(false)} />;
   }
 
-  // 2. Customer Role: Netflix Streaming Home Dashboard with Tab to Full Monthly Ledger
+  // 2. Not Authenticated: Centered Auth Card with Milk Watermarks
+  if (!auth.token || !auth.role) {
+    return <AuthScreen />;
+  }
+
+  // 3. Customer Role: Dashboard + Full Monthly Ledger
   if (auth.role === 'customer') {
     return (
-      <View style={styles.appContainer}>
+      <SafeAreaView style={styles.appContainer}>
         <View style={styles.screenContent}>
           {customerTab === 'HOME' ? (
             <NetflixDashboardHomeScreen 
@@ -84,7 +49,7 @@ function MainNavigator() {
           )}
         </View>
 
-        {/* Customer Bottom Navigation Bar (Dark Navy Theme) */}
+        {/* Clean White Bottom Navigation Bar with Deep Dairy Blue #1E3A8A Active Tabs */}
         <View style={styles.bottomNav}>
           <TouchableOpacity
             onPress={() => setCustomerTab('HOME')}
@@ -93,7 +58,7 @@ function MainNavigator() {
           >
             <Text style={styles.navIcon}>🎬</Text>
             <Text style={[styles.navLabel, customerTab === 'HOME' && styles.navLabelActive]}>
-              {lang === 'hi' ? 'होम डैशबोर्ड' : 'Dashboard'}
+              {lang === 'hi' ? 'डैशबोर्ड' : 'Dashboard'}
             </Text>
           </TouchableOpacity>
 
@@ -108,44 +73,42 @@ function MainNavigator() {
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
-  // 3. Vendor Role: Streaming Dashboard Home + Daily Checklist + Customers
+  // 4. Vendor Role: Dashboard + Daily Logs + Customers
   return (
-    <View style={styles.appContainer}>
+    <SafeAreaView style={styles.appContainer}>
       {/* Top Header Bar for secondary tabs (Daily & Customers) */}
       {vendorTab !== 'HOME' && (
-        <SafeAreaView style={styles.headerSafeArea}>
-          <View style={styles.topHeader}>
-            <View style={styles.brandRow}>
-              <Image 
-                source={require('./assets/logo.png')} 
-                style={styles.brandLogoImg} 
-                resizeMode="contain" 
-              />
-              <View>
-                <Text style={styles.brandTitle}>Milk Hisab</Text>
-                <Text style={styles.brandSub}>
-                  {auth.user?.business_name || auth.user?.name || (lang === 'hi' ? 'डेयरी प्रबंधन' : 'Dairy Vendor')}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.headerRight}>
-              <TouchableOpacity onPress={toggleLang} style={styles.langBtn} activeOpacity={0.8}>
-                <Text style={styles.langBtnText}>{lang === 'hi' ? 'EN' : 'हिन्दी'}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={logout} style={styles.logoutBtn} activeOpacity={0.8}>
-                <Text style={styles.logoutBtnText}>
-                  {lang === 'hi' ? 'लॉगआउट' : 'Logout'}
-                </Text>
-              </TouchableOpacity>
+        <View style={styles.topHeader}>
+          <View style={styles.brandRow}>
+            <Image 
+              source={require('./assets/icon.png')} 
+              style={styles.headerBrandIcon} 
+              resizeMode="contain" 
+            />
+            <View>
+              <Text style={styles.brandTitle}>Milk Hisab</Text>
+              <Text style={styles.brandSub}>
+                {auth.user?.business_name || auth.user?.name || (lang === 'hi' ? 'डेयरी प्रबंधन' : 'Dairy Vendor')}
+              </Text>
             </View>
           </View>
-        </SafeAreaView>
+
+          <View style={styles.headerRight}>
+            <TouchableOpacity onPress={toggleLang} style={styles.langBtn} activeOpacity={0.8}>
+              <Text style={styles.langBtnText}>{lang === 'hi' ? 'EN' : 'हिन्दी'}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={logout} style={styles.logoutBtn} activeOpacity={0.8}>
+              <Text style={styles.logoutBtnText}>
+                {lang === 'hi' ? 'लॉगआउट' : 'Logout'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
 
       {/* Main Screen Content */}
@@ -162,7 +125,7 @@ function MainNavigator() {
         {vendorTab === 'CUSTOMERS' && <CustomersScreen />}
       </View>
 
-      {/* Netflix-Style Bottom Navigation Tab Bar (Dark Navy #0F172A) */}
+      {/* Clean White Bottom Navigation Bar with Deep Dairy Blue (#1E3A8A) Active Tabs */}
       <View style={styles.bottomNav}>
         <TouchableOpacity
           onPress={() => setVendorTab('HOME')}
@@ -171,7 +134,7 @@ function MainNavigator() {
         >
           <Text style={styles.navIcon}>🎬</Text>
           <Text style={[styles.navLabel, vendorTab === 'HOME' && styles.navLabelActive]}>
-            {lang === 'hi' ? 'होम' : 'Dashboard'}
+            {lang === 'hi' ? 'डैशबोर्ड' : 'Dashboard'}
           </Text>
         </TouchableOpacity>
 
@@ -197,7 +160,7 @@ function MainNavigator() {
           </Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -205,7 +168,7 @@ export default function App() {
   return (
     <LanguageProvider>
       <AuthProvider>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <MainNavigator />
       </AuthProvider>
     </LanguageProvider>
@@ -215,10 +178,7 @@ export default function App() {
 const styles = StyleSheet.create({
   appContainer: {
     flex: 1,
-    backgroundColor: '#F8FAFC', // Soft Milky Cream Aesthetic
-  },
-  headerSafeArea: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFFFFF', // Solid Pure White Safe Area to fix iPhone Notch issues
   },
   topHeader: {
     flexDirection: 'row',
@@ -233,11 +193,12 @@ const styles = StyleSheet.create({
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
-  brandLogoImg: {
-    width: 120,
-    height: 32,
+  headerBrandIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
   },
   brandTitle: {
     fontSize: 16,
@@ -282,11 +243,13 @@ const styles = StyleSheet.create({
   },
   screenContent: {
     flex: 1,
+    backgroundColor: '#F8FAFC',
   },
+  // CLEAN WHITE BOTTOM NAV WITH DEEP DAIRY BLUE (#1E3A8A) ACTIVE TABS
   bottomNav: {
     flexDirection: 'row',
     height: 64,
-    backgroundColor: '#FFFFFF', // Pure White Bottom Nav
+    backgroundColor: '#FFFFFF', // Clean White Background
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
     paddingBottom: 4,
@@ -302,8 +265,8 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   navTabActive: {
-    borderTopWidth: 2,
-    borderTopColor: '#2563EB', // Deep Dairy Blue Indicator
+    borderTopWidth: 2.5,
+    borderTopColor: '#1E3A8A', // Deep Dairy Blue Indicator
   },
   navIcon: {
     fontSize: 20,
@@ -315,7 +278,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   navLabelActive: {
-    color: '#2563EB',
+    color: '#1E3A8A', // Deep Dairy Blue Active Label
     fontWeight: '900',
   },
 });

@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { 
   StyleSheet, View, Text, TouchableOpacity, ScrollView, 
-  Image, Dimensions, Platform, Modal, Alert, TextInput 
+  Image, Dimensions, Platform, Modal, Alert, TextInput, SafeAreaView 
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import VoiceAssistantModal from '../components/VoiceAssistantModal';
+import ProfileModal from '../components/ProfileModal';
 
 const { width } = Dimensions.get('window');
 
@@ -78,7 +79,6 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
   const userName = isVendor 
     ? (auth.user?.business_name || auth.user?.name || (lang === 'hi' ? 'श्री कृष्णा डेयरी फार्म' : 'Krishna Dairy Farm'))
     : (auth.customer?.name || (lang === 'hi' ? 'राजेश शर्मा' : 'Rajesh Sharma'));
-  const userPhone = auth.user?.phone || auth.customer?.phone || '9876543210';
 
   // Handle Delivery Pause / Skip Selection (Strict Same-Day Block)
   const handleSelectSkipDate = (dateLabel: string) => {
@@ -141,28 +141,34 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeAreaContainer}>
       <StatusBar style="dark" />
 
-      {/* TOP HEADER: Clean Milk Banner Aesthetic (No Red Buttons) */}
+      {/* ========================================================
+          GLOBAL HEADER: Solid Pure White, Notch-Safe, Standalone Icon
+          ======================================================== */}
       <View style={styles.headerBar}>
         <View style={styles.headerLeft}>
           <Image 
-            source={require('../../assets/logo.png')} 
-            style={styles.headerLogo} 
+            source={require('../../assets/icon.png')} 
+            style={styles.headerBrandIcon} 
             resizeMode="contain" 
           />
+          <View style={styles.brandTitleWrap}>
+            <Text style={styles.brandTitle}>Milk Hisab</Text>
+            <Text style={styles.brandSub}>{userName}</Text>
+          </View>
         </View>
 
         <View style={styles.headerRight}>
-          {/* 1-Tap Language Switcher */}
+          {/* 1-Tap Language Toggle */}
           <TouchableOpacity onPress={toggleLang} style={styles.langPill} activeOpacity={0.8}>
             <Text style={styles.langPillText}>
-              🌐 {lang === 'hi' ? 'English' : 'हिन्दी'}
+              🌐 {lang === 'hi' ? 'EN' : 'हिन्दी'}
             </Text>
           </TouchableOpacity>
 
-          {/* Profile Avatar Dropdown Trigger */}
+          {/* Profile Avatar Circle with Online Dot */}
           <TouchableOpacity 
             onPress={() => setProfileModalVisible(true)} 
             style={styles.profileAvatarBtn}
@@ -185,7 +191,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
         contentContainerStyle={styles.scrollContent}
       >
         {/* ========================================================
-            HERO FEATURED BANNER (Cinematic Dairy Blue Milk Banner)
+            HERO FEATURED BANNER (Cow Pasture Landscape + Strong Dark Overlay)
             ======================================================== */}
         <View style={styles.heroCardContainer}>
           <Image 
@@ -194,14 +200,14 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
             resizeMode="cover"
           />
 
-          {/* Deep Dairy Blue Gradient Overlay */}
+          {/* Strong Semi-Transparent Dark Overlay (LinearGradient) for Ultra Sharp Contrast */}
           <LinearGradient
             colors={[
-              'rgba(30, 58, 138, 0.45)',
-              'rgba(30, 58, 138, 0.88)',
+              'rgba(15, 23, 42, 0.40)',
+              'rgba(15, 23, 42, 0.75)',
               '#1E3A8A'
             ]}
-            locations={[0, 0.55, 1.0]}
+            locations={[0, 0.50, 1.0]}
             style={StyleSheet.absoluteFill}
           />
 
@@ -211,7 +217,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
               <View style={styles.liveChip}>
                 <View style={styles.livePulseDot} />
                 <Text style={styles.liveChipText}>
-                  {lang === 'hi' ? 'आज का लाइव हिसाब' : "TODAY'S LIVE LEDGER"}
+                  {lang === 'hi' ? 'आज का लाइव हिसाब' : "TODAY'S LIVE SUMMARY"}
                 </Text>
               </View>
 
@@ -225,17 +231,17 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
             {/* Role-Based Summary Headline */}
             <Text style={styles.heroHeadline}>
               {isVendor
-                ? (lang === 'hi' ? 'आज का वितरण: 48.5L संपन्न' : "Today's Delivery: 48.5L Distributed")
+                ? (lang === 'hi' ? 'आज 48.5L दूध वितरण पूरा' : "Today's Delivery: 48.5L Distributed")
                 : (lang === 'hi' ? 'आज का दूध: 1.5L प्राप्त | स्थिति: चुकता' : "Today's Delivery: 1.5L Delivered | Status: Settled")}
             </Text>
 
             <Text style={styles.heroSubHeadline}>
               {isVendor 
-                ? (lang === 'hi' ? '24 सक्रिय ग्राहक • संकलन: ₹3,880 • 1 आपत्ति समीक्षाधीन' : '24 Active Homes • Collected: ₹3,880 • 1 Dispute Pending')
-                : (lang === 'hi' ? 'शुद्ध गाय का दूध (A2 Gir) • सुबह 6:45 बजे प्राप्त • बिल: ₹90.00' : 'Pure Cow Milk (A2 Gir) • Received at 6:45 AM • Bill: ₹90.00')}
+                ? (lang === 'hi' ? '24 परिवार सक्रिय • संकलन: ₹3,880 • 1 आपत्ति समीक्षाधीन' : '24 Homes Delivered • Collected: ₹3,880 • 1 Dispute Pending')
+                : (lang === 'hi' ? 'शुद्ध गाय का दूध (A2 Gir) • सुबह 6:45 बजे प्राप्त • ₹90.00' : 'Pure Cow Milk (A2 Gir) • Received at 6:45 AM • ₹90.00')}
             </Text>
 
-            {/* Hero Action Buttons (Deep Dairy Blue & Crisp White, NO RED) */}
+            {/* Action Buttons (Strictly Deep Dairy Blue #1E3A8A & Crisp Sky Blue, NO RED) */}
             <View style={styles.heroButtonsRow}>
               <TouchableOpacity 
                 onPress={() => onNavigateTab ? onNavigateTab('DAILY') : null}
@@ -243,7 +249,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
                 activeOpacity={0.85}
               >
                 <Text style={styles.heroPrimaryBtnText}>
-                  ▶ {isVendor ? (lang === 'hi' ? 'तुरंत दूध एंट्री करें' : 'Log Delivery Entry') : (lang === 'hi' ? 'मासिक पर्ची देखें' : 'View Monthly Slip')}
+                  ▶ {isVendor ? (lang === 'hi' ? 'तुरंत दूध एंट्री करें' : 'Log Quick Entry') : (lang === 'hi' ? 'मासिक पर्ची देखें' : 'View Monthly Slip')}
                 </Text>
               </TouchableOpacity>
 
@@ -261,7 +267,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
         </View>
 
         {/* ========================================================
-            PENDING DISPUTE ALERT (Vendor & Customer Notice)
+            PENDING DISPUTE ALERT (Vendor Notice)
             ======================================================== */}
         {activeDispute.status === 'Pending' && (
           <View style={styles.disputeAlertCard}>
@@ -290,7 +296,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
         )}
 
         {/* ========================================================
-            ROW 1: QUICK ACTIONS (Netflix Horizontal Scroll)
+            ROW 1: QUICK ACTIONS (Horizontal Category Scroll)
             ======================================================== */}
         <View style={styles.sectionRow}>
           <View style={styles.sectionHeader}>
@@ -298,7 +304,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
               {lang === 'hi' ? '⚡ त्वरित सुविधाएं (Quick Actions)' : '⚡ Quick Actions'}
             </Text>
             <Text style={styles.sectionSubtitle}>
-              {lang === 'hi' ? 'दैनिक बहीखाता व ग्राहक संचालन' : '1-tap essential operations'}
+              {lang === 'hi' ? '1-क्लिक आसान दैनिक संचालन' : '1-tap essential operations'}
             </Text>
           </View>
 
@@ -310,10 +316,10 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
             {/* Quick Action 1: Log Daily Entry */}
             <TouchableOpacity 
               onPress={() => onNavigateTab ? onNavigateTab('DAILY') : null}
-              style={[styles.quickActionCard, { borderColor: '#2563EB' }]}
+              style={[styles.quickActionCard, { borderColor: '#1E3A8A' }]}
               activeOpacity={0.8}
             >
-              <View style={[styles.actionIconBadge, { backgroundColor: 'rgba(37, 99, 235, 0.12)' }]}>
+              <View style={[styles.actionIconBadge, { backgroundColor: 'rgba(30, 58, 138, 0.12)' }]}>
                 <Text style={styles.actionIconText}>📝</Text>
               </View>
               <Text style={styles.actionTitle}>
@@ -375,7 +381,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
               </Text>
             </TouchableOpacity>
 
-            {/* Quick Action 5: Raise Query / Dispute */}
+            {/* Quick Action 5: Dispute Center */}
             <TouchableOpacity 
               onPress={() => setDisputeModalVisible(true)}
               style={[styles.quickActionCard, { borderColor: '#F43F5E' }]}
@@ -414,7 +420,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
         </View>
 
         {/* =================================================================
-            ROW 2: RECENT DELIVERIES & LEDGERS (Netflix Horizontal Scroll)
+            ROW 2: RECENT DELIVERIES & LEDGERS (Horizontal Scroll)
             ================================================================= */}
         <View style={styles.sectionRow}>
           <View style={styles.sectionHeader}>
@@ -558,7 +564,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
         </View>
 
         {/* =================================================================
-            ROW 3: MONTHLY BILLS & PAYMENTS (Netflix Horizontal Scroll)
+            ROW 3: MONTHLY BILLS & PAYMENTS (Horizontal Scroll)
             ================================================================= */}
         <View style={styles.sectionRow}>
           <View style={styles.sectionHeader}>
@@ -741,86 +747,16 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
       </ScrollView>
 
       {/* ========================================================
-          USER PROFILE & SETTINGS MODAL
+          USER PROFILE MODAL (External Modular Component)
           ======================================================== */}
-      <Modal
+      <ProfileModal
         visible={profileModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setProfileModalVisible(false)}
-      >
-        <TouchableOpacity 
-          style={styles.modalBackdrop} 
-          activeOpacity={1} 
-          onPress={() => setProfileModalVisible(false)}
-        >
-          <View style={styles.profileModalCard}>
-            <View style={styles.modalProfileHeader}>
-              <View style={styles.modalAvatarCircle}>
-                <Text style={styles.modalAvatarInitials}>
-                  {userName.charAt(0).toUpperCase()}
-                </Text>
-              </View>
-              <View style={styles.modalProfileInfo}>
-                <Text style={styles.modalUserName}>{userName}</Text>
-                <Text style={styles.modalUserRole}>
-                  {isVendor ? '🥛 ' + (lang === 'hi' ? 'डेयरी विक्रेता (Vendor)' : 'Dairy Vendor') : '🏠 ' + (lang === 'hi' ? 'सत्यापित ग्राहक (Customer)' : 'Verified Customer')}
-                </Text>
-                <Text style={styles.modalUserPhone}>📞 {userPhone}</Text>
-              </View>
-            </View>
-
-            <View style={styles.modalDivider} />
-
-            {/* Switch Language */}
-            <TouchableOpacity 
-              onPress={() => {
-                setProfileModalVisible(false);
-                toggleLang();
-              }}
-              style={styles.modalMenuItem}
-            >
-              <Text style={styles.modalMenuIcon}>🌐</Text>
-              <View style={styles.modalMenuTextWrap}>
-                <Text style={styles.modalMenuTitle}>
-                  {lang === 'hi' ? 'भाषा बदलें (Switch Language)' : 'Switch Language'}
-                </Text>
-                <Text style={styles.modalMenuSub}>
-                  {lang === 'hi' ? 'वर्तमान: हिन्दी → English' : 'Current: English → हिन्दी'}
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            {/* Logout Option (NO HARSH RED) */}
-            <TouchableOpacity 
-              onPress={() => {
-                setProfileModalVisible(false);
-                logout();
-              }}
-              style={[styles.modalMenuItem, { borderBottomWidth: 0 }]}
-            >
-              <Text style={styles.modalMenuIcon}>🚪</Text>
-              <View style={styles.modalMenuTextWrap}>
-                <Text style={[styles.modalMenuTitle, { color: '#0F172A' }]}>
-                  {lang === 'hi' ? 'लॉगआउट करें (Sign Out)' : 'Sign Out'}
-                </Text>
-                <Text style={styles.modalMenuSub}>
-                  {lang === 'hi' ? 'खाते से सुरक्षित बाहर निकलें' : 'Safely exit current session'}
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              onPress={() => setProfileModalVisible(false)}
-              style={styles.modalCloseBtn}
-            >
-              <Text style={styles.modalCloseBtnText}>
-                {lang === 'hi' ? 'बंद करें' : 'Close'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+        onClose={() => setProfileModalVisible(false)}
+        onLogout={logout}
+        onNavigateTab={(tab) => {
+          if (onNavigateTab) onNavigateTab(tab);
+        }}
+      />
 
       {/* ========================================================
           DISPUTE & QUERY RESOLUTION MODAL
@@ -919,7 +855,6 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
                 : 'Direct messaging channel for milk delivery instructions'}
             </Text>
 
-            {/* Chat Messages List */}
             <ScrollView style={styles.chatListScroll}>
               {chatMessages.map(msg => (
                 <View 
@@ -935,7 +870,6 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
               ))}
             </ScrollView>
 
-            {/* Chat Input Row */}
             <View style={styles.chatInputRow}>
               <TextInput
                 style={styles.chatInput}
@@ -978,7 +912,6 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
                 : 'Same-day cancellation is blocked to avoid dairy waste. Please select future dates.'}
             </Text>
 
-            {/* Date Pills */}
             <View style={styles.skipDatesGrid}>
               {[
                 { label: 'Today (29 Oct) [Blocked]', isBlocked: true },
@@ -1048,23 +981,23 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
           );
         }}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeAreaContainer: {
     flex: 1,
-    backgroundColor: '#F8FAFC', // Soft Milky Cream Aesthetic
+    backgroundColor: '#FFFFFF', // Solid Pure White Safe Area to fix iPhone Notch issues
   },
+  // GLOBAL HEADER BAR (SOLID PURE WHITE, NOTCH-SAFE)
   headerBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'android' ? 44 : 16,
-    paddingBottom: 12,
-    backgroundColor: '#FFFFFF', // Pure White Top Nav
+    paddingVertical: 10,
+    backgroundColor: '#FFFFFF', // Solid Pure White
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
     shadowColor: '#000',
@@ -1075,10 +1008,25 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
   },
-  headerLogo: {
-    width: 140,
+  headerBrandIcon: {
+    width: 38,
     height: 38,
+    borderRadius: 8,
+  },
+  brandTitleWrap: {
+    justifyContent: 'center',
+  },
+  brandTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#0F172A',
+  },
+  brandSub: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '700',
   },
   headerRight: {
     flexDirection: 'row',
@@ -1105,11 +1053,11 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#2563EB', // Deep Dairy Blue
+    backgroundColor: '#1E3A8A', // Deep Dairy Blue
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#93C5FD',
+    borderColor: '#38BDF8', // Sky Blue
   },
   avatarInitials: {
     color: '#FFFFFF',
@@ -1129,11 +1077,12 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
     paddingBottom: 36,
   },
-  // HERO CARD (Clean Milk Banner)
+  // HERO CARD (COW PASTURE LANDSCAPE + STRONG SEMI-TRANSPARENT DARK OVERLAY)
   heroCardContainer: {
     marginHorizontal: 14,
     marginTop: 14,
@@ -1223,19 +1172,21 @@ const styles = StyleSheet.create({
   },
   heroPrimaryBtn: {
     flex: 1,
-    backgroundColor: '#2563EB', // Deep Dairy Blue (Strictly NO RED)
+    backgroundColor: '#1E3A8A', // Deep Dairy Blue (Strictly NO RED)
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
-    shadowColor: '#2563EB',
+    shadowColor: '#1E3A8A',
     shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   heroPrimaryBtnText: {
     color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '900',
   },
   heroSecondaryBtn: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
@@ -1409,7 +1360,7 @@ const styles = StyleSheet.create({
   qtyUnitText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#2563EB',
+    color: '#1E3A8A', // Deep Dairy Blue
   },
   rateDetailText: {
     fontSize: 11,
@@ -1534,7 +1485,7 @@ const styles = StyleSheet.create({
     maxWidth: 120,
   },
   billActionBtn: {
-    backgroundColor: '#2563EB', // Deep Dairy Blue
+    backgroundColor: '#1E3A8A', // Deep Dairy Blue
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
@@ -1569,99 +1520,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-  },
-  profileModalCard: {
-    width: '100%',
-    maxWidth: 360,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  modalProfileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  modalAvatarCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#2563EB',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalAvatarInitials: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#FFFFFF',
-  },
-  modalProfileInfo: {
-    flex: 1,
-  },
-  modalUserName: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#0F172A',
-  },
-  modalUserRole: {
-    fontSize: 12,
-    color: '#2563EB',
-    marginTop: 2,
-    fontWeight: '700',
-  },
-  modalUserPhone: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  modalDivider: {
-    height: 1,
-    backgroundColor: '#E2E8F0',
-    marginVertical: 16,
-  },
-  modalMenuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  modalMenuIcon: {
-    fontSize: 20,
-  },
-  modalMenuTextWrap: {
-    flex: 1,
-  },
-  modalMenuTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  modalMenuSub: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 1,
-  },
-  modalCloseBtn: {
-    marginTop: 14,
-    backgroundColor: '#F8FAFC',
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  modalCloseBtnText: {
-    color: '#0F172A',
-    fontSize: 13,
-    fontWeight: '700',
   },
   modalCardWide: {
     width: '100%',
@@ -1737,7 +1595,7 @@ const styles = StyleSheet.create({
     flex: 1.5,
     paddingVertical: 12,
     borderRadius: 10,
-    backgroundColor: '#2563EB', // Deep Dairy Blue (Strictly NO RED)
+    backgroundColor: '#1E3A8A', // Deep Dairy Blue (Strictly NO RED)
     alignItems: 'center',
   },
   modalConfirmDairyBlueBtnText: {
@@ -1815,7 +1673,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   chatSendBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#1E3A8A',
     paddingHorizontal: 16,
     borderRadius: 10,
     justifyContent: 'center',

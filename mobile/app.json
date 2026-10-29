@@ -34,6 +34,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "0bc02694-8564-4ac0-af17-a3394e0a2787"
+      }
+    },
+    "owner": "sanjayyadav138"
   }
 }

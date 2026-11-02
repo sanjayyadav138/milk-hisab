@@ -6,6 +6,7 @@ import {
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { LanguageProvider, useLanguage } from './src/context/LanguageContext';
 import WelcomeSplashScreen from './src/screens/WelcomeSplashScreen';
+import WelcomeHomeScreen from './src/screens/WelcomeHomeScreen';
 import AuthScreen from './src/screens/AuthScreen';
 import NetflixDashboardHomeScreen from './src/screens/NetflixDashboardHomeScreen';
 import DailyChecklistScreen from './src/screens/vendor/DailyChecklistScreen';
@@ -16,8 +17,13 @@ function MainNavigator() {
   const { auth, logout } = useAuth();
   const { lang, toggleLang } = useLanguage();
 
-  // Splash Screen State: Shows central Milkman logo with watermarks for 1.5 seconds
+  // Splash Screen State
   const [isSplash, setIsSplash] = useState(true);
+
+  // Auth Flow State: 'WELCOME' (App Info & Role Selection) | 'AUTH' (Login / Register Card)
+  const [authView, setAuthView] = useState<'WELCOME' | 'AUTH'>('WELCOME');
+  const [selectedRole, setSelectedRole] = useState<'vendor' | 'customer'>('vendor');
+  const [selectedMode, setSelectedMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
 
   // Navigation State for Vendor Tabs: 'HOME' | 'DAILY' | 'CUSTOMERS'
   const [vendorTab, setVendorTab] = useState<'HOME' | 'DAILY' | 'CUSTOMERS'>('HOME');
@@ -25,14 +31,37 @@ function MainNavigator() {
   // Navigation State for Customer Tabs: 'HOME' | 'PORTAL'
   const [customerTab, setCustomerTab] = useState<'HOME' | 'PORTAL'>('HOME');
 
-  // 1. Initial 1.5-second cinematic Splash Screen
+  // 1. Initial 1.8-second cinematic Splash Screen (Seamless full-screen milk texture)
   if (isSplash) {
     return <WelcomeSplashScreen onFinish={() => setIsSplash(false)} />;
   }
 
-  // 2. Not Authenticated: Centered Auth Card with Milk Watermarks
+  // 2. Not Authenticated: Welcome Home Page -> Login/Register
   if (!auth.token || !auth.role) {
-    return <AuthScreen />;
+    if (authView === 'WELCOME') {
+      return (
+        <WelcomeHomeScreen 
+          onGoLogin={(role) => {
+            setSelectedRole(role);
+            setSelectedMode('LOGIN');
+            setAuthView('AUTH');
+          }}
+          onGoRegister={(role) => {
+            setSelectedRole(role);
+            setSelectedMode('REGISTER');
+            setAuthView('AUTH');
+          }}
+        />
+      );
+    }
+
+    return (
+      <AuthScreen 
+        initialRole={selectedRole}
+        initialMode={selectedMode}
+        onBack={() => setAuthView('WELCOME')}
+      />
+    );
   }
 
   // 3. Customer Role: Dashboard + Full Monthly Ledger

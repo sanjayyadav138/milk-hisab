@@ -12,12 +12,14 @@ interface AuthScreenProps {
   initialRole?: 'vendor' | 'customer';
   initialMode?: 'LOGIN' | 'REGISTER';
   onSuccess?: () => void;
+  onBack?: () => void;
 }
 
 export default function AuthScreen({ 
   initialRole = 'vendor', 
   initialMode = 'LOGIN', 
-  onSuccess 
+  onSuccess,
+  onBack,
 }: AuthScreenProps) {
   const { login, sendOtp, verifyOtp, registerVendor, registerCustomer, loading } = useAuth();
   const { lang, toggleLang, t } = useLanguage();
@@ -165,17 +167,30 @@ export default function AuthScreen({
           resizeMode="contain" 
         />
 
-        {/* TOP BAR: Demo Shortcut + 1-Tap Language Toggle */}
+        {/* TOP BAR: Back Button + Demo Shortcut + 1-Tap Language Toggle */}
         <View style={styles.topBar}>
-          <TouchableOpacity onPress={handleFillDemo} style={styles.demoPill} activeOpacity={0.8}>
-            <Text style={styles.demoPillText}>⚡ {lang === 'hi' ? 'त्वरित डेमो 1234' : 'Demo 1234'}</Text>
-          </TouchableOpacity>
+          {onBack ? (
+            <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.8}>
+              <Text style={styles.backBtnText}>← {lang === 'hi' ? 'वापस' : 'Back'}</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={handleFillDemo} style={styles.demoPill} activeOpacity={0.8}>
+              <Text style={styles.demoPillText}>⚡ {lang === 'hi' ? 'त्वरित डेमो 1234' : 'Demo 1234'}</Text>
+            </TouchableOpacity>
+          )}
 
-          <TouchableOpacity onPress={toggleLang} style={styles.langPill} activeOpacity={0.8}>
-            <Text style={styles.langPillText}>
-              🌐 {lang === 'hi' ? 'English' : 'हिन्दी'}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.topBarRight}>
+            {onBack && (
+              <TouchableOpacity onPress={handleFillDemo} style={styles.demoPill} activeOpacity={0.8}>
+                <Text style={styles.demoPillText}>⚡ 1234</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={toggleLang} style={styles.langPill} activeOpacity={0.8}>
+              <Text style={styles.langPillText}>
+                🌐 {lang === 'hi' ? 'English' : 'हिन्दी'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
@@ -542,6 +557,24 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'android' ? 24 : 10,
     marginBottom: 10,
     zIndex: 10,
+  },
+  topBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  backBtn: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#1E3A8A',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  backBtnText: {
+    color: '#1E3A8A',
+    fontSize: 12,
+    fontWeight: '800',
   },
   demoPill: {
     backgroundColor: 'rgba(30, 58, 138, 0.08)',

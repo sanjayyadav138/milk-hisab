@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, View, Text, TextInput, TouchableOpacity, 
-  FlatList, ActivityIndicator, SafeAreaView, Modal, Linking, Alert, Image 
+  FlatList, ActivityIndicator, SafeAreaView, Modal, Linking, Alert, Image, Share 
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { fetchCustomersApi, createCustomerApi } from '../../api/client';
@@ -90,17 +90,18 @@ export default function CustomersScreen() {
     }
   };
 
-  const openWhatsApp = (phone: string, name: string) => {
-    const cleanPhone = phone.replace(/[^0-9]/g, '');
-    const fullPhone = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
-    const text = encodeURIComponent(
-      lang === 'hi' 
-        ? `नमस्ते ${name} जी! Milk Hisab पर आपका दैनिक दूध का रिकॉर्ड दर्ज है। लॉगिन हेतु: http://16.176.65.41`
-        : `Hello ${name}! Your milk ledger records are updated on Milk Hisab. Log in at: http://16.176.65.41`
-    );
-    Linking.openURL(`whatsapp://send?phone=${fullPhone}&text=${text}`).catch(() => {
-      Alert.alert(lang === 'hi' ? 'WhatsApp नहीं मिला' : 'WhatsApp Not Found', lang === 'hi' ? 'फोन में WhatsApp ऐप इनस्टॉल होना चाहिए' : 'WhatsApp must be installed on your device');
-    });
+  const sendMessage = async (phone: string, name: string) => {
+    const text = lang === 'hi' 
+      ? `नमस्ते ${name} जी! Milk Hisab ऐप पर आपका दैनिक दूध का रिकॉर्ड अपडेट है। विवरण देखने हेतु: https://milkhisab.in`
+      : `Hello ${name}! Your milk ledger records are updated on Milk Hisab. View details at: https://milkhisab.in`;
+    try {
+      await Share.share({
+        message: text,
+        title: lang === 'hi' ? 'मिल्क हिसाब संदेश' : 'Milk Hisab Message'
+      });
+    } catch {
+      Linking.openURL(`sms:${phone}?body=${encodeURIComponent(text)}`).catch(() => {});
+    }
   };
 
   const makeCall = (phone: string) => {
@@ -147,7 +148,7 @@ export default function CustomersScreen() {
 
           <View style={styles.cardInfo}>
             <View style={styles.nameRow}>
-              <Text style={styles.cardName}>{item.name}</Text>
+              <Text style={styles.cardName} numberOfLines={2}>{item.name}</Text>
               <View style={[styles.badge, isSupplier ? styles.badgeSupplier : styles.badgeBuyer]}>
                 <Text style={styles.badgeText}>
                   {isSupplier ? (lang === 'hi' ? '📥 सप्लायर' : '📥 Sourcing') : (lang === 'hi' ? '📤 ग्राहक' : '📤 Customer')}
@@ -155,33 +156,37 @@ export default function CustomersScreen() {
               </View>
             </View>
             <Text style={styles.cardPhone}>📞 {item.phone}</Text>
-            {item.address ? <Text style={styles.cardAddress}>📍 {item.address}</Text> : null}
+            {item.address ? <Text style={styles.cardAddress} numberOfLines={1}>📍 {item.address}</Text> : null}
+          </View>
+        </View>
+
+        <View style={styles.cardFooter}>
+          <View style={styles.rateInfoColumn}>
+            <Text style={styles.rateInfo}>
+              {lang === 'hi' ? 'दैनिक: ' : 'Daily: '}<Text style={styles.rateHighlight}>{item.default_quantity}L</Text> ({item.milk_type})
+            </Text>
+            <Text style={styles.rateInfo}>
+              {lang === 'hi' ? 'दर: ' : 'Rate: '}<Text style={styles.rateHighlight}>₹{item.price_per_liter}</Text>/L
+            </Text>
           </View>
 
           <View style={styles.actionButtons}>
             <TouchableOpacity 
-              onPress={() => openWhatsApp(item.phone, item.name)} 
-              style={styles.actionBtnWhatsApp}
+              onPress={() => sendMessage(item.phone, item.name)} 
+              style={styles.actionBtnMessage}
+              activeOpacity={0.8}
             >
-              <Text style={styles.actionBtnText}>WhatsApp</Text>
+              <Text style={styles.actionBtnText}>{lang === 'hi' ? '💬 संदेश' : '💬 Message'}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               onPress={() => makeCall(item.phone)} 
               style={styles.actionBtnCall}
+              activeOpacity={0.8}
             >
-              <Text style={styles.actionBtnText}>{lang === 'hi' ? 'कॉल' : 'Call'}</Text>
+              <Text style={styles.actionBtnText}>{lang === 'hi' ? '📞 कॉल' : '📞 Call'}</Text>
             </TouchableOpacity>
           </View>
-        </View>
-
-        <View style={styles.cardFooter}>
-          <Text style={styles.rateInfo}>
-            {lang === 'hi' ? 'दैनिक: ' : 'Daily: '}<Text style={styles.rateHighlight}>{item.default_quantity}L</Text> ({item.milk_type})
-          </Text>
-          <Text style={styles.rateInfo}>
-            {lang === 'hi' ? 'दर: ' : 'Rate: '}<Text style={styles.rateHighlight}>₹{item.price_per_liter}</Text>/L
-          </Text>
         </View>
       </View>
     );
@@ -495,17 +500,23 @@ const styles = StyleSheet.create({
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
     gap: 6,
+    marginBottom: 2,
   },
   cardName: {
     fontSize: 15,
     fontWeight: '800',
     color: '#0f172a',
+    flexShrink: 1,
+    maxWidth: '72%',
   },
   badge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 8,
+    alignSelf: 'flex-start',
   },
   badgeBuyer: {
     backgroundColor: '#ecfdf5',
@@ -521,7 +532,7 @@ const styles = StyleSheet.create({
   cardPhone: {
     fontSize: 12,
     color: '#475569',
-    marginTop: 3,
+    marginTop: 2,
     fontWeight: '600',
   },
   cardAddress: {
@@ -529,21 +540,35 @@ const styles = StyleSheet.create({
     color: '#64748b',
     marginTop: 1,
   },
-  actionButtons: {
-    flexDirection: 'column',
-    gap: 6,
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
   },
-  actionBtnWhatsApp: {
-    backgroundColor: '#16a34a',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+  rateInfoColumn: {
+    flexDirection: 'column',
+    gap: 2,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  actionBtnMessage: {
+    backgroundColor: '#1E3A8A',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 10,
     alignItems: 'center',
   },
   actionBtnCall: {
     backgroundColor: '#0284c7',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 10,
     alignItems: 'center',
   },
@@ -551,14 +576,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 11,
     fontWeight: 'bold',
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
   },
   rateInfo: {
     fontSize: 12,

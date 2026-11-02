@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, View, Text, Modal, TouchableOpacity, 
-  ScrollView, Linking, Alert, Image, ActivityIndicator 
+  ScrollView, Linking, Alert, Image, ActivityIndicator, Share, TextInput 
 } from 'react-native';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
@@ -12,6 +12,7 @@ interface MonthlySlipModalProps {
   visible: boolean;
   onClose: () => void;
   onOpenFullLedger?: () => void;
+  initialMonth?: string;
   billData?: {
     month?: string;
     totalLiters?: number;
@@ -34,6 +35,7 @@ export default function MonthlySlipModal({
   visible, 
   onClose, 
   onOpenFullLedger,
+  initialMonth,
 }: MonthlySlipModalProps) {
   const { lang } = useLanguage();
   const { auth } = useAuth();
@@ -41,7 +43,7 @@ export default function MonthlySlipModal({
   const isVendor = auth.role === 'vendor';
 
   // Selected Month State
-  const [selectedMonth, setSelectedMonth] = useState('2026-10');
+  const [selectedMonth, setSelectedMonth] = useState(initialMonth || '2026-10');
 
   // Vendor: Customers list & selected customer
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -51,6 +53,16 @@ export default function MonthlySlipModal({
 
   const [loading, setLoading] = useState(false);
   const [slipData, setSlipData] = useState<any>(null);
+  const [showBreakdown, setShowBreakdown] = useState(true);
+  const [customPhone, setCustomPhone] = useState('');
+  const [showUpiModal, setShowUpiModal] = useState(false);
+
+  // Sync initial month when modal opens
+  useEffect(() => {
+    if (visible && initialMonth) {
+      setSelectedMonth(initialMonth);
+    }
+  }, [visible, initialMonth]);
 
   // Load customer list if vendor
   useEffect(() => {
@@ -78,7 +90,7 @@ export default function MonthlySlipModal({
     setLoading(true);
     try {
       const data = await fetchMonthlySlipApi(custId, monthKey);
-      if (data) {
+      if (data && data.total_liters !== undefined) {
         setSlipData(data);
       } else {
         createFallbackSlip(custId, monthKey);
@@ -94,23 +106,79 @@ export default function MonthlySlipModal({
     const custObj = customers.find(c => c.id === custId) || auth.customer;
     const cName = custObj?.name || (isHi ? 'राजेश शर्मा' : 'Rajesh Sharma');
     const mObj = AVAILABLE_MONTHS.find(m => m.key === monthKey);
-    const mName = isHi ? mObj?.nameHi : mObj?.nameEn;
+
+    const rate = custObj?.price_per_liter || 60.0;
+    const dailyQty = custObj?.default_quantity || 1.5;
+
+    let totalLiters = 45.0;
+    let deliveredDays = 30;
+    let skippedDays = 1;
+    let isSettled = true;
+
+    if (monthKey === '2026-11') {
+      deliveredDays = 2;
+      skippedDays = 0;
+      totalLiters = +(deliveredDays * dailyQty).toFixed(1);
+      isSettled = false;
+    } else if (monthKey === '2026-10') {
+      deliveredDays = 30;
+      skippedDays = 1;
+      totalLiters = +(deliveredDays * dailyQty).toFixed(1);
+      isSettled = true;
+    } else if (monthKey === '2026-09') {
+      deliveredDays = 29;
+      skippedDays = 1;
+      totalLiters = +(deliveredDays * dailyQty).toFixed(1);
+      isSettled = true;
+    } else if (monthKey === '2026-08') {
+      deliveredDays = 30;
+      skippedDays = 1;
+      totalLiters = +(deliveredDays * dailyQty).toFixed(1);
+      isSettled = true;
+    }
+
+    const totalAmount = Math.round(totalLiters * rate);
+    const paidAmount = isSettled ? totalAmount : 0;
+    const balanceDue = isSettled ? 0 : totalAmount;
+
+    const [yStr, mStr] = monthKey.split('-');
+    const year = parseInt(yStr, 10);
+    const month = parseInt(mStr, 10);
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const maxDay = monthKey === '2026-11' ? 2 : daysInMonth;
+
+    const breakdown = [];
+    for (let d = 1; d <= maxDay; d++) {
+      const isSkip = (d === 15) && (maxDay > 15);
+      const curDate = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      breakdown.push({
+        date: curDate,
+        day: d,
+        quantity: isSkip ? 0.0 : dailyQty,
+        status: isSkip ? 'Skipped' : 'Delivered',
+        notes: isSkip ? (isHi ? 'ग्राहक छुट्टी' : 'Skipped by customer') : (isHi ? 'प्रातः 7:00 बजे वितरित' : 'Morning Delivery')
+      });
+    }
 
     setSlipData({
       month: monthKey,
       month_name_hi: mObj?.nameHi || 'अक्टूबर 2026',
       month_name_en: mObj?.nameEn || 'October 2026',
+      customer_id: custId,
       customer_name: cName,
       customer_phone: custObj?.phone || '9811122233',
       vendor_name: auth.user?.business_name || (isHi ? 'श्री कृष्णा डेयरी फार्म' : 'Shree Krishna Dairy Farm'),
-      total_liters: 45.0,
-      rate_per_liter: 60,
-      total_amount: 2700,
-      delivered_days: 30,
-      skipped_days: 1,
-      status: 'Settled',
-      balance_due: 0,
-      paid_amount: 2700,
+      vendor_phone: auth.user?.phone || '9811100000',
+      vendor_upi: auth.user?.upi_id || '918076646872@paytm',
+      total_liters: totalLiters,
+      rate_per_liter: rate,
+      total_amount: totalAmount,
+      delivered_days: deliveredDays,
+      skipped_days: skippedDays,
+      status: isSettled ? 'Settled' : 'Pending',
+      balance_due: balanceDue,
+      paid_amount: paidAmount,
+      daily_breakdown: breakdown,
     });
   };
 
@@ -119,15 +187,17 @@ export default function MonthlySlipModal({
 
   const customerName = slipData?.customer_name || (auth.customer?.name || (isHi ? 'संजय यादव' : 'Sanjay Yadav'));
   const vendorName = slipData?.vendor_name || auth.user?.business_name || (isHi ? 'श्री कृष्णा डेयरी फार्म' : 'Shree Krishna Dairy Farm');
-  const totalLiters = slipData?.total_liters || 45.0;
-  const ratePerLiter = slipData?.rate_per_liter || 60;
-  const totalAmount = slipData?.total_amount || 2700;
-  const deliveredDays = slipData?.delivered_days || 30;
-  const skippedDays = slipData?.skipped_days || 1;
+  const totalLiters = slipData?.total_liters ?? 45.0;
+  const ratePerLiter = slipData?.rate_per_liter ?? 60;
+  const totalAmount = slipData?.total_amount ?? 2700;
+  const deliveredDays = slipData?.delivered_days ?? 30;
+  const skippedDays = slipData?.skipped_days ?? 1;
   const status = slipData?.status || 'Settled';
+  const dailyBreakdown = slipData?.daily_breakdown || [];
+  const vendorUpi = slipData?.vendor_upi || '918076646872@paytm';
 
-  const handleShareWhatsApp = () => {
-    const textReceipt = isHi
+  const buildReceiptText = () => {
+    return isHi
       ? `🥛 *मिल्क हिसाब (Milk Hisab) - मासिक बिल पर्ची*\n` +
         `--------------------------------\n` +
         `🏪 *डेयरी:* ${vendorName}\n` +
@@ -141,7 +211,7 @@ export default function MonthlySlipModal({
         `• वितरित दिन: ${deliveredDays} दिन (छुट्टी: ${skippedDays} दिन)\n` +
         `• स्थिति: *${status === 'Settled' ? '✅ चुकता (Settled)' : '⚡ देय (Pending)'}*\n` +
         `--------------------------------\n` +
-        `डिजिटल दूध बहीखाता • Milk Hisab App`
+        `पारदर्शी डिजिटल दूध बहीखाता • Milk Hisab App: https://milkhisab.in`
       : `🥛 *Milk Hisab - Verified Monthly Bill Slip*\n` +
         `--------------------------------\n` +
         `🏪 *Dairy:* ${vendorName}\n` +
@@ -155,34 +225,76 @@ export default function MonthlySlipModal({
         `• Delivered Days: ${deliveredDays} (Skipped: ${skippedDays})\n` +
         `• Ledger Status: *${status}*\n` +
         `--------------------------------\n` +
-        `Zero-dispute digital dairy ledger • Milk Hisab`;
+        `Zero-dispute digital dairy ledger • Milk Hisab App: https://milkhisab.in`;
+  };
 
-    const encoded = encodeURIComponent(textReceipt);
-    const targetPhone = slipData?.customer_phone ? slipData.customer_phone.replace(/[^0-9]/g, '') : '';
-    const waUrl = targetPhone ? `whatsapp://send?phone=91${targetPhone}&text=${encoded}` : `whatsapp://send?text=${encoded}`;
+  const handleShareUniversal = async () => {
+    const textReceipt = buildReceiptText();
+    try {
+      await Share.share({
+        message: textReceipt,
+        title: isHi ? 'मिल्क हिसाब मासिक बिल पर्ची' : 'Milk Hisab Monthly Bill Slip',
+      });
+    } catch {
+      Alert.alert(isHi ? 'पर्ची तैयार' : 'Slip Ready', textReceipt);
+    }
+  };
 
-    Linking.openURL(waUrl).catch(() => {
+  const handleSendToCustomPhone = () => {
+    const clean = customPhone.replace(/[^0-9]/g, '');
+    if (!clean || clean.length < 10) {
       Alert.alert(
-        isHi ? 'WhatsApp उपलब्ध नहीं' : 'WhatsApp Not Found',
-        isHi ? 'पर्ची का विवरण तैयार है:\n\n' + textReceipt : 'Slip details:\n\n' + textReceipt
+        isHi ? 'मान्य नंबर दर्ज करें' : 'Invalid Phone Number',
+        isHi ? 'कृपया 10 अंकों का मान्य मोबाइल नंबर दर्ज करें।' : 'Please enter a valid 10-digit mobile number.'
       );
+      return;
+    }
+    const textReceipt = buildReceiptText();
+    Linking.openURL(`sms:${clean}?body=${encodeURIComponent(textReceipt)}`).catch(() => {
+      handleShareUniversal();
     });
   };
 
-  const handlePayUpi = () => {
-    const upiId = slipData?.vendor_upi || '918076646872@paytm';
+  // Launch specific UPI app
+  const launchUpiApp = (app: 'gpay' | 'phonepe' | 'paytm' | 'any') => {
+    setShowUpiModal(false);
     const payeeName = encodeURIComponent(vendorName);
     const note = encodeURIComponent(`Milk Slip ${monthDisplay} - ${customerName}`);
-    const upiUrl = `upi://pay?pa=${upiId}&pn=${payeeName}&am=${totalAmount}&cu=INR&tn=${note}`;
+    const amount = totalAmount;
 
-    Linking.openURL(upiUrl).catch(() => {
-      Alert.alert(
-        isHi ? 'UPI भुगतान' : 'UPI Payment',
-        isHi 
-          ? `कृपया PhonePe, Google Pay या Paytm पर UPI ID: ${upiId} पर ₹${totalAmount} का भुगतान करें।`
-          : `Please open your UPI app and pay ₹${totalAmount} to UPI ID: ${upiId}`
-      );
+    let url = '';
+    if (app === 'gpay') {
+      url = `tez://upi/pay?pa=${vendorUpi}&pn=${payeeName}&am=${amount}&cu=INR&tn=${note}`;
+    } else if (app === 'phonepe') {
+      url = `phonepe://pay?pa=${vendorUpi}&pn=${payeeName}&am=${amount}&cu=INR&tn=${note}`;
+    } else if (app === 'paytm') {
+      url = `paytmmp://pay?pa=${vendorUpi}&pn=${payeeName}&am=${amount}&cu=INR&tn=${note}`;
+    } else {
+      url = `upi://pay?pa=${vendorUpi}&pn=${payeeName}&am=${amount}&cu=INR&tn=${note}`;
+    }
+
+    Linking.openURL(url).catch(() => {
+      // Fallback to standard upi://
+      const genericUrl = `upi://pay?pa=${vendorUpi}&pn=${payeeName}&am=${amount}&cu=INR&tn=${note}`;
+      Linking.openURL(genericUrl).catch(() => {
+        Alert.alert(
+          isHi ? 'UPI ऐप उपलब्ध नहीं है' : 'UPI App Not Found',
+          isHi 
+            ? `कृपया अपने फोन में Google Pay, PhonePe या Paytm खोलें और UPI ID: ${vendorUpi} पर ₹${amount} का भुगतान करें।`
+            : `Please open your preferred payment app and send ₹${amount} to UPI ID: ${vendorUpi}`
+        );
+      });
     });
+  };
+
+  const copyUpiId = () => {
+    setShowUpiModal(false);
+    Alert.alert(
+      isHi ? 'UPI ID प्राप्त' : 'UPI ID Copied',
+      isHi 
+        ? `दूधिया की UPI ID: ${vendorUpi}\nराशि: ₹${totalAmount}\n\nआप किसी भी UPI ऐप (GPay, PhonePe, Paytm, BHIM) में जाकर यह ID डालकर भुगतान कर सकते हैं।`
+        : `Vendor UPI ID: ${vendorUpi}\nAmount: ₹${totalAmount}\n\nYou can paste this UPI ID in any payment app to complete payment.`
+    );
   };
 
   return (
@@ -209,10 +321,10 @@ export default function MonthlySlipModal({
             </TouchableOpacity>
           </View>
 
-          {/* Month Selector Pills (Issue 6 Fix!) */}
+          {/* Month Selector Pills */}
           <View style={styles.monthPickerSection}>
             <Text style={styles.pickerSectionLabel}>
-              📅 {isHi ? 'माह चुनें (SELECT MONTH):' : 'Select Month:'}
+              📅 {isHi ? 'बिल माह चुनें (SELECT MONTH):' : 'Select Month:'}
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.monthPillsRow}>
               {AVAILABLE_MONTHS.map(m => (
@@ -230,7 +342,7 @@ export default function MonthlySlipModal({
             </ScrollView>
           </View>
 
-          {/* Vendor Customer Selector (Issue 6 Fix!) */}
+          {/* Vendor Customer Selector */}
           {isVendor && customers.length > 0 && (
             <View style={styles.customerPickerSection}>
               <Text style={styles.pickerSectionLabel}>
@@ -256,12 +368,12 @@ export default function MonthlySlipModal({
           {loading ? (
             <View style={styles.loadingBox}>
               <ActivityIndicator size="large" color="#1E3A8A" />
-              <Text style={styles.loadingText}>{isHi ? 'पर्ची लोड हो रही है...' : 'Calculating slip...'}</Text>
+              <Text style={styles.loadingText}>{isHi ? 'मासिक हिसाब की गणना हो रही है...' : 'Calculating monthly slip...'}</Text>
             </View>
           ) : (
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
               
-              {/* Slip Card Design */}
+              {/* Slip Voucher Card */}
               <View style={styles.voucherContainer}>
                 
                 {/* Meta details */}
@@ -291,8 +403,8 @@ export default function MonthlySlipModal({
                   </View>
 
                   <View style={styles.statBox}>
-                    <Text style={styles.statLabel}>{isHi ? 'वितरित दिन' : 'Days'}</Text>
-                    <Text style={styles.statValue}>{deliveredDays} दिन</Text>
+                    <Text style={styles.statLabel}>{isHi ? 'वितरित दिन' : 'Delivered Days'}</Text>
+                    <Text style={styles.statValue}>{deliveredDays} {isHi ? 'दिन' : 'days'}</Text>
                   </View>
                 </View>
 
@@ -301,9 +413,9 @@ export default function MonthlySlipModal({
                 {/* Bill Amount Row */}
                 <View style={styles.amountRow}>
                   <View>
-                    <Text style={styles.totalBillLabel}>{isHi ? 'कुल मासिक देय राशि' : 'Total Monthly Bill'}</Text>
+                    <Text style={styles.totalBillLabel}>{isHi ? 'कुल मासिक बिल' : 'Total Monthly Bill'}</Text>
                     <Text style={styles.subtext}>
-                      {isHi ? `${deliveredDays} दिन दूध प्राप्त • ${skippedDays} दिन छुट्टी` : `${deliveredDays} delivered, ${skippedDays} skipped`}
+                      {isHi ? `${deliveredDays} दिन वितरण • ${skippedDays} दिन छुट्टी` : `${deliveredDays} delivered, ${skippedDays} skipped`}
                     </Text>
                   </View>
                   <Text style={styles.totalBillAmount}>₹{totalAmount.toLocaleString('en-IN')}</Text>
@@ -322,35 +434,113 @@ export default function MonthlySlipModal({
 
               </View>
 
-              {/* Action Buttons */}
-              <View style={styles.actionBtnRow}>
+              {/* Day-by-Day Delivery Breakdown Section */}
+              <View style={styles.breakdownSection}>
                 <TouchableOpacity 
-                  onPress={handleShareWhatsApp} 
-                  style={styles.shareWhatsAppBtn}
+                  onPress={() => setShowBreakdown(!showBreakdown)}
+                  style={styles.breakdownHeader}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.breakdownTitleRow}>
+                    <Text style={styles.breakdownTitle}>
+                      📅 {isHi ? 'दैनिक डिलीवरी रिकॉर्ड (दिन-वार ब्योरा)' : 'Day-by-Day Delivery Log'}
+                    </Text>
+                    <View style={styles.breakdownBadgePill}>
+                      <Text style={styles.breakdownBadgeText}>{dailyBreakdown.length} {isHi ? 'दिन' : 'days'}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.breakdownChevron}>{showBreakdown ? '▲' : '▼'}</Text>
+                </TouchableOpacity>
+
+                {showBreakdown && (
+                  <View style={styles.breakdownTableContainer}>
+                    <View style={styles.tableHeaderRow}>
+                      <Text style={[styles.tableColHeader, { flex: 1.2 }]}>{isHi ? 'तारीख' : 'Date'}</Text>
+                      <Text style={[styles.tableColHeader, { flex: 1, textAlign: 'center' }]}>{isHi ? 'मात्रा' : 'Qty'}</Text>
+                      <Text style={[styles.tableColHeader, { flex: 1.2, textAlign: 'right' }]}>{isHi ? 'स्थिति' : 'Status'}</Text>
+                    </View>
+
+                    {dailyBreakdown.length === 0 ? (
+                      <Text style={styles.emptyBreakdownText}>{isHi ? 'इस माह के लिए कोई रिकॉर्ड उपलब्ध नहीं है' : 'No records for this month'}</Text>
+                    ) : (
+                      dailyBreakdown.map((row: any, idx: number) => {
+                        const isSkip = row.status === 'Skipped';
+                        return (
+                          <View key={idx} style={[styles.tableRow, idx % 2 === 1 && styles.tableRowAlt]}>
+                            <Text style={[styles.tableCell, { flex: 1.2 }]}>
+                              {row.date ? row.date.slice(5) : `Day ${row.day}`}
+                            </Text>
+                            <Text style={[styles.tableCellBold, { flex: 1, textAlign: 'center' }]}>
+                              {row.quantity} L
+                            </Text>
+                            <View style={[styles.tableStatusCell, { flex: 1.2, alignItems: 'flex-end' }]}>
+                              <View style={[styles.tableStatusBadge, isSkip ? styles.tableStatusSkipped : styles.tableStatusDelivered]}>
+                                <Text style={[styles.tableStatusText, isSkip ? styles.tableTextSkipped : styles.tableTextDelivered]}>
+                                  {isSkip ? (isHi ? 'छुट्टी' : 'Skipped') : (isHi ? 'वितरित' : 'Delivered')}
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+                        );
+                      })
+                    )}
+                  </View>
+                )}
+              </View>
+
+              {/* Universal Share to ANY Contact / Phone */}
+              <View style={styles.shareBox}>
+                <Text style={styles.shareBoxLabel}>
+                  📤 {isHi ? 'पर्ची किसी भी संपर्क को भेजें (SHARE BILL)' : 'Share Slip to Any Contact:'}
+                </Text>
+                
+                <TouchableOpacity 
+                  onPress={handleShareUniversal} 
+                  style={styles.universalShareBtn}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.shareWhatsAppText}>
-                    💬 {isHi ? 'WhatsApp पर पर्ची भेजें' : 'Share Slip on WhatsApp'}
+                  <Text style={styles.universalShareText}>
+                    📤 {isHi ? 'पर्ची शेयर करें (किसी भी ऐप / संपर्क पर)' : 'Share Bill Slip (Any App / Contact)'}
                   </Text>
                 </TouchableOpacity>
 
-                {!isVendor && status !== 'Settled' && (
+                <View style={styles.customPhoneRow}>
+                  <TextInput
+                    style={styles.customPhoneInput}
+                    placeholder={isHi ? 'अन्य 10-अंक का मोबाइल नंबर...' : 'Enter 10-digit mobile number...'}
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                    value={customPhone}
+                    onChangeText={setCustomPhone}
+                  />
                   <TouchableOpacity 
-                    onPress={handlePayUpi} 
-                    style={styles.payUpiBtn}
-                    activeOpacity={0.85}
+                    onPress={handleSendToCustomPhone}
+                    style={styles.customPhoneBtn}
+                    activeOpacity={0.8}
                   >
-                    <Text style={styles.payUpiText}>
-                      ⚡ {isHi ? `₹${totalAmount} का UPI भुगतान करें` : `Pay ₹${totalAmount} via UPI`}
-                    </Text>
+                    <Text style={styles.customPhoneBtnText}>{isHi ? 'SMS भेजें' : 'Send SMS'}</Text>
                   </TouchableOpacity>
-                )}
+                </View>
               </View>
+
+              {/* UPI Payment Button with Chooser */}
+              {!isVendor && status !== 'Settled' && (
+                <TouchableOpacity 
+                  onPress={() => setShowUpiModal(true)} 
+                  style={styles.payUpiBtn}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.payUpiText}>
+                    ⚡ {isHi ? `₹${totalAmount} का UPI भुगतान करें (GPay / PhonePe / Paytm)` : `Pay ₹${totalAmount} via UPI (GPay / PhonePe / Paytm)`}
+                  </Text>
+                </TouchableOpacity>
+              )}
 
               {onOpenFullLedger && (
                 <TouchableOpacity onPress={() => { onClose(); onOpenFullLedger(); }} style={styles.fullLedgerLink}>
                   <Text style={styles.fullLedgerLinkText}>
-                    📅 {isHi ? 'पूरा दैनिक बहीखाता विवरण देखें →' : 'View Full Daily Ledger Breakdown →'}
+                    📊 {isHi ? 'पूरा दैनिक बहीखाता विवरण देखें →' : 'View Full Daily Ledger Breakdown →'}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -360,6 +550,67 @@ export default function MonthlySlipModal({
 
         </View>
       </View>
+
+      {/* UPI App Chooser Modal */}
+      <Modal visible={showUpiModal} animationType="fade" transparent onRequestClose={() => setShowUpiModal(false)}>
+        <View style={styles.upiModalBackdrop}>
+          <View style={styles.upiModalCard}>
+            <Text style={styles.upiModalTitle}>⚡ {isHi ? 'UPI भुगतान माध्यम चुनें' : 'Choose UPI Payment App'}</Text>
+            <Text style={styles.upiModalSub}>
+              {isHi ? `देय राशि: ₹${totalAmount} • प्राप्तकर्ता: ${vendorName}` : `Amount: ₹${totalAmount} • Payee: ${vendorName}`}
+            </Text>
+
+            <TouchableOpacity 
+              onPress={() => launchUpiApp('gpay')} 
+              style={[styles.upiAppBtn, { backgroundColor: '#1E3A8A' }]}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.upiAppBtnText}>🔵 Google Pay (GPay)</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => launchUpiApp('phonepe')} 
+              style={[styles.upiAppBtn, { backgroundColor: '#5F259F' }]}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.upiAppBtnText}>🟣 PhonePe (फोनपे)</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => launchUpiApp('paytm')} 
+              style={[styles.upiAppBtn, { backgroundColor: '#00BAF2' }]}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.upiAppBtnText}>🔷 Paytm (पेटीएम)</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => launchUpiApp('any')} 
+              style={[styles.upiAppBtn, { backgroundColor: '#10B981' }]}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.upiAppBtnText}>⚡ {isHi ? 'कोई भी अन्य UPI ऐप' : 'Any Other UPI App'}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={copyUpiId} 
+              style={styles.copyUpiBtn}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.copyUpiBtnText}>📋 {isHi ? `UPI ID कॉपी करें (${vendorUpi})` : `Copy UPI ID (${vendorUpi})`}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => setShowUpiModal(false)} 
+              style={styles.closeUpiModalBtn}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.closeUpiModalText}>{isHi ? 'रद्द करें' : 'Cancel'}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
     </Modal>
   );
 }
@@ -373,9 +624,9 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 26,
-    padding: 20,
-    maxHeight: '92%',
+    borderRadius: 24,
+    padding: 18,
+    maxHeight: '94%',
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
     shadowColor: '#000',
@@ -387,15 +638,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   logoIcon: {
-    width: 38,
-    height: 38,
+    width: 36,
+    height: 36,
     marginRight: 10,
   },
   slipBrandTitle: {
@@ -424,16 +675,16 @@ const styles = StyleSheet.create({
   monthPickerSection: {
     marginBottom: 10,
     backgroundColor: '#F8FAFC',
-    borderRadius: 14,
-    padding: 10,
+    borderRadius: 12,
+    padding: 8,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
   customerPickerSection: {
     marginBottom: 10,
     backgroundColor: '#F8FAFC',
-    borderRadius: 14,
-    padding: 10,
+    borderRadius: 12,
+    padding: 8,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
@@ -453,7 +704,7 @@ const styles = StyleSheet.create({
   monthPill: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: 10,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#CBD5E1',
@@ -506,8 +757,8 @@ const styles = StyleSheet.create({
   },
   voucherContainer: {
     backgroundColor: '#F8FAFC',
-    borderRadius: 18,
-    padding: 16,
+    borderRadius: 16,
+    padding: 14,
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
   },
@@ -532,7 +783,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#CBD5E1',
     borderStyle: 'dashed',
-    marginVertical: 12,
+    marginVertical: 10,
   },
   voucherStatsRow: {
     flexDirection: 'row',
@@ -542,13 +793,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#64748B',
     fontWeight: '600',
     marginBottom: 2,
   },
   statValue: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '900',
     color: '#0F172A',
   },
@@ -568,19 +819,19 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   totalBillAmount: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '900',
     color: '#10B981',
   },
   statusRow: {
-    marginTop: 12,
+    marginTop: 10,
     alignItems: 'center',
   },
   settledBadge: {
     backgroundColor: '#D1FAE5',
     paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 14,
+    paddingVertical: 4,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#10B981',
   },
@@ -592,8 +843,8 @@ const styles = StyleSheet.create({
   pendingBadge: {
     backgroundColor: '#FEF3C7',
     paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 14,
+    paddingVertical: 4,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#F59E0B',
   },
@@ -602,30 +853,174 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#B45309',
   },
-  actionBtnRow: {
-    marginTop: 16,
-    gap: 10,
-  },
-  shareWhatsAppBtn: {
-    backgroundColor: '#1E3A8A', // Deep Dairy Blue
-    paddingVertical: 13,
+  breakdownSection: {
+    marginTop: 12,
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    alignItems: 'center',
-    shadowColor: '#1E3A8A',
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
   },
-  shareWhatsAppText: {
+  breakdownHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#F1F5F9',
+  },
+  breakdownTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  breakdownTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#1E3A8A',
+  },
+  breakdownBadgePill: {
+    backgroundColor: '#E2E8F0',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  breakdownBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  breakdownChevron: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: 'bold',
+  },
+  breakdownTableContainer: {
+    padding: 10,
+  },
+  tableHeaderRow: {
+    flexDirection: 'row',
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    marginBottom: 4,
+  },
+  tableColHeader: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#64748B',
+    textTransform: 'uppercase',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
+  },
+  tableRowAlt: {
+    backgroundColor: '#F8FAFC',
+  },
+  tableCell: {
+    fontSize: 12,
+    color: '#475569',
+    fontWeight: '600',
+  },
+  tableCellBold: {
+    fontSize: 12,
+    color: '#0F172A',
+    fontWeight: '800',
+  },
+  tableStatusCell: {
+    justifyContent: 'center',
+  },
+  tableStatusBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  tableStatusDelivered: {
+    backgroundColor: '#ECFDF5',
+  },
+  tableStatusSkipped: {
+    backgroundColor: '#FEF3C7',
+  },
+  tableStatusText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  tableTextDelivered: {
+    color: '#059669',
+  },
+  tableTextSkipped: {
+    color: '#D97706',
+  },
+  emptyBreakdownText: {
+    textAlign: 'center',
+    paddingVertical: 12,
+    fontSize: 12,
+    color: '#94A3B8',
+  },
+  shareBox: {
+    marginTop: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  shareBoxLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 8,
+  },
+  universalShareBtn: {
+    backgroundColor: '#1E3A8A', // Deep Dairy Blue
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  universalShareText: {
     color: '#FFFFFF',
     fontWeight: '900',
     fontSize: 13,
+  },
+  customPhoneRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  customPhoneInput: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 12,
+    color: '#0F172A',
+  },
+  customPhoneBtn: {
+    backgroundColor: '#0284C7', // Sky Blue
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  customPhoneBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
   },
   payUpiBtn: {
     backgroundColor: '#10B981', // Ledger Green
     paddingVertical: 13,
     borderRadius: 14,
     alignItems: 'center',
+    marginTop: 12,
   },
   payUpiText: {
     color: '#FFFFFF',
@@ -640,5 +1035,72 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     color: '#1E3A8A',
+  },
+  upiModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  upiModalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 20,
+    width: '100%',
+    maxWidth: 360,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  upiModalTitle: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#0F172A',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  upiModalSub: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    marginBottom: 16,
+    fontWeight: '600',
+  },
+  upiAppBtn: {
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  upiAppBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  copyUpiBtn: {
+    backgroundColor: '#F1F5F9',
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  copyUpiBtnText: {
+    color: '#1E3A8A',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  closeUpiModalBtn: {
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  closeUpiModalText: {
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

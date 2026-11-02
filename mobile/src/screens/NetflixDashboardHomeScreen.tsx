@@ -29,6 +29,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
   const [disputeModalVisible, setDisputeModalVisible] = useState(false);
   const [chatModalVisible, setChatModalVisible] = useState(false);
   const [slipModalVisible, setSlipModalVisible] = useState(false);
+  const [selectedSlipMonth, setSelectedSlipMonth] = useState('2026-10');
 
   // Skip Delivery State
   const [selectedSkipDate, setSelectedSkipDate] = useState('Tomorrow (30 Oct)');
@@ -257,6 +258,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
                   if (isVendor) {
                     if (onNavigateTab) onNavigateTab('DAILY');
                   } else {
+                    setSelectedSlipMonth('2026-10');
                     setSlipModalVisible(true);
                   }
                 }}
@@ -334,6 +336,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
                 if (isVendor) {
                   if (onNavigateTab) onNavigateTab('DAILY');
                 } else {
+                  setSelectedSlipMonth('2026-10');
                   setSlipModalVisible(true);
                 }
               }}
@@ -613,7 +616,10 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
             {/* Bill Card 1: October 2026 Running */}
             <TouchableOpacity 
               style={styles.billCard}
-              onPress={() => setSlipModalVisible(true)}
+              onPress={() => {
+                setSelectedSlipMonth('2026-10');
+                setSlipModalVisible(true);
+              }}
               activeOpacity={0.9}
             >
               <View style={styles.billHeader}>
@@ -650,7 +656,10 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
                 </Text>
 
                 <TouchableOpacity 
-                  onPress={() => setSlipModalVisible(true)}
+                  onPress={() => {
+                    setSelectedSlipMonth('2026-10');
+                    setSlipModalVisible(true);
+                  }}
                   style={styles.billActionBtn}
                   activeOpacity={0.8}
                 >
@@ -664,7 +673,10 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
             {/* Bill Card 2: Pending Dues Alert */}
             <TouchableOpacity 
               style={[styles.billCard, { borderColor: '#F59E0B' }]}
-              onPress={() => setSlipModalVisible(true)}
+              onPress={() => {
+                setSelectedSlipMonth('2026-11');
+                setSlipModalVisible(true);
+              }}
               activeOpacity={0.9}
             >
               <View style={styles.billHeader}>
@@ -701,7 +713,10 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
                 </Text>
 
                 <TouchableOpacity 
-                  onPress={() => setSlipModalVisible(true)}
+                  onPress={() => {
+                    setSelectedSlipMonth('2026-11');
+                    setSlipModalVisible(true);
+                  }}
                   style={[styles.billActionBtn, { backgroundColor: '#F59E0B' }]}
                   activeOpacity={0.8}
                 >
@@ -715,7 +730,10 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
             {/* Bill Card 3: September Completed */}
             <TouchableOpacity 
               style={styles.billCard}
-              onPress={() => setSlipModalVisible(true)}
+              onPress={() => {
+                setSelectedSlipMonth('2026-09');
+                setSlipModalVisible(true);
+              }}
               activeOpacity={0.9}
             >
               <View style={styles.billHeader}>
@@ -752,7 +770,10 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
                 </Text>
 
                 <TouchableOpacity 
-                  onPress={() => setSlipModalVisible(true)}
+                  onPress={() => {
+                    setSelectedSlipMonth('2026-09');
+                    setSlipModalVisible(true);
+                  }}
                   style={styles.billActionBtn}
                   activeOpacity={0.8}
                 >
@@ -1010,17 +1031,9 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
       <MonthlySlipModal 
         visible={slipModalVisible}
         onClose={() => setSlipModalVisible(false)}
+        initialMonth={selectedSlipMonth}
         onOpenFullLedger={() => {
           if (onNavigateTab) onNavigateTab('PORTAL');
-        }}
-        billData={{
-          month: lang === 'hi' ? 'अक्टूबर 2026' : 'October 2026',
-          totalLiters: 45.0,
-          ratePerLiter: 60,
-          totalAmount: 2700,
-          deliveredDays: 30,
-          skippedDays: 1,
-          status: 'Settled',
         }}
       />
     </SafeAreaView>

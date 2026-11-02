@@ -228,6 +228,20 @@ export async function skipMilkDateApi(customerId: number, date: string, reason?:
   });
 }
 
+export async function searchUserByPhoneApi(phone: string) {
+  return request<{
+    found: boolean;
+    id?: number;
+    name?: string;
+    phone?: string;
+    role?: 'customer' | 'vendor';
+    avatar_url?: string;
+    address?: string;
+    subtitle?: string;
+    message?: string;
+  }>(`/portal/users/search-by-phone?phone=${encodeURIComponent(phone)}`);
+}
+
 // 5. Voice AI Parsing API
 export async function parseVoiceCommandApi(transcript: string) {
   return request<any>('/logs/parse-voice', {

@@ -496,3 +496,19 @@ export async function submitContactInquiryApi(payload: {
   }
   return res.json();
 }
+
+export async function searchUserByPhoneApi(phone: string): Promise<{
+  found: boolean;
+  id?: number;
+  name?: string;
+  phone?: string;
+  role?: 'customer' | 'vendor';
+  avatar_url?: string;
+  address?: string;
+  subtitle?: string;
+  message?: string;
+}> {
+  const res = await fetch(`${API_BASE}/portal/users/search-by-phone?phone=${encodeURIComponent(phone)}`);
+  if (!res.ok) throw new Error("उपयोगकर्ता खोजने में त्रुटि आई");
+  return res.json();
+}

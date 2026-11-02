@@ -380,16 +380,16 @@ export default function CustomersView({ onResetCustomerPin }: CustomersViewProps
                       <span className="absolute bottom-0.5 right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white"></span>
                     </div>
 
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-black text-slate-900 text-base">{c.name}</h4>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center flex-wrap gap-2">
+                        <h4 className="font-black text-slate-900 text-base break-words max-w-full">{c.name}</h4>
                       {isSupplier ? (
-                        <span className="text-[10px] font-black bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md flex items-center gap-1">
+                        <span className="text-[10px] font-black bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md flex items-center gap-1 shrink-0">
                           <ArrowDownCircle className="w-3 h-3 text-blue-600" />
                           {t('supplierHomeBadge')}
                         </span>
                       ) : (
-                        <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md flex items-center gap-1">
+                        <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md flex items-center gap-1 shrink-0">
                           <ArrowUpCircle className="w-3 h-3 text-emerald-600" />
                           {t('customerBadge')}
                         </span>
@@ -461,7 +461,7 @@ export default function CustomersView({ onResetCustomerPin }: CustomersViewProps
                 {createdNotice.pin}
               </p>
               <p className="text-[11px] text-blue-700 mt-1">
-                {lang === 'hi' ? 'यह पिन ग्राहक को WhatsApp या SMS से भेजें।' : 'Share this PIN with customer to log in.'}
+                {lang === 'hi' ? 'यह पिन ग्राहक को सुरक्षित संदेश या SMS से भेजें।' : 'Share this PIN with customer to log in.'}
               </p>
             </div>
 
@@ -470,10 +470,10 @@ export default function CustomersView({ onResetCustomerPin }: CustomersViewProps
                 href={createdNotice.whatsapp_share_url}
                 target="_blank"
                 rel="noreferrer"
-                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-sm transition active:scale-95"
+                className="w-full py-3 bg-blue-800 hover:bg-blue-900 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-sm transition active:scale-95"
               >
                 <MessageCircle className="w-4 h-4" />
-                <span>{lang === 'hi' ? 'WhatsApp पर पिन व लिंक भेजें' : 'Send PIN via WhatsApp'}</span>
+                <span>{lang === 'hi' ? 'ग्राहक को सीधा संदेश भेजें' : 'Share PIN via Direct Message'}</span>
               </a>
             )}
 

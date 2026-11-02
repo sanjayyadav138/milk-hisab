@@ -15,6 +15,7 @@ import {
 } from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { getIsoDateAgo } from '../utils/dateUtils';
 
 export interface DisputeItem {
   log_id: number;
@@ -58,7 +59,7 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
       customer_id: 1,
       customer_name: isHi ? 'राजेश शर्मा (House 12)' : 'Rajesh Sharma (House 12)',
       customer_phone: '9811122233',
-      date: '2026-10-26',
+      date: getIsoDateAgo(3),
       quantity: 2.0,
       reported_quantity: 1.5,
       status: 'Disputed',
@@ -73,14 +74,14 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
       customer_id: 2,
       customer_name: isHi ? 'आरती वर्मा (A-402)' : 'Aarti Verma (A-402)',
       customer_phone: '9822233344',
-      date: '2026-10-23',
+      date: getIsoDateAgo(6),
       quantity: 1.5,
       reported_quantity: 0.0,
       status: 'Disputed',
       dispute_status: 'Pending',
       dispute_reason: isHi 
-        ? '23 अक्टूबर को हम बाहर थे, छुट्टी दर्ज होनी थी।'
-        : 'We were out of town on 23rd Oct, should be marked as skip.',
+        ? 'छुट्टी वाले दिन हम बाहर थे, छुट्टी दर्ज होनी थी।'
+        : 'We were out of town on that day, should be marked as skip.',
       notes: 'CUSTOMER_REPORTED:0.0:छुट्टी पर थे'
     },
     {
@@ -88,7 +89,7 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
       customer_id: 1,
       customer_name: isHi ? 'राजेश शर्मा (House 12)' : 'Rajesh Sharma (House 12)',
       customer_phone: '9811122233',
-      date: '2026-10-24',
+      date: getIsoDateAgo(8),
       quantity: 1.0,
       reported_quantity: 1.0,
       status: 'Resolved',
@@ -101,7 +102,7 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
       customer_id: 1,
       customer_name: isHi ? 'राजेश शर्मा (House 12)' : 'Rajesh Sharma (House 12)',
       customer_phone: '9811122233',
-      date: '2026-10-28',
+      date: getIsoDateAgo(12),
       quantity: 0.5,
       reported_quantity: 0.5,
       status: 'Resolved',
@@ -114,7 +115,7 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
       customer_id: 3,
       customer_name: isHi ? 'कमलेश यादव (Plot 9)' : 'Kamlesh Yadav (Plot 9)',
       customer_phone: '9844455566',
-      date: '2026-10-20',
+      date: getIsoDateAgo(15),
       quantity: 2.0,
       reported_quantity: 1.0,
       status: 'Delivered',
@@ -143,7 +144,7 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
 
   // Customer Raise New Dispute Modal State
   const [isRaiseModalOpen, setIsRaiseModalOpen] = useState(false);
-  const [newDisputeDate, setNewDisputeDate] = useState('2026-10-29');
+  const [newDisputeDate, setNewDisputeDate] = useState(getIsoDateAgo(0));
   const [newLoggedQty, setNewLoggedQty] = useState('2.0');
   const [newActualQty, setNewActualQty] = useState('1.5');
   const [newReason, setNewReason] = useState('');

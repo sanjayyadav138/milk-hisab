@@ -14,6 +14,7 @@ import {
 } from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { getIsoDateAgo } from '../utils/dateUtils';
 
 export interface ChatMessage {
   id: number;
@@ -78,8 +79,8 @@ export default function ChatScreen({ onGoBack }: ChatScreenProps) {
       last_message: isHi ? 'नमस्ते, कल सुबह 1.5L गाय का दूध चाहिए।' : 'Hello, need 1.5L cow milk tomorrow.',
       last_time: '12:15 PM',
       messages: [
-        { id: 1, sender_name: isVendor ? currentUserName : 'दूधिया', sender_role: 'vendor', message: isHi ? 'नमस्ते! आज 2L दूध delivered.' : 'Hello! Today 2L milk delivered.', created_at: '2026-10-28T07:30:00' },
-        { id: 2, sender_name: 'राजेश शर्मा', sender_role: 'customer', message: isHi ? 'नमस्ते, कल सुबह 1.5L गाय का दूध चाहिए।' : 'Hello, need 1.5L cow milk tomorrow.', created_at: '2026-10-29T12:15:00' }
+        { id: 1, sender_name: isVendor ? currentUserName : 'दूधिया', sender_role: 'vendor', message: isHi ? 'नमस्ते! आज 2L दूध delivered.' : 'Hello! Today 2L milk delivered.', created_at: `${getIsoDateAgo(1)}T07:30:00` },
+        { id: 2, sender_name: 'राजेश शर्मा', sender_role: 'customer', message: isHi ? 'नमस्ते, कल सुबह 1.5L गाय का दूध चाहिए।' : 'Hello, need 1.5L cow milk tomorrow.', created_at: `${getIsoDateAgo(0)}T12:15:00` }
       ]
     },
     {
@@ -93,8 +94,8 @@ export default function ChatScreen({ onGoBack }: ChatScreenProps) {
       last_message: isHi ? 'कल शाम को 1L गाय का दूध और देना' : 'Please deliver 1L extra cow milk tomorrow evening',
       last_time: 'Yesterday',
       messages: [
-        { id: 3, sender_name: 'डॉ. वर्मा', sender_role: 'customer', message: isHi ? 'कल शाम को 1L गाय का दूध और देना' : 'Please deliver 1L extra cow milk tomorrow evening', created_at: '2026-10-27T18:20:00' },
-        { id: 4, sender_name: isVendor ? currentUserName : 'दूधिया', sender_role: 'vendor', message: isHi ? 'जी डॉक्टर साहब, नोट कर लिया है।' : 'Noted, doctor sahib.', created_at: '2026-10-27T18:25:00' }
+        { id: 3, sender_name: 'डॉ. वर्मा', sender_role: 'customer', message: isHi ? 'कल शाम को 1L गाय का दूध और देना' : 'Please deliver 1L extra cow milk tomorrow evening', created_at: `${getIsoDateAgo(2)}T18:20:00` },
+        { id: 4, sender_name: isVendor ? currentUserName : 'दूधिया', sender_role: 'vendor', message: isHi ? 'जी डॉक्टर साहब, नोट कर लिया है।' : 'Noted, doctor sahib.', created_at: `${getIsoDateAgo(2)}T18:25:00` }
       ]
     },
     {
@@ -106,9 +107,9 @@ export default function ChatScreen({ onGoBack }: ChatScreenProps) {
       address: isHi ? 'प्लॉट 9, न्यू कॉलोनी' : 'Plot 9, New Colony',
       unread_count: 0,
       last_message: isHi ? 'पर्ची प्राप्त हो गई है, धन्यवाद' : 'Received the slip, thanks',
-      last_time: '24 Oct',
+      last_time: 'Recent',
       messages: [
-        { id: 5, sender_name: 'कमलेश यादव', sender_role: 'customer', message: isHi ? 'पर्ची प्राप्त हो गई है, धन्यवाद' : 'Received the slip, thanks', created_at: '2026-10-24T10:00:00' }
+        { id: 5, sender_name: 'कमलेश यादव', sender_role: 'customer', message: isHi ? 'पर्ची प्राप्त हो गई है, धन्यवाद' : 'Received the slip, thanks', created_at: `${getIsoDateAgo(4)}T10:00:00` }
       ]
     }
   ];

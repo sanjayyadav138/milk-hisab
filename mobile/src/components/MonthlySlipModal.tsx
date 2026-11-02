@@ -7,6 +7,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { fetchMonthlySlipApi, fetchCustomersApi } from '../api/client';
 import { Customer } from '../types';
+import { getDynamicMonthList, getCurrentMonthKey, getMonthInfo } from '../utils/dateUtils';
 
 interface MonthlySlipModalProps {
   visible: boolean;
@@ -24,13 +25,6 @@ interface MonthlySlipModalProps {
   };
 }
 
-const AVAILABLE_MONTHS = [
-  { key: '2026-11', nameHi: 'नवम्बर 2026', nameEn: 'November 2026' },
-  { key: '2026-10', nameHi: 'अक्टूबर 2026', nameEn: 'October 2026' },
-  { key: '2026-09', nameHi: 'सितम्बर 2026', nameEn: 'September 2026' },
-  { key: '2026-08', nameHi: 'अगस्त 2026', nameEn: 'August 2026' },
-];
-
 export default function MonthlySlipModal({ 
   visible, 
   onClose, 
@@ -42,8 +36,12 @@ export default function MonthlySlipModal({
   const isHi = lang === 'hi';
   const isVendor = auth.role === 'vendor';
 
+  // Dynamic real-time month list (Current month + 5 previous months)
+  const availableMonths = getDynamicMonthList(6);
+  const currentMonthKey = getCurrentMonthKey();
+
   // Selected Month State
-  const [selectedMonth, setSelectedMonth] = useState(initialMonth || '2026-10');
+  const [selectedMonth, setSelectedMonth] = useState(initialMonth || currentMonthKey);
 
   // Vendor: Customers list & selected customer
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -59,8 +57,8 @@ export default function MonthlySlipModal({
 
   // Sync initial month when modal opens
   useEffect(() => {
-    if (visible && initialMonth) {
-      setSelectedMonth(initialMonth);
+    if (visible) {
+      setSelectedMonth(initialMonth || currentMonthKey);
     }
   }, [visible, initialMonth]);
 
@@ -105,65 +103,63 @@ export default function MonthlySlipModal({
   const createFallbackSlip = (custId: number, monthKey: string) => {
     const custObj = customers.find(c => c.id === custId) || auth.customer;
     const cName = custObj?.name || (isHi ? 'राजेश शर्मा' : 'Rajesh Sharma');
-    const mObj = AVAILABLE_MONTHS.find(m => m.key === monthKey);
+
+    const [yStr, mStr] = monthKey.split('-');
+    const year = parseInt(yStr, 10) || new Date().getFullYear();
+    const month = parseInt(mStr, 10) || (new Date().getMonth() + 1);
+    const monthInfo = getMonthInfo(year, month);
 
     const rate = custObj?.price_per_liter || 60.0;
     const dailyQty = custObj?.default_quantity || 1.5;
 
-    let totalLiters = 45.0;
-    let deliveredDays = 30;
-    let skippedDays = 1;
-    let isSettled = true;
+    const now = new Date();
+    const isCurrent = monthInfo.isCurrent;
+    const isPast = monthInfo.isPast;
+    const daysInMonth = monthInfo.totalDays;
 
-    if (monthKey === '2026-11') {
-      deliveredDays = 2;
-      skippedDays = 0;
-      totalLiters = +(deliveredDays * dailyQty).toFixed(1);
-      isSettled = false;
-    } else if (monthKey === '2026-10') {
-      deliveredDays = 30;
-      skippedDays = 1;
-      totalLiters = +(deliveredDays * dailyQty).toFixed(1);
-      isSettled = true;
-    } else if (monthKey === '2026-09') {
-      deliveredDays = 29;
-      skippedDays = 1;
-      totalLiters = +(deliveredDays * dailyQty).toFixed(1);
-      isSettled = true;
-    } else if (monthKey === '2026-08') {
-      deliveredDays = 30;
-      skippedDays = 1;
-      totalLiters = +(deliveredDays * dailyQty).toFixed(1);
-      isSettled = true;
-    }
+    // Real-time: if current month, only calculate days elapsed up to today!
+    const maxDay = isCurrent ? Math.max(1, Math.min(now.getDate(), daysInMonth)) : daysInMonth;
 
-    const totalAmount = Math.round(totalLiters * rate);
-    const paidAmount = isSettled ? totalAmount : 0;
-    const balanceDue = isSettled ? 0 : totalAmount;
-
-    const [yStr, mStr] = monthKey.split('-');
-    const year = parseInt(yStr, 10);
-    const month = parseInt(mStr, 10);
-    const daysInMonth = new Date(year, month, 0).getDate();
-    const maxDay = monthKey === '2026-11' ? 2 : daysInMonth;
-
+    let totalLiters = 0.0;
+    let deliveredDays = 0;
+    let skippedDays = 0;
     const breakdown = [];
+
     for (let d = 1; d <= maxDay; d++) {
-      const isSkip = (d === 15) && (maxDay > 15);
+      const isSkip = (d === 7 || d === 21) && (maxDay > 10);
       const curDate = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      breakdown.push({
-        date: curDate,
-        day: d,
-        quantity: isSkip ? 0.0 : dailyQty,
-        status: isSkip ? 'Skipped' : 'Delivered',
-        notes: isSkip ? (isHi ? 'ग्राहक छुट्टी' : 'Skipped by customer') : (isHi ? 'प्रातः 7:00 बजे वितरित' : 'Morning Delivery')
-      });
+      if (isSkip) {
+        skippedDays++;
+        breakdown.push({
+          date: curDate,
+          day: d,
+          quantity: 0.0,
+          status: 'Skipped',
+          notes: isHi ? 'ग्राहक द्वारा पूर्व सूचना (छुट्टी)' : 'Skipped by customer'
+        });
+      } else {
+        deliveredDays++;
+        totalLiters += dailyQty;
+        breakdown.push({
+          date: curDate,
+          day: d,
+          quantity: dailyQty,
+          status: 'Delivered',
+          notes: isHi ? 'प्रातः 7:00 बजे वितरित' : 'Morning Delivery'
+        });
+      }
     }
+
+    totalLiters = +totalLiters.toFixed(1);
+    const totalAmount = Math.round(totalLiters * rate);
+    const paidAmount = isPast ? totalAmount : 0;
+    const balanceDue = isPast ? 0 : totalAmount;
+    const isSettled = isPast && totalAmount > 0;
 
     setSlipData({
       month: monthKey,
-      month_name_hi: mObj?.nameHi || 'अक्टूबर 2026',
-      month_name_en: mObj?.nameEn || 'October 2026',
+      month_name_hi: monthInfo.nameHi,
+      month_name_en: monthInfo.nameEn,
       customer_id: custId,
       customer_name: cName,
       customer_phone: custObj?.phone || '9811122233',
@@ -182,8 +178,9 @@ export default function MonthlySlipModal({
     });
   };
 
-  const currentMonthObj = AVAILABLE_MONTHS.find(m => m.key === selectedMonth);
-  const monthDisplay = isHi ? currentMonthObj?.nameHi : currentMonthObj?.nameEn;
+  const [curY, curM] = selectedMonth.split('-').map(Number);
+  const currentMonthObj = getMonthInfo(curY || new Date().getFullYear(), curM || (new Date().getMonth() + 1));
+  const monthDisplay = isHi ? currentMonthObj.nameHi : currentMonthObj.nameEn;
 
   const customerName = slipData?.customer_name || (auth.customer?.name || (isHi ? 'संजय यादव' : 'Sanjay Yadav'));
   const vendorName = slipData?.vendor_name || auth.user?.business_name || (isHi ? 'श्री कृष्णा डेयरी फार्म' : 'Shree Krishna Dairy Farm');
@@ -327,7 +324,7 @@ export default function MonthlySlipModal({
               📅 {isHi ? 'बिल माह चुनें (SELECT MONTH):' : 'Select Month:'}
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.monthPillsRow}>
-              {AVAILABLE_MONTHS.map(m => (
+              {availableMonths.map(m => (
                 <TouchableOpacity
                   key={m.key}
                   onPress={() => setSelectedMonth(m.key)}
@@ -336,6 +333,7 @@ export default function MonthlySlipModal({
                 >
                   <Text style={[styles.monthPillText, selectedMonth === m.key && styles.monthPillTextActive]}>
                     {isHi ? m.nameHi : m.nameEn}
+                    {m.isCurrent ? (isHi ? ' (चालू)' : ' (Current)') : ''}
                   </Text>
                 </TouchableOpacity>
               ))}

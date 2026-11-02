@@ -11,6 +11,7 @@ import VoiceAssistantModal from '../components/VoiceAssistantModal';
 import ProfileModal from '../components/ProfileModal';
 import MonthlySlipModal from '../components/MonthlySlipModal';
 import ChatScreen from './ChatScreen';
+import { getDynamicMonthList, getCurrentMonthKey } from '../utils/dateUtils';
 
 const { width } = Dimensions.get('window');
 
@@ -29,7 +30,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
   const [disputeModalVisible, setDisputeModalVisible] = useState(false);
   const [chatModalVisible, setChatModalVisible] = useState(false);
   const [slipModalVisible, setSlipModalVisible] = useState(false);
-  const [selectedSlipMonth, setSelectedSlipMonth] = useState('2026-10');
+  const [selectedSlipMonth, setSelectedSlipMonth] = useState(getCurrentMonthKey());
 
   // Skip Delivery State
   const [selectedSkipDate, setSelectedSkipDate] = useState('Tomorrow (30 Oct)');
@@ -258,7 +259,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
                   if (isVendor) {
                     if (onNavigateTab) onNavigateTab('DAILY');
                   } else {
-                    setSelectedSlipMonth('2026-10');
+                    setSelectedSlipMonth(getCurrentMonthKey());
                     setSlipModalVisible(true);
                   }
                 }}
@@ -336,7 +337,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
                 if (isVendor) {
                   if (onNavigateTab) onNavigateTab('DAILY');
                 } else {
-                  setSelectedSlipMonth('2026-10');
+                  setSelectedSlipMonth(getCurrentMonthKey());
                   setSlipModalVisible(true);
                 }
               }}
@@ -608,182 +609,205 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
             </Text>
           </View>
 
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalListPadding}
-          >
-            {/* Bill Card 1: October 2026 Running */}
-            <TouchableOpacity 
-              style={styles.billCard}
-              onPress={() => {
-                setSelectedSlipMonth('2026-10');
-                setSlipModalVisible(true);
-              }}
-              activeOpacity={0.9}
-            >
-              <View style={styles.billHeader}>
-                <Text style={styles.billMonthTitle}>
-                  {lang === 'hi' ? 'अक्टूबर 2026 (चालू माह)' : 'October 2026 (Running)'}
-                </Text>
-                <View style={styles.badgeGreen}>
-                  <Text style={styles.badgeGreenText}>
-                    {lang === 'hi' ? 'पूर्ण चुकता' : 'All Clear'}
-                  </Text>
-                </View>
-              </View>
+          {(() => {
+            const isHi = lang === 'hi';
+            const dynamicMonths = getDynamicMonthList(3);
+            const curMonth = dynamicMonths[0]; // Real-time running month
+            const prevMonth = dynamicMonths[1]; // Real-time previous month
+            const olderMonth = dynamicMonths[2]; // Real-time prior month
 
-              <View style={styles.billMetricsRow}>
-                <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>{lang === 'hi' ? 'कुल दूध' : 'Total Milk'}</Text>
-                  <Text style={styles.metricValue}>45.0 L</Text>
-                </View>
-                <View style={styles.metricDivider} />
-                <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>{lang === 'hi' ? 'कुल बिल' : 'Total Bill'}</Text>
-                  <Text style={styles.metricValue}>₹2,700</Text>
-                </View>
-                <View style={styles.metricDivider} />
-                <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>{lang === 'hi' ? 'बाकी राशि' : 'Balance'}</Text>
-                  <Text style={[styles.metricValue, { color: '#10B981' }]}>₹0</Text>
-                </View>
-              </View>
+            const now = new Date();
+            const elapsedDays = Math.max(1, now.getDate());
+            const curMonthQty = (elapsedDays * 1.5).toFixed(1);
+            const curMonthBill = Math.round(elapsedDays * 1.5 * 60);
 
-              <View style={styles.billFooterRow}>
-                <Text style={styles.billDueText}>
-                  📅 {lang === 'hi' ? 'चक्र: 01 - 31 अक्टूबर' : 'Cycle: 01 - 31 Oct'}
-                </Text>
+            const prevDays = prevMonth.totalDays - 1;
+            const prevQty = (prevDays * 1.5).toFixed(1);
+            const prevBill = Math.round(prevDays * 1.5 * 60);
 
+            const olderDays = olderMonth.totalDays - 1;
+            const olderQty = (olderDays * 1.5).toFixed(1);
+            const olderBill = Math.round(olderDays * 1.5 * 60);
+
+            return (
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalListPadding}
+              >
+                {/* Bill Card 1: Real-time Current Month Running */}
                 <TouchableOpacity 
+                  style={styles.billCard}
                   onPress={() => {
-                    setSelectedSlipMonth('2026-10');
+                    setSelectedSlipMonth(curMonth.key);
                     setSlipModalVisible(true);
                   }}
-                  style={styles.billActionBtn}
-                  activeOpacity={0.8}
+                  activeOpacity={0.9}
                 >
-                  <Text style={styles.billActionBtnText}>
-                    🧾 {lang === 'hi' ? 'मासिक पर्ची देखें' : 'View Slip'}
-                  </Text>
+                  <View style={styles.billHeader}>
+                    <Text style={styles.billMonthTitle}>
+                      {isHi ? curMonth.nameHi : curMonth.nameEn} ({isHi ? 'चालू माह' : 'Running'})
+                    </Text>
+                    <View style={styles.badgeGreen}>
+                      <Text style={styles.badgeGreenText}>
+                        {isHi ? 'दैनिक प्रगति' : 'Active Cycle'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.billMetricsRow}>
+                    <View style={styles.metricItem}>
+                      <Text style={styles.metricLabel}>{isHi ? 'कुल दूध' : 'Total Milk'}</Text>
+                      <Text style={styles.metricValue}>{curMonthQty} L</Text>
+                    </View>
+                    <View style={styles.metricDivider} />
+                    <View style={styles.metricItem}>
+                      <Text style={styles.metricLabel}>{isHi ? 'कुल बिल' : 'Total Bill'}</Text>
+                      <Text style={styles.metricValue}>₹{curMonthBill.toLocaleString('en-IN')}</Text>
+                    </View>
+                    <View style={styles.metricDivider} />
+                    <View style={styles.metricItem}>
+                      <Text style={styles.metricLabel}>{isHi ? 'बाकी राशि' : 'Balance'}</Text>
+                      <Text style={[styles.metricValue, { color: '#F59E0B' }]}>₹{curMonthBill.toLocaleString('en-IN')}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.billFooterRow}>
+                    <Text style={styles.billDueText}>
+                      📅 {isHi ? `चक्र: 01 - ${curMonth.totalDays} ${curMonth.shortNameHi}` : `Cycle: 01 - ${curMonth.totalDays} ${curMonth.shortNameEn}`}
+                    </Text>
+
+                    <TouchableOpacity 
+                      onPress={() => {
+                        setSelectedSlipMonth(curMonth.key);
+                        setSlipModalVisible(true);
+                      }}
+                      style={styles.billActionBtn}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.billActionBtnText}>
+                        🧾 {isHi ? 'मासिक पर्ची देखें' : 'View Slip'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
 
-            {/* Bill Card 2: Pending Dues Alert */}
-            <TouchableOpacity 
-              style={[styles.billCard, { borderColor: '#F59E0B' }]}
-              onPress={() => {
-                setSelectedSlipMonth('2026-11');
-                setSlipModalVisible(true);
-              }}
-              activeOpacity={0.9}
-            >
-              <View style={styles.billHeader}>
-                <Text style={styles.billMonthTitle}>
-                  {lang === 'hi' ? 'पिछला बकाया बिल' : 'Pending Ledger Balance'}
-                </Text>
-                <View style={styles.badgeAmber}>
-                  <Text style={styles.badgeAmberText}>
-                    {lang === 'hi' ? '3 दिन में देय' : 'Due in 3 Days'}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.billMetricsRow}>
-                <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>{lang === 'hi' ? 'बकाया दूध' : 'Dues Qty'}</Text>
-                  <Text style={styles.metricValue}>14.0 L</Text>
-                </View>
-                <View style={styles.metricDivider} />
-                <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>{lang === 'hi' ? 'देय राशि' : 'Due Amount'}</Text>
-                  <Text style={[styles.metricValue, { color: '#F59E0B' }]}>₹850</Text>
-                </View>
-                <View style={styles.metricDivider} />
-                <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>{lang === 'hi' ? 'अंतिम तिथि' : 'Due Date'}</Text>
-                  <Text style={styles.metricValue}>01 Nov</Text>
-                </View>
-              </View>
-
-              <View style={styles.billFooterRow}>
-                <Text style={styles.billDueText}>
-                  ⚡ {lang === 'hi' ? 'शून्य ब्याज तुरंत भुगतान' : 'Zero fee on direct UPI'}
-                </Text>
-
+                {/* Bill Card 2: Real-time Previous Month Statement */}
                 <TouchableOpacity 
+                  style={[styles.billCard, { borderColor: '#10B981' }]}
                   onPress={() => {
-                    setSelectedSlipMonth('2026-11');
+                    setSelectedSlipMonth(prevMonth.key);
                     setSlipModalVisible(true);
                   }}
-                  style={[styles.billActionBtn, { backgroundColor: '#F59E0B' }]}
-                  activeOpacity={0.8}
+                  activeOpacity={0.9}
                 >
-                  <Text style={[styles.billActionBtnText, { color: '#0F172A' }]}>
-                    ⚡ {lang === 'hi' ? 'पर्ची व UPI' : 'Slip & Pay'}
-                  </Text>
+                  <View style={styles.billHeader}>
+                    <Text style={styles.billMonthTitle}>
+                      {isHi ? prevMonth.nameHi : prevMonth.nameEn} ({isHi ? 'पिछला बिल' : 'Previous'})
+                    </Text>
+                    <View style={styles.badgeGreen}>
+                      <Text style={styles.badgeGreenText}>
+                        ✓ {isHi ? 'सत्यापित चुकता' : 'Paid in Full'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.billMetricsRow}>
+                    <View style={styles.metricItem}>
+                      <Text style={styles.metricLabel}>{isHi ? 'कुल दूध' : 'Total Milk'}</Text>
+                      <Text style={styles.metricValue}>{prevQty} L</Text>
+                    </View>
+                    <View style={styles.metricDivider} />
+                    <View style={styles.metricItem}>
+                      <Text style={styles.metricLabel}>{isHi ? 'कुल बिल' : 'Total Bill'}</Text>
+                      <Text style={styles.metricValue}>₹{prevBill.toLocaleString('en-IN')}</Text>
+                    </View>
+                    <View style={styles.metricDivider} />
+                    <View style={styles.metricItem}>
+                      <Text style={styles.metricLabel}>{isHi ? 'बाकी राशि' : 'Balance'}</Text>
+                      <Text style={[styles.metricValue, { color: '#10B981' }]}>₹0</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.billFooterRow}>
+                    <Text style={styles.billDueText}>
+                      ⚡ {isHi ? 'शून्य बकाया • पूर्ण चुकता' : 'Zero dues • Settled'}
+                    </Text>
+
+                    <TouchableOpacity 
+                      onPress={() => {
+                        setSelectedSlipMonth(prevMonth.key);
+                        setSlipModalVisible(true);
+                      }}
+                      style={[styles.billActionBtn, { backgroundColor: '#10B981' }]}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.billActionBtnText}>
+                        🧾 {isHi ? 'पर्ची देखें' : 'View Slip'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
 
-            {/* Bill Card 3: September Completed */}
-            <TouchableOpacity 
-              style={styles.billCard}
-              onPress={() => {
-                setSelectedSlipMonth('2026-09');
-                setSlipModalVisible(true);
-              }}
-              activeOpacity={0.9}
-            >
-              <View style={styles.billHeader}>
-                <Text style={styles.billMonthTitle}>
-                  {lang === 'hi' ? 'सितम्बर 2026 (पूर्ण)' : 'September 2026'}
-                </Text>
-                <View style={styles.badgeGreen}>
-                  <Text style={styles.badgeGreenText}>
-                    ✓ {lang === 'hi' ? 'सत्यापित चुकता' : 'Paid in Full'}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.billMetricsRow}>
-                <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>{lang === 'hi' ? 'कुल दूध' : 'Total Milk'}</Text>
-                  <Text style={styles.metricValue}>46.5 L</Text>
-                </View>
-                <View style={styles.metricDivider} />
-                <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>{lang === 'hi' ? 'भुगतान किया' : 'Paid'}</Text>
-                  <Text style={[styles.metricValue, { color: '#10B981' }]}>₹2,790</Text>
-                </View>
-                <View style={styles.metricDivider} />
-                <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>{lang === 'hi' ? 'माध्यम' : 'Method'}</Text>
-                  <Text style={styles.metricValue}>GPay UPI</Text>
-                </View>
-              </View>
-
-              <View style={styles.billFooterRow}>
-                <Text style={styles.billDueText}>
-                  ✓ {lang === 'hi' ? '02 अक्टूबर को चुकता' : 'Settled on 02 Oct'}
-                </Text>
-
+                {/* Bill Card 3: Real-time Prior Month Verified */}
                 <TouchableOpacity 
+                  style={styles.billCard}
                   onPress={() => {
-                    setSelectedSlipMonth('2026-09');
+                    setSelectedSlipMonth(olderMonth.key);
                     setSlipModalVisible(true);
                   }}
-                  style={styles.billActionBtn}
-                  activeOpacity={0.8}
+                  activeOpacity={0.9}
                 >
-                  <Text style={styles.billActionBtnText}>
-                    🧾 {lang === 'hi' ? 'रसीद पर्ची' : 'View Slip'}
-                  </Text>
+                  <View style={styles.billHeader}>
+                    <Text style={styles.billMonthTitle}>
+                      {isHi ? olderMonth.nameHi : olderMonth.nameEn} ({isHi ? 'पूर्ण' : 'Completed'})
+                    </Text>
+                    <View style={styles.badgeGreen}>
+                      <Text style={styles.badgeGreenText}>
+                        ✓ {isHi ? 'सत्यापित चुकता' : 'Paid in Full'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.billMetricsRow}>
+                    <View style={styles.metricItem}>
+                      <Text style={styles.metricLabel}>{isHi ? 'कुल दूध' : 'Total Milk'}</Text>
+                      <Text style={styles.metricValue}>{olderQty} L</Text>
+                    </View>
+                    <View style={styles.metricDivider} />
+                    <View style={styles.metricItem}>
+                      <Text style={styles.metricLabel}>{isHi ? 'भुगतान किया' : 'Paid'}</Text>
+                      <Text style={[styles.metricValue, { color: '#10B981' }]}>₹{olderBill.toLocaleString('en-IN')}</Text>
+                    </View>
+                    <View style={styles.metricDivider} />
+                    <View style={styles.metricItem}>
+                      <Text style={styles.metricLabel}>{isHi ? 'माध्यम' : 'Method'}</Text>
+                      <Text style={styles.metricValue}>UPI</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.billFooterRow}>
+                    <Text style={styles.billDueText}>
+                      📅 {isHi ? `चक्र: 01 - ${olderMonth.totalDays} ${olderMonth.shortNameHi}` : `Cycle: 01 - ${olderMonth.totalDays} ${olderMonth.shortNameEn}`}
+                    </Text>
+
+                    <TouchableOpacity 
+                      onPress={() => {
+                        setSelectedSlipMonth(olderMonth.key);
+                        setSlipModalVisible(true);
+                      }}
+                      style={styles.billActionBtn}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.billActionBtnText}>
+                        🧾 {isHi ? 'रसीद पर्ची' : 'View Slip'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          </ScrollView>
+              </ScrollView>
+            );
+          })()}
         </View>
 
         {/* TRUST FOOTER */}

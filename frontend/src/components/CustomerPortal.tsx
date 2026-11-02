@@ -12,6 +12,7 @@ import {
 } from '../services/api';
 import { Customer, CustomerDashboardData, SubUser, CustomerMessage } from '../types';
 import { useLanguage } from '../context/LanguageContext';
+import { getDynamicMonthList, getCurrentMonthKey, getIsoDateAgo } from '../utils/dateUtils';
 
 interface CustomerPortalProps {
   customer: Customer;
@@ -53,7 +54,7 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin, on
   const [disputingLog, setDisputingLog] = useState<{ id: number; date: string; quantity: number } | null>(null);
   const [disputeReason, setDisputeReason] = useState('');
   const [submittingDispute, setSubmittingDispute] = useState(false);
-  const [selectedSlipMonth, setSelectedSlipMonth] = useState('2026-10');
+  const [selectedSlipMonth, setSelectedSlipMonth] = useState(getCurrentMonthKey());
 
   const handleSelectMonth = async (monthKey: string) => {
     setSelectedSlipMonth(monthKey);
@@ -321,12 +322,7 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin, on
         {/* Month Picker Row for Slip */}
         <div className="flex items-center gap-1.5 overflow-x-auto pt-3 border-t border-white/20 scrollbar-none">
           <span className="text-[11px] font-bold text-blue-100 shrink-0">📅 {lang === 'hi' ? 'माह चुनें:' : 'Select Month:'}</span>
-          {[
-            { key: '2026-11', label: lang === 'hi' ? 'नवम्बर 2026' : 'Nov 2026' },
-            { key: '2026-10', label: lang === 'hi' ? 'अक्टूबर 2026' : 'Oct 2026' },
-            { key: '2026-09', label: lang === 'hi' ? 'सितम्बर 2026' : 'Sep 2026' },
-            { key: '2026-08', label: lang === 'hi' ? 'अगस्त 2026' : 'Aug 2026' },
-          ].map((m) => (
+          {getDynamicMonthList(5).map((m) => (
             <button
               key={m.key}
               type="button"
@@ -337,7 +333,8 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin, on
                   : 'bg-white/20 text-white hover:bg-white/30'
               }`}
             >
-              {m.label}
+              {lang === 'hi' ? m.nameHi : m.shortNameEn}
+              {m.isCurrent ? (lang === 'hi' ? ' (चालू)' : ' (Cur)') : ''}
             </button>
           ))}
         </div>
@@ -481,14 +478,14 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin, on
                   </button>
                   <button
                     type="button"
-                    onClick={() => setSelectedDate('2026-10-27')}
+                    onClick={() => setSelectedDate(getIsoDateAgo(2))}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 ${
-                      selectedDate === '2026-10-27'
+                      selectedDate === getIsoDateAgo(2)
                         ? 'bg-blue-600 text-white shadow-xs' 
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
-                    27 Oct
+                    {lang === 'hi' ? 'परसों (Day Before)' : '2 Days Ago'}
                   </button>
                 </div>
               </div>

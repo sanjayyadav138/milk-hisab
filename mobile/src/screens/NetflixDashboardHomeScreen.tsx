@@ -10,6 +10,7 @@ import { useLanguage } from '../context/LanguageContext';
 import VoiceAssistantModal from '../components/VoiceAssistantModal';
 import ProfileModal from '../components/ProfileModal';
 import MonthlySlipModal from '../components/MonthlySlipModal';
+import ChatScreen from './ChatScreen';
 
 const { width } = Dimensions.get('window');
 
@@ -867,61 +868,10 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
           ======================================================== */}
       <Modal
         visible={chatModalVisible}
-        transparent
         animationType="slide"
         onRequestClose={() => setChatModalVisible(false)}
       >
-        <View style={styles.modalBackdrop}>
-          <View style={[styles.modalCardWide, { maxHeight: '85%' }]}>
-            <View style={styles.chatHeader}>
-              <Text style={styles.modalTitle}>
-                💬 {lang === 'hi' ? 'दूधिया-ग्राहक संवाद (Direct Chat)' : 'Direct Communication Channel'}
-              </Text>
-              <TouchableOpacity onPress={() => setChatModalVisible(false)}>
-                <Text style={styles.chatCloseText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.modalSubtitle}>
-              {lang === 'hi' 
-                ? 'दूध की मात्रा व समय से जुड़े सीधे नोट्स व निर्देश' 
-                : 'Direct messaging channel for milk delivery instructions'}
-            </Text>
-
-            <ScrollView style={styles.chatListScroll}>
-              {chatMessages.map(msg => (
-                <View 
-                  key={msg.id} 
-                  style={[
-                    styles.chatBubble, 
-                    msg.sender === (isVendor ? 'vendor' : 'customer') ? styles.chatBubbleMe : styles.chatBubbleOther
-                  ]}
-                >
-                  <Text style={styles.chatSenderName}>{msg.senderName} • {msg.time}</Text>
-                  <Text style={styles.chatMessageText}>{msg.text}</Text>
-                </View>
-              ))}
-            </ScrollView>
-
-            <View style={styles.chatInputRow}>
-              <TextInput
-                style={styles.chatInput}
-                placeholder={lang === 'hi' ? 'संदेश लिखें (उदा. कल 2L दूध चाहिए)...' : 'Type a message...'}
-                placeholderTextColor="#94A3B8"
-                value={newChatText}
-                onChangeText={setNewChatText}
-              />
-              <TouchableOpacity 
-                onPress={handleSendMessage}
-                style={styles.chatSendBtn}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.chatSendBtnText}>
-                  {lang === 'hi' ? 'भेजें' : 'Send'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+        <ChatScreen onGoBack={() => setChatModalVisible(false)} />
       </Modal>
 
       {/* ========================================================

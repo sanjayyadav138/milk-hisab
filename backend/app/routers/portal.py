@@ -503,6 +503,10 @@ def get_customer_accounts_by_phone(phone: str, db: Session = Depends(get_db)):
             "vendor_area": v.area if v else "Jamalpur"
         })
     return results
+
+@router.get("/customer/{customer_id}/disputes")
+def get_customer_disputes(customer_id: int, status: Optional[str] = None, db: Session = Depends(get_db)):
+    return get_vendor_disputes(status=status, customer_id=customer_id, db=db)
 @router.post("/auth/register-vendor")
 def register_vendor(req: RegisterVendorRequest, db: Session = Depends(get_db)):
 
@@ -855,10 +859,21 @@ def reject_dispute(req: RejectDisputeRequest, db: Session = Depends(get_db)):
     return {"message": "Dispute marked as rejected", "log_id": log.id}
 
 @router.get("/vendor/disputes")
-def get_vendor_disputes(status: Optional[str] = None, db: Session = Depends(get_db)):
+def get_vendor_disputes(
+    status: Optional[str] = None, 
+    vendor_id: Optional[int] = None, 
+    customer_id: Optional[int] = None, 
+    db: Session = Depends(get_db)
+):
     query = db.query(DailyLog).filter(DailyLog.dispute_status.isnot(None), DailyLog.dispute_status != "None")
     if status and status.upper() != "ALL":
         query = query.filter(DailyLog.dispute_status == status)
+    if customer_id:
+        query = query.filter(DailyLog.customer_id == customer_id)
+    elif vendor_id:
+        c_ids = [c.id for c in db.query(Customer).filter(Customer.vendor_id == vendor_id).all()]
+        if c_ids:
+            query = query.filter(DailyLog.customer_id.in_(c_ids))
     logs = query.order_by(DailyLog.date.desc()).all()
 
     # If completely empty, auto-seed realistic disputes for immediate demonstration
@@ -956,30 +971,36 @@ def customer_skip_date(customer_id: int, req: SkipDateRequest, db: Session = Dep
 # --- Module 5: Vendor Messaging (MSG-02) ---
 
 @router.get("/vendor/all-messages")
-def get_vendor_messages(db: Session = Depends(get_db)):
-
-    customers = db.query(Customer).all()
+def get_vendor_messages(vendor_id: Optional[int] = None, db: Session = Depends(get_db)):
+    query = db.query(Customer)
+    if vendor_id:
+        query = query.filter(Customer.vendor_id == vendor_id)
+    customers = query.all()
     threads = []
     for c in customers:
         msgs = db.query(CustomerMessage).filter(CustomerMessage.customer_id == c.id).order_by(CustomerMessage.created_at.asc()).all()
-        if msgs:
-            threads.append({
-                "customer_id": c.id,
-                "customer_name": c.name,
-                "customer_phone": c.phone or "",
-                "address": c.address or "",
-                "last_message": msgs[-1].message,
-                "last_time": msgs[-1].created_at.isoformat(),
-                "messages": [
-                    {
-                        "id": m.id,
-                        "sender_name": m.sender_name,
-                        "sender_role": m.sender_role,
-                        "message": m.message,
-                        "created_at": m.created_at.isoformat()
-                    } for m in msgs
-                ]
-            })
+        unread_count = sum(1 for m in msgs if m.sender_role == "customer")
+        last_msg = msgs[-1] if msgs else None
+        threads.append({
+            "customer_id": c.id,
+            "customer_name": c.name,
+            "customer_phone": c.phone or "",
+            "customer_avatar": getattr(c, "avatar_url", None),
+            "address": c.address or "",
+            "unread_count": unread_count,
+            "last_message": last_msg.message if last_msg else "कोई संदेश नहीं (No messages)",
+            "last_time": last_msg.created_at.isoformat() if last_msg else c.created_at.isoformat() if hasattr(c, "created_at") and c.created_at else datetime.datetime.utcnow().isoformat(),
+            "messages": [
+                {
+                    "id": m.id,
+                    "sender_name": m.sender_name,
+                    "sender_role": m.sender_role,
+                    "message": m.message,
+                    "created_at": m.created_at.isoformat()
+                } for m in msgs
+            ]
+        })
+    threads.sort(key=lambda x: x["last_time"], reverse=True)
     return threads
 @router.post("/vendor/send-message")
 def vendor_send_message(req: VendorReplyMessageRequest, db: Session = Depends(get_db)):
@@ -1170,4 +1191,79 @@ def submit_contact_inquiry(inquiry: ContactInquiryCreate, db: Session = Depends(
         "status": "success",
         "message": "आपकी पूछताछ सफलतापूर्वक दर्ज कर ली गई है। हमारी टीम शीघ्र संपर्क करेगी।",
         "id": db_inquiry.id
+    }
+
+@router.get("/billing/monthly-slip")
+def get_monthly_slip(
+    customer_id: int, 
+    month: Optional[str] = None, 
+    db: Session = Depends(get_db)
+):
+    customer = db.query(Customer).filter(Customer.id == customer_id).first()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    if not month:
+        today = datetime.date.today()
+        month = f"{today.year}-{today.month:02d}"
+    
+    try:
+        year, mon = map(int, month.split("-"))
+    except Exception:
+        today = datetime.date.today()
+        year, mon = today.year, today.month
+        month = f"{year}-{mon:02d}"
+    
+    logs = db.query(DailyLog).filter(
+        DailyLog.customer_id == customer_id,
+        extract('year', DailyLog.date) == year,
+        extract('month', DailyLog.date) == mon
+    ).order_by(DailyLog.date.asc()).all()
+    
+    total_liters = sum(l.quantity_delivered for l in logs if l.status != "Skipped")
+    delivered_days = sum(1 for l in logs if l.status != "Skipped" and l.quantity_delivered > 0)
+    skipped_days = sum(1 for l in logs if l.status == "Skipped" or l.quantity_delivered == 0)
+    rate = customer.price_per_liter or 60.0
+    total_amount = total_liters * rate
+    
+    payments = db.query(Payment).filter(
+        Payment.customer_id == customer_id,
+        Payment.month_year == month
+    ).all()
+    paid_amount = sum(p.amount_paid for p in payments)
+    status = "Settled" if paid_amount >= total_amount and total_amount > 0 else "Pending"
+    
+    vendor = db.query(User).filter(User.id == customer.vendor_id).first() if customer.vendor_id else None
+    
+    month_names_hi = {1: "जनवरी", 2: "फरवरी", 3: "मार्च", 4: "अप्रैल", 5: "मई", 6: "जून", 7: "जुलाई", 8: "अगस्त", 9: "सितम्बर", 10: "अक्टूबर", 11: "नवम्बर", 12: "दिसम्बर"}
+    month_names_en = {1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June", 7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December"}
+    
+    return {
+        "month": month,
+        "month_name_hi": f"{month_names_hi.get(mon, '')} {year}",
+        "month_name_en": f"{month_names_en.get(mon, '')} {year}",
+        "customer_id": customer.id,
+        "customer_name": customer.name,
+        "customer_phone": customer.phone,
+        "customer_address": customer.address,
+        "vendor_name": vendor.business_name if vendor else "श्री कृष्णा डेयरी फार्म",
+        "vendor_phone": vendor.phone if vendor else "9811100000",
+        "vendor_upi": vendor.upi_id if vendor else "918076646872@paytm",
+        "total_liters": round(total_liters, 1),
+        "rate_per_liter": rate,
+        "total_amount": round(total_amount, 2),
+        "paid_amount": round(paid_amount, 2),
+        "balance_due": round(max(0.0, total_amount - paid_amount), 2),
+        "delivered_days": delivered_days,
+        "skipped_days": skipped_days,
+        "status": status,
+        "daily_breakdown": [
+            {
+                "date": l.date.isoformat(),
+                "day": l.date.day,
+                "quantity": l.quantity_delivered,
+                "status": l.status,
+                "notes": l.notes
+            } for l in logs
+        ]
     }

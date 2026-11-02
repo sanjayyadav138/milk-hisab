@@ -67,9 +67,9 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
           name: custName.trim(),
           phone: custPhone.trim(),
           address: custAddress.trim() || 'स्थानीय पता',
-          default_quantity: parseFloat(custQty) || 1.0,
-          milk_type: custMilkType,
-          price_per_liter: parseFloat(custRate) || 60.0,
+          default_quantity: 1.0,
+          milk_type: 'Cow',
+          price_per_liter: 65.0,
           pin: custPin.trim() || '1234',
         });
       }
@@ -273,32 +273,12 @@ export default function RegisterScreen({ initialRole = 'vendor', onBack, onGoLog
                   />
                 </View>
 
-                <View style={styles.row}>
-                  <View style={[styles.formGroup, { flex: 1, marginRight: 6 }]}>
-                    <Text style={styles.label}>
-                      {lang === 'hi' ? 'दैनिक मात्रा (L)' : 'Daily Qty (L)'}
-                    </Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="1.0"
-                      keyboardType="numeric"
-                      value={custQty}
-                      onChangeText={setCustQty}
-                    />
-                  </View>
-
-                  <View style={[styles.formGroup, { flex: 1, marginLeft: 6 }]}>
-                    <Text style={styles.label}>
-                      {lang === 'hi' ? 'दर (₹/L)' : 'Rate (₹/L)'}
-                    </Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="60"
-                      keyboardType="numeric"
-                      value={custRate}
-                      onChangeText={setCustRate}
-                    />
-                  </View>
+                <View style={styles.helperTipBox}>
+                  <Text style={styles.helperTipText}>
+                    💡 {lang === 'hi' 
+                      ? 'दूधिया चुनते समय आप अपनी दैनिक दूध मात्रा (Liters) व प्रकार (गाय/भैंस) तय कर सकेंगे।'
+                      : 'You can choose your daily milk volume and milkman after registration.'}
+                  </Text>
                 </View>
 
                 <View style={styles.formGroup}>
@@ -547,5 +527,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#2563eb',
     fontWeight: 'bold',
+  },
+  helperTipBox: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    marginBottom: 14,
+  },
+  helperTipText: {
+    fontSize: 12,
+    color: '#1E3A8A',
+    fontWeight: '700',
+    lineHeight: 17,
   },
 });

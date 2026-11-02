@@ -494,32 +494,40 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialRole = 'v
                       className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:border-blue-600 focus:outline-none"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                        {customerCategory === 'SUPPLIER' ? (lang === 'hi' ? 'दैनिक संकलन (L)' : 'Daily Supply (L)') : t('qtyLabel')}
-                      </label>
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={custQty}
-                        onChange={(e) => setCustQty(e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium"
-                      />
+                  {customerCategory === 'SUPPLIER' ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                          {lang === 'hi' ? 'दैनिक संकलन (L)' : 'Daily Supply (L)'}
+                        </label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          value={custQty}
+                          onChange={(e) => setCustQty(e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">{t('milkTypeLabel')}</label>
+                        <select
+                          value={custType}
+                          onChange={(e) => setCustType(e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium bg-white"
+                        >
+                          <option value="Cow">{t('cowMilk')}</option>
+                          <option value="Buffalo">{t('buffaloMilk')}</option>
+                          <option value="Mixed">{t('mixedMilk')}</option>
+                        </select>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">{t('milkTypeLabel')}</label>
-                      <select
-                        value={custType}
-                        onChange={(e) => setCustType(e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium bg-white"
-                      >
-                        <option value="Cow">{t('cowMilk')}</option>
-                        <option value="Buffalo">{t('buffaloMilk')}</option>
-                        <option value="Mixed">{t('mixedMilk')}</option>
-                      </select>
+                  ) : (
+                    <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-3 text-xs text-blue-900 font-medium">
+                      💡 {lang === 'hi' 
+                        ? 'दूधिया चुनते समय आप अपनी दैनिक दूध मात्रा (Liters) व प्रकार (गाय/भैंस) तय कर सकेंगे।' 
+                        : 'You can choose your daily milk quantity and milkman after registration.'}
                     </div>
-                  </div>
+                  )}
                 </>
               )}
 

@@ -6,7 +6,13 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { fetchVendorDisputesApi, resolveDisputeApi, rejectDisputeApi } from '../api/client';
+import { 
+  fetchVendorDisputesApi, 
+  fetchCustomerDisputesApi, 
+  resolveDisputeApi, 
+  rejectDisputeApi,
+  raiseDisputeApi 
+} from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -36,13 +42,17 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
   const { auth } = useAuth();
   const isHi = lang === 'hi';
   const isVendor = auth.role === 'vendor';
+  const isCustomer = auth.role === 'customer';
+
+  const currentCustomerId = auth.customer?.id || 1;
+  const currentVendorId = auth.user?.id || 1;
 
   const [filter, setFilter] = useState<'PENDING' | 'RESOLVED' | 'REJECTED' | 'ALL'>('PENDING');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Initial demo disputes synchronized with database rows
-  const initialDisputes: DisputeItem[] = [
+  // All baseline disputes
+  const allBaselineDisputes: DisputeItem[] = [
     {
       log_id: 24,
       customer_id: 1,
@@ -89,8 +99,8 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
     {
       log_id: 10,
       customer_id: 1,
-      customer_name: isHi ? 'शर्मा जी (दुकान 4)' : 'Sharma Ji (Shop 4)',
-      customer_phone: '9833344455',
+      customer_name: isHi ? 'राजेश शर्मा (House 12)' : 'Rajesh Sharma (House 12)',
+      customer_phone: '9811122233',
       date: '2026-10-28',
       quantity: 0.5,
       reported_quantity: 0.5,
@@ -114,22 +124,33 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
     }
   ];
 
-  const [disputes, setDisputes] = useState<DisputeItem[]>(initialDisputes);
+  // Filter initial disputes strictly by role (Issue 1 fix!)
+  const initialScopedDisputes = isCustomer
+    ? allBaselineDisputes.filter(d => d.customer_id === currentCustomerId || (auth.customer?.phone && d.customer_phone === auth.customer.phone))
+    : allBaselineDisputes;
 
-  // Resolution Modal State
+  const [disputes, setDisputes] = useState<DisputeItem[]>(initialScopedDisputes);
+
+  // Resolution Modal State (Vendor Only)
   const [resolvingItem, setResolvingItem] = useState<DisputeItem | null>(null);
   const [resolveQty, setResolveQty] = useState('');
   const [resolveNote, setResolveNote] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Rejection Modal State
+  // Rejection Modal State (Vendor Only)
   const [rejectingItem, setRejectingItem] = useState<DisputeItem | null>(null);
   const [rejectNote, setRejectNote] = useState('');
 
-  // Load disputes with AsyncStorage caching & DB persistence
+  // Customer Raise New Dispute Modal State
+  const [isRaiseModalOpen, setIsRaiseModalOpen] = useState(false);
+  const [newDisputeDate, setNewDisputeDate] = useState('2026-10-29');
+  const [newLoggedQty, setNewLoggedQty] = useState('2.0');
+  const [newActualQty, setNewActualQty] = useState('1.5');
+  const [newReason, setNewReason] = useState('');
+
+  // Load disputes with AsyncStorage caching & DB persistence (Scoped to user!)
   const loadDisputes = async () => {
     try {
-      // 1. Read locally cached state immediately for fast render & offline guarantee
       const cachedJson = await AsyncStorage.getItem(DISPUTES_STORAGE_KEY);
       const storedResolvedJson = await AsyncStorage.getItem(RESOLVED_MAP_STORAGE_KEY);
       const localOverrides: Record<number, Partial<DisputeItem>> = storedResolvedJson ? JSON.parse(storedResolvedJson) : {};
@@ -137,7 +158,12 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
       if (cachedJson) {
         const cachedList: DisputeItem[] = JSON.parse(cachedJson);
         if (Array.isArray(cachedList) && cachedList.length > 0) {
-          const mergedCached = cachedList.map(item => {
+          // Strictly filter by role
+          const filteredCached = isCustomer
+            ? cachedList.filter(item => item.customer_id === currentCustomerId || (auth.customer?.phone && item.customer_phone === auth.customer.phone))
+            : cachedList;
+
+          const mergedCached = filteredCached.map(item => {
             if (localOverrides[item.log_id]) {
               return { ...item, ...localOverrides[item.log_id] };
             }
@@ -148,10 +174,21 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
         }
       }
 
-      // 2. Fetch fresh disputes from API
-      const remoteData = await fetchVendorDisputesApi();
+      // Fetch fresh disputes from API (Customer-isolated or Vendor-isolated)
+      let remoteData: any[] = [];
+      if (isCustomer) {
+        remoteData = await fetchCustomerDisputesApi(currentCustomerId);
+      } else {
+        remoteData = await fetchVendorDisputesApi(undefined, currentVendorId);
+      }
+
       if (remoteData && Array.isArray(remoteData) && remoteData.length > 0) {
-        const mergedRemote = remoteData.map((d: any) => {
+        // Double-check isolation
+        const strictlyScoped = isCustomer
+          ? remoteData.filter(d => d.customer_id === currentCustomerId || (auth.customer?.phone && d.customer_phone === auth.customer.phone))
+          : remoteData;
+
+        const mergedRemote = strictlyScoped.map((d: any) => {
           const override = localOverrides[d.log_id];
           if (override) {
             return { ...d, ...override };
@@ -159,7 +196,7 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
           return {
             log_id: d.log_id,
             customer_id: d.customer_id,
-            customer_name: d.customer_name || 'ग्राहक',
+            customer_name: d.customer_name || (isCustomer ? auth.customer?.name || 'मेरा खाता' : 'ग्राहक'),
             customer_phone: d.customer_phone || '',
             date: d.date,
             quantity: d.quantity,
@@ -174,9 +211,9 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
         setDisputes(mergedRemote);
         await AsyncStorage.setItem(DISPUTES_STORAGE_KEY, JSON.stringify(mergedRemote));
       } else {
-        // If remote returned empty or fallback needed, use initialDisputes merged with overrides
+        // Fallback to scoped baseline
         setDisputes(prev => {
-          const base = prev.length > 0 ? prev : initialDisputes;
+          const base = prev.length > 0 ? prev : initialScopedDisputes;
           const mergedBase = base.map(item => {
             if (localOverrides[item.log_id]) {
               return { ...item, ...localOverrides[item.log_id] };
@@ -188,18 +225,7 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
         });
       }
     } catch (err) {
-      console.log('Notice: Loaded disputes from local persistent cache', err);
-      // Fallback: merge initialDisputes with stored overrides
-      try {
-        const storedResolvedJson = await AsyncStorage.getItem(RESOLVED_MAP_STORAGE_KEY);
-        const localOverrides: Record<number, Partial<DisputeItem>> = storedResolvedJson ? JSON.parse(storedResolvedJson) : {};
-        setDisputes(prev => {
-          const base = prev.length > 0 ? prev : initialDisputes;
-          return base.map(item => localOverrides[item.log_id] ? { ...item, ...localOverrides[item.log_id] } : item);
-        });
-      } catch {
-        // Ignore
-      }
+      console.log('Notice: Loaded disputes from scoped persistent cache', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -208,14 +234,14 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
 
   useEffect(() => {
     loadDisputes();
-  }, []);
+  }, [auth.role, auth.customer?.id, auth.user?.id]);
 
   const onRefresh = () => {
     setRefreshing(true);
     loadDisputes();
   };
 
-  // Open Resolve Action
+  // Open Resolve Action (Vendor)
   const handleOpenResolve = (item: DisputeItem) => {
     setResolvingItem(item);
     const defaultQty = (item.reported_quantity !== null && item.reported_quantity !== undefined)
@@ -241,15 +267,12 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
       notes: `सुलझाया गया: ${validQty}L (${validNote})`
     };
 
-    // 1. Immediately update React State
     setDisputes(prev => {
       const next = prev.map(d => (d.log_id === resolvingItem.log_id ? { ...d, ...updatedPatch } : d));
-      // Save full list to AsyncStorage
       AsyncStorage.setItem(DISPUTES_STORAGE_KEY, JSON.stringify(next)).catch(() => {});
       return next;
     });
 
-    // 2. Persist in local override map (ensures resolution is NEVER lost on reload)
     try {
       const storedResolvedJson = await AsyncStorage.getItem(RESOLVED_MAP_STORAGE_KEY);
       const localOverrides = storedResolvedJson ? JSON.parse(storedResolvedJson) : {};
@@ -259,7 +282,6 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
       console.log('AsyncStorage error while saving resolved dispute:', e);
     }
 
-    // 3. Send update to Backend API
     try {
       await resolveDisputeApi(resolvingItem.log_id, validQty, validNote);
     } catch (err) {
@@ -271,20 +293,20 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
     setActionLoading(false);
 
     Alert.alert(
-      isHi ? '✓ समाधान सफलतापूर्वक दर्ज हुआ' : '✓ Dispute Resolved',
+      isHi ? '✓ समाधान दर्ज हुआ' : '✓ Dispute Resolved',
       isHi 
-        ? `${resolvedCustomer} का विवाद सुलझा दिया गया है। नया हिसाब बहीखाते में दर्ज हो गया है और यह लंबित सूची से हट गया है।`
-        : `Dispute for ${resolvedCustomer} resolved. Ledger has been updated and removed from Pending.`
+        ? `${resolvedCustomer} का विवाद सुलझा दिया गया है। नया हिसाब बहीखाते में दर्ज हो गया है।`
+        : `Dispute for ${resolvedCustomer} resolved. Ledger updated.`
     );
   };
 
-  // Open Reject Action
+  // Open Reject Action (Vendor)
   const handleOpenReject = (item: DisputeItem) => {
     setRejectingItem(item);
     setRejectNote(isHi ? 'दैनिक वितरण रजिस्टर से मिलान सत्यापित है' : 'Verified with daily distribution register');
   };
 
-  // Confirm Reject -> updates state, saves to AsyncStorage & updates DB
+  // Confirm Reject
   const handleConfirmReject = async () => {
     if (!rejectingItem) return;
     const validNote = rejectNote.trim() || (isHi ? 'आपत्ति अस्वीकृत' : 'Dispute claim rejected');
@@ -296,14 +318,12 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
       notes: `अस्वीकृत: ${validNote}`
     };
 
-    // 1. Immediately update React State
     setDisputes(prev => {
       const next = prev.map(d => (d.log_id === rejectingItem.log_id ? { ...d, ...updatedPatch } : d));
       AsyncStorage.setItem(DISPUTES_STORAGE_KEY, JSON.stringify(next)).catch(() => {});
       return next;
     });
 
-    // 2. Persist in override map
     try {
       const storedResolvedJson = await AsyncStorage.getItem(RESOLVED_MAP_STORAGE_KEY);
       const localOverrides = storedResolvedJson ? JSON.parse(storedResolvedJson) : {};
@@ -313,7 +333,6 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
       console.log('AsyncStorage error while saving rejected dispute:', e);
     }
 
-    // 3. Send update to Backend API
     try {
       await rejectDisputeApi(rejectingItem.log_id, validNote);
     } catch (err) {
@@ -327,8 +346,53 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
     Alert.alert(
       isHi ? '✕ आपत्ति अस्वीकृत की गई' : '✕ Dispute Rejected',
       isHi 
-        ? `${rejectedCustomer} की आपत्ति अस्वीकृत कर दी गई है। मूल दर्ज मात्रा बहीखाते में सुरक्षित है।`
-        : `Dispute for ${rejectedCustomer} rejected. Original delivery record preserved.`
+        ? `${rejectedCustomer} की आपत्ति अस्वीकृत कर दी गई है। मूल मात्रा सुरक्षित है।`
+        : `Dispute for ${rejectedCustomer} rejected. Original record preserved.`
+    );
+  };
+
+  // Customer Submit New Dispute
+  const handleCustomerSubmitDispute = async () => {
+    if (!newReason.trim()) {
+      Alert.alert(isHi ? 'कारण आवश्यक' : 'Reason Required', isHi ? 'कृपया आपत्ति का विवरण लिखें' : 'Please provide dispute details');
+      return;
+    }
+    const actQty = parseFloat(newActualQty);
+    const validActQty = isNaN(actQty) ? 0 : Math.max(0, actQty);
+
+    setActionLoading(true);
+    const newLogId = Date.now();
+    const newDisputeObj: DisputeItem = {
+      log_id: newLogId,
+      customer_id: currentCustomerId,
+      customer_name: auth.customer?.name || (isHi ? 'संजय यादव' : 'Sanjay Yadav'),
+      customer_phone: auth.customer?.phone || '',
+      date: newDisputeDate,
+      quantity: parseFloat(newLoggedQty) || 2.0,
+      reported_quantity: validActQty,
+      status: 'Disputed',
+      dispute_status: 'Pending',
+      dispute_reason: newReason.trim(),
+      notes: `CUSTOMER_REPORTED:${validActQty}:${newReason.trim()}`
+    };
+
+    setDisputes(prev => [newDisputeObj, ...prev]);
+
+    try {
+      await raiseDisputeApi(currentCustomerId, newLogId, newReason.trim(), validActQty);
+    } catch (err) {
+      console.log('Raise dispute API sync:', err);
+    }
+
+    setIsRaiseModalOpen(false);
+    setActionLoading(false);
+    setNewReason('');
+
+    Alert.alert(
+      isHi ? '✓ आपत्ति दर्ज कर ली गई' : '✓ Dispute Submitted',
+      isHi 
+        ? 'आपकी आपत्ति दूधिया के पास समीक्षा हेतु भेज दी गई है। स्थिति यहां ट्रैक करें।' 
+        : 'Dispute submitted to your milkman for review.'
     );
   };
 
@@ -357,11 +421,15 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
         isRejected && styles.cardRejected
       ]}>
         
-        {/* Card Header: Customer info & Status Badge */}
+        {/* Card Header */}
         <View style={styles.cardHeader}>
           <View style={styles.customerMeta}>
-            <Text style={styles.cardCustomerName}>{item.customer_name}</Text>
-            <Text style={styles.cardDateText}>📅 {item.date} {item.customer_phone ? `• 📞 ${item.customer_phone}` : ''}</Text>
+            <Text style={styles.cardCustomerName}>
+              {isCustomer ? `👤 ${isHi ? 'मेरा विवाद' : 'My Dispute'} • ${item.date}` : item.customer_name}
+            </Text>
+            <Text style={styles.cardDateText}>
+              📅 {item.date} {(!isCustomer && item.customer_phone) ? `• 📞 ${item.customer_phone}` : ''}
+            </Text>
           </View>
 
           <View style={[
@@ -388,7 +456,7 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
         {/* Quantities Comparison Grid */}
         <View style={styles.comparisonBox}>
           <View style={styles.qtyColumn}>
-            <Text style={styles.qtyHeader}>{isHi ? 'दर्ज मात्रा' : 'Logged Qty'}</Text>
+            <Text style={styles.qtyHeader}>{isHi ? 'पर्ची में दर्ज' : 'Logged Qty'}</Text>
             <Text style={[styles.qtyNumber, { color: '#F59E0B' }]}>{item.quantity.toFixed(1)} L</Text>
           </View>
 
@@ -397,7 +465,7 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
           </View>
 
           <View style={styles.qtyColumn}>
-            <Text style={styles.qtyHeader}>{isHi ? 'दावा / वास्तविक' : 'Claimed Qty'}</Text>
+            <Text style={styles.qtyHeader}>{isHi ? 'वास्तविक / दावा' : 'Claimed Qty'}</Text>
             <Text style={[styles.qtyNumber, { color: '#10B981' }]}>
               {item.reported_quantity !== null && item.reported_quantity !== undefined 
                 ? `${item.reported_quantity.toFixed(1)} L` 
@@ -409,7 +477,7 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
         {/* Reason / Notes */}
         <View style={styles.reasonBox}>
           <Text style={styles.reasonLabel}>
-            💬 {isHi ? 'ग्राहक की आपत्ति' : 'Customer Note'}:
+            💬 {isCustomer ? (isHi ? 'आपकी शिकायत' : 'Your Note') : (isHi ? 'ग्राहक की आपत्ति' : 'Customer Note')}:
           </Text>
           <Text style={styles.reasonText}>
             {item.dispute_reason || (isHi ? 'मात्रा से संबंधित शिकायत' : 'Delivery volume query')}
@@ -421,11 +489,22 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
           ) : null}
         </View>
 
+        {/* Customer Status Message (Instead of Action Buttons) */}
+        {isCustomer && (
+          <View style={styles.customerNoticeBox}>
+            <Text style={styles.customerNoticeText}>
+              {isPending 
+                ? (isHi ? '🕒 आपके दूधिया द्वारा इसकी समीक्षा की जा रही है।' : 'Under review by your milkman.')
+                : isResolved
+                  ? (isHi ? '✓ दूधिया ने हिसाब संशोधित करके सुलझा दिया है।' : 'Resolved: Ledger quantity amended.')
+                  : (isHi ? '✕ दूधिया ने वितरण रिकॉर्ड के अनुसार सत्यापित रखा है।' : 'Verified against distribution register.')}
+            </Text>
+          </View>
+        )}
+
         {/* Vendor Action Buttons for Pending disputes */}
         {isPending && isVendor && (
           <View style={styles.actionRow}>
-            
-            {/* Reject Button (Soft Slate / Outlined, NO RED) */}
             <TouchableOpacity 
               onPress={() => handleOpenReject(item)} 
               style={styles.rejectBtn}
@@ -436,7 +515,6 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
               </Text>
             </TouchableOpacity>
 
-            {/* Resolve Button (Deep Dairy Blue #1E3A8A) */}
             <TouchableOpacity 
               onPress={() => handleOpenResolve(item)} 
               style={styles.resolveBtn}
@@ -446,7 +524,6 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
                 ✓ {isHi ? 'सुधारें व सुलझाएं' : 'Resolve Entry'}
               </Text>
             </TouchableOpacity>
-
           </View>
         )}
 
@@ -463,7 +540,7 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
         end={{ x: 0.5, y: 1 }}
       />
 
-      {/* Top Header Bar with Back Button */}
+      {/* Top Header Bar */}
       <View style={styles.topHeader}>
         <TouchableOpacity onPress={onGoBack} style={styles.backBtn} activeOpacity={0.8}>
           <Text style={styles.backBtnText}>← {isHi ? 'डैशबोर्ड' : 'Dashboard'}</Text>
@@ -471,14 +548,27 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
 
         <View style={styles.headerTitleWrap}>
           <Text style={styles.pageTitle}>
-            ⚖️ {isHi ? 'आपत्ति समाधान केंद्र' : 'Dispute Center'}
+            ⚖️ {isCustomer ? (isHi ? 'मेरी आपत्तियां' : 'My Disputes') : (isHi ? 'विवाद समाधान केंद्र' : 'Dispute Center')}
           </Text>
           <Text style={styles.pageSubtitle}>
-            {isHi ? '0 विवाद नीति • पारदर्शी बहीखाता' : 'Zero-dispute transparent audit'}
+            {isCustomer 
+              ? (isHi ? 'केवल आपका व्यक्तिगत खाता' : 'Only your personal disputes') 
+              : (isHi ? '0 विवाद नीति • पारदर्शी बहीखाता' : 'Zero-dispute audit')}
           </Text>
         </View>
 
-        <View style={styles.headerSpacer} />
+        {/* If customer, show + New Dispute button */}
+        {isCustomer ? (
+          <TouchableOpacity 
+            onPress={() => setIsRaiseModalOpen(true)} 
+            style={styles.raiseHeaderBtn}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.raiseHeaderBtnText}>+ {isHi ? 'नई आपत्ति' : 'New'}</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.headerSpacer} />
+        )}
       </View>
 
       {/* Filter Tabs Row */}
@@ -546,21 +636,104 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
               <Text style={styles.emptyIcon}>🎉</Text>
               <Text style={styles.emptyTitle}>
                 {filter === 'PENDING' 
-                  ? (isHi ? 'कोई लंबित आपत्ति नहीं!' : 'No Pending Disputes!')
-                  : (isHi ? 'इस श्रेणी में कोई रिकॉर्ड नहीं है' : 'No records found in this view')}
+                  ? (isCustomer ? (isHi ? 'आपकी कोई लंबित आपत्ति नहीं है!' : 'No pending disputes filed by you!') : (isHi ? 'कोई लंबित आपत्ति नहीं!' : 'No Pending Disputes!'))
+                  : (isHi ? 'इस श्रेणी में कोई रिकॉर्ड नहीं है' : 'No records found')}
               </Text>
               <Text style={styles.emptySubtitle}>
                 {isHi 
                   ? 'सभी दूध प्रविष्टियां सत्यापित हैं। आपका डिजिटल बहीखाता 100% पारदर्शी है।' 
-                  : 'All milk entries are reconciled and verified.'}
+                  : 'All milk entries are verified.'}
               </Text>
+              {isCustomer && (
+                <TouchableOpacity 
+                  onPress={() => setIsRaiseModalOpen(true)}
+                  style={styles.emptyActionBtn}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.emptyActionBtnText}>+ {isHi ? 'नई आपत्ति दर्ज करें' : 'Raise New Dispute'}</Text>
+                </TouchableOpacity>
+              )}
             </View>
           }
         />
       )}
 
       {/* ========================================================
-          RESOLVE DISPUTE MODAL (Dairy Theme, High Contrast, No Red)
+          CUSTOMER RAISE DISPUTE MODAL
+          ======================================================== */}
+      <Modal visible={isRaiseModalOpen} transparent animationType="fade" onRequestClose={() => setIsRaiseModalOpen(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeaderTop}>
+              <View style={styles.brandPillResolve}>
+                <Text style={styles.brandPillResolveText}>📝 {isHi ? 'नई आपत्ति दर्ज करें' : 'Raise Dispute'}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setIsRaiseModalOpen(false)} style={styles.modalCloseIconBtn}>
+                <Text style={styles.modalCloseIconText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalHeading}>{isHi ? 'दूध हिसाब में सुधार हेतु अनुरोध' : 'Request Volume Correction'}</Text>
+            <Text style={styles.modalSubheading}>{isHi ? 'अपने दूधिया को मात्रा संशोधन भेजें' : 'Send discrepancy note to your milkman'}</Text>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }}>
+              <Text style={styles.inputLabel}>{isHi ? 'वितरण तारीख (DATE):' : 'Delivery Date:'}</Text>
+              <TextInput
+                style={styles.textInputArea}
+                value={newDisputeDate}
+                onChangeText={setNewDisputeDate}
+                placeholder="YYYY-MM-DD"
+              />
+
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.inputLabel}>{isHi ? 'पर्ची में दर्ज मात्रा:' : 'Logged Qty:'}</Text>
+                  <TextInput
+                    style={styles.numericTextInputBox}
+                    keyboardType="decimal-pad"
+                    value={newLoggedQty}
+                    onChangeText={setNewLoggedQty}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.inputLabel}>{isHi ? 'वास्तविक प्राप्त मात्रा:' : 'Actual Received:'}</Text>
+                  <TextInput
+                    style={styles.numericTextInputBox}
+                    keyboardType="decimal-pad"
+                    value={newActualQty}
+                    onChangeText={setNewActualQty}
+                  />
+                </View>
+              </View>
+
+              <Text style={[styles.inputLabel, { marginTop: 10 }]}>{isHi ? 'आपत्ति का कारण / विवरण:' : 'Reason / Details:'}</Text>
+              <TextInput
+                style={styles.textInputArea}
+                value={newReason}
+                onChangeText={setNewReason}
+                multiline
+                numberOfLines={3}
+                placeholder={isHi ? 'उदा. कल केवल 1.5L मिला था, पर्ची में 2L लिखा है' : 'e.g. Received 1.5L, logged as 2.0L'}
+              />
+
+              <View style={styles.modalBtnRow}>
+                <TouchableOpacity onPress={() => setIsRaiseModalOpen(false)} style={styles.modalCancelBtn}>
+                  <Text style={styles.modalCancelBtnText}>{isHi ? 'रद्द करें' : 'Cancel'}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={handleCustomerSubmitDispute} disabled={actionLoading} style={styles.modalResolveConfirmBtn}>
+                  <Text style={styles.modalResolveConfirmBtnText}>
+                    {actionLoading ? '...' : (isHi ? 'आपत्ति दर्ज करें' : 'Submit Dispute')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ========================================================
+          RESOLVE DISPUTE MODAL (Vendor Only)
           ======================================================== */}
       <Modal visible={!!resolvingItem} transparent animationType="fade" onRequestClose={() => setResolvingItem(null)}>
         <KeyboardAvoidingView 
@@ -569,7 +742,6 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
         >
           <View style={styles.modalCard}>
             
-            {/* Top Dairy Brand Header Badge */}
             <View style={styles.modalHeaderTop}>
               <View style={styles.brandPillResolve}>
                 <Text style={styles.brandPillResolveText}>🥛 Milk Hisab • विवाद समाधान</Text>
@@ -616,7 +788,6 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
                   </View>
                 </View>
 
-                {/* Dispute reason callout */}
                 {resolvingItem?.dispute_reason ? (
                   <View style={styles.modalReasonQuote}>
                     <Text style={styles.modalReasonQuoteText}>
@@ -690,7 +861,6 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
                 {isHi ? 'समाधान टिप्पणी / कारण (NOTE):' : 'Resolution Note / Action:'}
               </Text>
 
-              {/* Quick Note Presets */}
               <View style={styles.quickNotesRow}>
                 <TouchableOpacity 
                   onPress={() => setResolveNote(isHi ? 'ग्राहक से पुष्टि करके मात्रा ठीक की' : 'Volume corrected upon phone confirmation')}
@@ -723,7 +893,6 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
                 placeholderTextColor="#94A3B8"
               />
 
-              {/* Buttons: Clean Cancel & Deep Dairy Blue Resolve Button (Strictly NO RED) */}
               <View style={styles.modalBtnRow}>
                 <TouchableOpacity 
                   onPress={() => setResolvingItem(null)} 
@@ -755,7 +924,7 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
       </Modal>
 
       {/* ========================================================
-          REJECT DISPUTE MODAL (Dairy Theme, Slate/Navy, No Red)
+          REJECT DISPUTE MODAL (Vendor Only)
           ======================================================== */}
       <Modal visible={!!rejectingItem} transparent animationType="fade" onRequestClose={() => setRejectingItem(null)}>
         <KeyboardAvoidingView 
@@ -764,7 +933,6 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
         >
           <View style={styles.modalCard}>
             
-            {/* Header Badge */}
             <View style={styles.modalHeaderTop}>
               <View style={styles.brandPillReject}>
                 <Text style={styles.brandPillRejectText}>🛡️ Milk Hisab • आपत्ति समीक्षा</Text>
@@ -787,12 +955,11 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }}>
               
-              {/* Summary box */}
               <View style={styles.modalCompareCard}>
                 <Text style={styles.rejectInfoText}>
                   {isHi 
-                    ? `ग्राहक ने ${rejectingItem?.quantity}L के मुकाबले आपत्ति दर्ज की है। यदि आप इसे अस्वीकार करते हैं, तो मूल दर्ज मात्रा बहीखाते में मान्य रहेगी।`
-                    : `Customer disputed ${rejectingItem?.quantity}L delivery. Rejecting will preserve the logged volume in official records.`}
+                    ? `ग्राहक ने ${rejectingItem?.quantity}L के मुकाबले आपत्ति दर्ज की है। अस्वीकार करने पर मूल मात्रा सुरक्षित रहेगी।`
+                    : `Customer disputed ${rejectingItem?.quantity}L. Rejecting preserves original record.`}
                 </Text>
                 {rejectingItem?.dispute_reason ? (
                   <View style={styles.modalReasonQuote}>
@@ -803,7 +970,6 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
                 ) : null}
               </View>
 
-              {/* Quick Rejection Reasons */}
               <Text style={styles.inputSectionLabel}>
                 {isHi ? '⚡ अस्वीकृति का कारण चुनें:' : '⚡ Select Rejection Reason:'}
               </Text>
@@ -827,16 +993,6 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
                     📞 {isHi ? 'फोन पर ग्राहक से पुनः पुष्टि' : 'Phone reconfirmed with customer'}
                   </Text>
                 </TouchableOpacity>
-
-                <TouchableOpacity 
-                  onPress={() => setRejectNote(isHi ? 'सीसीटीवी फुटेज में डिलीवरी सत्यापित' : 'Delivery verified with CCTV footage')}
-                  style={[styles.quickChipReject, rejectNote.includes('सीसीटीवी') && styles.quickChipRejectActive]}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.quickChipRejectText, rejectNote.includes('सीसीटीवी') && styles.quickChipRejectTextActive]}>
-                    📹 {isHi ? 'डिलीवरी कैमरे में सत्यापित' : 'CCTV proof verified'}
-                  </Text>
-                </TouchableOpacity>
               </View>
 
               <Text style={styles.inputLabel}>
@@ -852,7 +1008,6 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
                 placeholderTextColor="#94A3B8"
               />
 
-              {/* Buttons: Clean Cancel & Slate Navy Reject Button (Strictly NO RED) */}
               <View style={styles.modalBtnRow}>
                 <TouchableOpacity 
                   onPress={() => setRejectingItem(null)} 
@@ -918,6 +1073,17 @@ const styles = StyleSheet.create({
     color: '#1E3A8A',
     fontWeight: '800',
     fontSize: 13,
+  },
+  raiseHeaderBtn: {
+    backgroundColor: '#1E3A8A',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 12,
+  },
+  raiseHeaderBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 12,
   },
   headerTitleWrap: {
     alignItems: 'center',
@@ -1112,6 +1278,19 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontWeight: '700',
   },
+  customerNoticeBox: {
+    backgroundColor: '#F8FAFC',
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginTop: 4,
+  },
+  customerNoticeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#334155',
+  },
   actionRow: {
     flexDirection: 'row',
     gap: 10,
@@ -1133,7 +1312,7 @@ const styles = StyleSheet.create({
   },
   resolveBtn: {
     flex: 2,
-    backgroundColor: '#1E3A8A', // Deep Dairy Blue
+    backgroundColor: '#1E3A8A',
     paddingVertical: 10,
     borderRadius: 12,
     alignItems: 'center',
@@ -1185,10 +1364,18 @@ const styles = StyleSheet.create({
     marginTop: 6,
     lineHeight: 17,
   },
-
-  /* ==============================================
-     ENHANCED DIALOG / MODAL STYLES (DAIRY THEME)
-     ============================================== */
+  emptyActionBtn: {
+    backgroundColor: '#1E3A8A',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 14,
+    marginTop: 14,
+  },
+  emptyActionBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 13,
+  },
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.72)',
@@ -1295,7 +1482,7 @@ const styles = StyleSheet.create({
   },
   modalCompareArrow: {
     fontSize: 18,
-    color: '#38BDF8', // Sky Blue
+    color: '#38BDF8',
     fontWeight: '900',
   },
   modalReasonQuote: {
@@ -1403,6 +1590,17 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#0F172A',
   },
+  numericTextInputBox: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
   suffixBadge: {
     backgroundColor: '#EFF6FF',
     paddingHorizontal: 10,
@@ -1441,9 +1639,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 13,
     color: '#0F172A',
-    minHeight: 52,
+    minHeight: 48,
     textAlignVertical: 'top',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   modalBtnRow: {
     flexDirection: 'row',
@@ -1466,7 +1664,7 @@ const styles = StyleSheet.create({
   },
   modalResolveConfirmBtn: {
     flex: 2,
-    backgroundColor: '#1E3A8A', // Deep Dairy Blue
+    backgroundColor: '#1E3A8A',
     paddingVertical: 13,
     borderRadius: 14,
     alignItems: 'center',
@@ -1482,7 +1680,7 @@ const styles = StyleSheet.create({
   },
   modalRejectConfirmBtn: {
     flex: 2,
-    backgroundColor: '#334155', // Slate Navy (Strictly NO RED)
+    backgroundColor: '#334155',
     paddingVertical: 13,
     borderRadius: 14,
     alignItems: 'center',

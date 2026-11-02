@@ -317,8 +317,20 @@ export async function raiseDisputeApi(customerId: number, logId: number, reason:
   return res.json();
 }
 
-export async function fetchVendorDisputesApi(): Promise<VendorDisputeItem[]> {
-  const res = await fetch(`${API_BASE}/portal/vendor/disputes`);
+export async function fetchVendorDisputesApi(status?: string, vendorId?: number, customerId?: number): Promise<VendorDisputeItem[]> {
+  const params = new URLSearchParams();
+  if (status) params.append('status', status);
+  if (vendorId) params.append('vendor_id', String(vendorId));
+  if (customerId) params.append('customer_id', String(customerId));
+  const q = params.toString() ? `?${params.toString()}` : '';
+  const res = await fetch(`${API_BASE}/portal/vendor/disputes${q}`);
+  if (!res.ok) throw new Error("आपत्ति सूची लोड नहीं हो सकी");
+  return res.json();
+}
+
+export async function fetchCustomerDisputesApi(customerId: number, status?: string): Promise<VendorDisputeItem[]> {
+  const q = status ? `?status=${status}` : '';
+  const res = await fetch(`${API_BASE}/portal/customer/${customerId}/disputes${q}`);
   if (!res.ok) throw new Error("आपत्ति सूची लोड नहीं हो सकी");
   return res.json();
 }
@@ -351,9 +363,33 @@ export async function skipMilkDateApi(customerId: number, date: string, reason?:
 }
 
 // --- Module 5: Vendor Message Management (MSG-02) ---
-export async function fetchVendorMessageThreadsApi(): Promise<VendorMessageThread[]> {
-  const res = await fetch(`${API_BASE}/portal/vendor/all-messages`);
+export async function fetchVendorMessageThreadsApi(vendorId?: number): Promise<VendorMessageThread[]> {
+  const q = vendorId ? `?vendor_id=${vendorId}` : '';
+  const res = await fetch(`${API_BASE}/portal/vendor/all-messages${q}`);
   if (!res.ok) throw new Error("संदेश लोड नहीं हो सके");
+  return res.json();
+}
+
+export async function fetchCustomerMessagesApi(customerId: number): Promise<CustomerMessage[]> {
+  const res = await fetch(`${API_BASE}/portal/customer/${customerId}/messages`);
+  if (!res.ok) throw new Error("संदेश लोड नहीं हो सके");
+  return res.json();
+}
+
+export async function customerSendMessageApi(customerId: number, message: string, senderName: string = 'ग्राहक') {
+  const res = await fetch(`${API_BASE}/portal/customer/${customerId}/messages`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message, sender_name: senderName })
+  });
+  if (!res.ok) throw new Error("संदेश भेजने में त्रुटि आई");
+  return res.json();
+}
+
+export async function fetchMonthlySlipApi(customerId: number, month?: string) {
+  const q = month ? `?month=${month}` : '';
+  const res = await fetch(`${API_BASE}/portal/billing/monthly-slip?customer_id=${customerId}${month ? `&month=${month}` : ''}`);
+  if (!res.ok) throw new Error("पर्ची लोड नहीं हो सकी");
   return res.json();
 }
 

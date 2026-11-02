@@ -373,16 +373,16 @@ export default function Navbar({
                     {/* Divider */}
                     <div className="my-1 border-t border-slate-100" />
 
-                    {/* Logout */}
+                    {/* Logout (Strictly NO RED buttons) */}
                     <button
                       type="button"
                       onClick={() => {
                         setProfileDropdownOpen(false);
                         onLogout();
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition"
                     >
-                      <LogOut className="w-4 h-4 text-rose-600 shrink-0" />
+                      <LogOut className="w-4 h-4 text-slate-500 shrink-0" />
                       <span>{t('logout')}</span>
                     </button>
                   </div>

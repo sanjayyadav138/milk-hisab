@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { 
   fetchCustomerDashboard, fetchSubUsers, addSubUserApi, 
-  fetchMessages, sendMessageApi, raiseDisputeApi, skipMilkDateApi,
+  fetchMessages, sendMessageApi, raiseDisputeApi, fetchMonthlySlipApi, skipMilkDateApi,
   fetchCustomerAccountsByPhone
 } from '../services/api';
 import { Customer, CustomerDashboardData, SubUser, CustomerMessage } from '../types';
@@ -53,6 +53,29 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin, on
   const [disputingLog, setDisputingLog] = useState<{ id: number; date: string; quantity: number } | null>(null);
   const [disputeReason, setDisputeReason] = useState('');
   const [submittingDispute, setSubmittingDispute] = useState(false);
+  const [selectedSlipMonth, setSelectedSlipMonth] = useState('2026-10');
+
+  const handleSelectMonth = async (monthKey: string) => {
+    setSelectedSlipMonth(monthKey);
+    try {
+      const slip = await fetchMonthlySlipApi(activeCustomer.id, monthKey);
+      if (slip && data) {
+        setData({
+          ...data,
+          month_summary: {
+            ...data.month_summary,
+            total_liters: slip.total_liters,
+            total_amount: slip.total_amount,
+            balance_due: slip.balance_due,
+            days_delivered: slip.delivered_days,
+            days_skipped: slip.skipped_days,
+          }
+        });
+      }
+    } catch (err) {
+      console.log('Error fetching month slip:', err);
+    }
+  };
 
   // Skip Milk state (SKP-01, SKP-02)
   const [isSkipModalOpen, setIsSkipModalOpen] = useState(false);
@@ -293,6 +316,30 @@ export default function CustomerPortal({ customer, onLogout, onOpenChangePin, on
               {t('logout')}
             </button>
           </div>
+        </div>
+
+        {/* Month Picker Row for Slip */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pt-3 border-t border-white/20 scrollbar-none">
+          <span className="text-[11px] font-bold text-blue-100 shrink-0">📅 {lang === 'hi' ? 'माह चुनें:' : 'Select Month:'}</span>
+          {[
+            { key: '2026-11', label: lang === 'hi' ? 'नवम्बर 2026' : 'Nov 2026' },
+            { key: '2026-10', label: lang === 'hi' ? 'अक्टूबर 2026' : 'Oct 2026' },
+            { key: '2026-09', label: lang === 'hi' ? 'सितम्बर 2026' : 'Sep 2026' },
+            { key: '2026-08', label: lang === 'hi' ? 'अगस्त 2026' : 'Aug 2026' },
+          ].map((m) => (
+            <button
+              key={m.key}
+              type="button"
+              onClick={() => handleSelectMonth(m.key)}
+              className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition shrink-0 cursor-pointer ${
+                selectedSlipMonth === m.key 
+                  ? 'bg-white text-blue-900 shadow-xs' 
+                  : 'bg-white/20 text-white hover:bg-white/30'
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
         </div>
 
         {/* Financial Snapshot */}

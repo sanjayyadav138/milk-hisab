@@ -370,9 +370,19 @@ export default function CustomersView({ onResetCustomerPin }: CustomersViewProps
                 }`}
               >
                 <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-black text-slate-900 text-base">{c.name}</h4>
+                  <div className="flex items-start gap-3">
+                    <div className="relative w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-800 to-sky-500 flex items-center justify-center text-white font-black text-lg shadow-xs shrink-0 overflow-hidden">
+                      {c.avatar_url ? (
+                        <img src={c.avatar_url} alt={c.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span>{c.name.charAt(0).toUpperCase()}</span>
+                      )}
+                      <span className="absolute bottom-0.5 right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white"></span>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-black text-slate-900 text-base">{c.name}</h4>
                       {isSupplier ? (
                         <span className="text-[10px] font-black bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md flex items-center gap-1">
                           <ArrowDownCircle className="w-3 h-3 text-blue-600" />
@@ -399,6 +409,7 @@ export default function CustomersView({ onResetCustomerPin }: CustomersViewProps
                         <span>{c.address}</span>
                       </p>
                     )}
+                    </div>
                   </div>
 
                   <div className="text-right">

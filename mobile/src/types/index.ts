@@ -9,6 +9,8 @@ export interface Customer {
   price_per_liter: number;
   customer_type?: 'BUYER' | 'SUPPLIER';
   active?: boolean;
+  avatar_url?: string;
+  vendor_id?: number;
 }
 
 export interface DailyLogItem {
@@ -96,6 +98,12 @@ export interface AuthState {
     phone: string;
     business_name: string;
     upi_id?: string;
+    avatar_url?: string;
+    city?: string;
+    area?: string;
+    pincode?: string;
+    price_cow?: number;
+    price_buffalo?: number;
   };
   customer?: Customer;
 }

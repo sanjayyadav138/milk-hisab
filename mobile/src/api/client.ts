@@ -141,9 +141,60 @@ export async function raiseDisputeApi(customerId: number, logId: number, reason:
   });
 }
 
-export async function fetchVendorDisputesApi(status?: string) {
-  const q = status ? `?status=${status}` : '';
+export async function fetchVendorDisputesApi(status?: string, vendorId?: number, customerId?: number) {
+  const params = new URLSearchParams();
+  if (status) params.append('status', status);
+  if (vendorId) params.append('vendor_id', String(vendorId));
+  if (customerId) params.append('customer_id', String(customerId));
+  const q = params.toString() ? `?${params.toString()}` : '';
   return request<any[]>(`/portal/vendor/disputes${q}`);
+}
+
+export async function fetchCustomerDisputesApi(customerId: number, status?: string) {
+  const q = status ? `?status=${status}` : '';
+  return request<any[]>(`/portal/customer/${customerId}/disputes${q}`);
+}
+
+export async function fetchVendorMessagesApi(vendorId?: number) {
+  const q = vendorId ? `?vendor_id=${vendorId}` : '';
+  return request<any[]>(`/portal/vendor/all-messages${q}`);
+}
+
+export async function fetchCustomerMessagesApi(customerId: number) {
+  return request<any[]>(`/portal/customer/${customerId}/messages`);
+}
+
+export async function vendorReplyMessageApi(customerId: number, message: string) {
+  return request<any>('/portal/vendor/send-message', {
+    method: 'POST',
+    body: JSON.stringify({ customer_id: customerId, message }),
+  });
+}
+
+export async function customerSendMessageApi(customerId: number, message: string, senderName: string = 'ग्राहक') {
+  return request<any>(`/portal/customer/${customerId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ message, sender_name: senderName }),
+  });
+}
+
+export async function fetchMonthlySlipApi(customerId: number, month?: string) {
+  const q = month ? `?month=${month}` : '';
+  return request<any>(`/portal/billing/monthly-slip?customer_id=${customerId}${month ? `&month=${month}` : ''}`);
+}
+
+export async function updateVendorProfileApi(data: any) {
+  return request<any>('/portal/profile/vendor', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateCustomerProfileApi(data: any) {
+  return request<any>('/portal/profile/customer', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
 }
 
 export async function resolveDisputeApi(logId: number, resolvedQuantity: number, resolutionNote?: string) {

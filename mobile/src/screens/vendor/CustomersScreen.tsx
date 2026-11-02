@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, View, Text, TextInput, TouchableOpacity, 
-  FlatList, ActivityIndicator, SafeAreaView, Modal, Linking, Alert 
+  FlatList, ActivityIndicator, SafeAreaView, Modal, Linking, Alert, Image 
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { fetchCustomersApi, createCustomerApi } from '../../api/client';
@@ -122,18 +122,35 @@ export default function CustomersScreen() {
     );
   });
 
+  const getAvatarColor = (id: number) => {
+    const colors = ['#1E3A8A', '#0D9488', '#0284C7', '#7C3AED', '#D97706'];
+    return colors[id % colors.length];
+  };
+
   const renderCustomerItem = ({ item }: { item: Customer }) => {
     const isSupplier = item.customer_type === 'SUPPLIER';
 
     return (
       <View style={styles.card}>
         <View style={styles.cardHeader}>
+          {/* Customer Profile Picture / Avatar Thumbnail */}
+          <View style={styles.avatarContainer}>
+            {item.avatar_url ? (
+              <Image source={{ uri: item.avatar_url }} style={styles.avatarImage} />
+            ) : (
+              <View style={[styles.avatarFallback, { backgroundColor: getAvatarColor(item.id) }]}>
+                <Text style={styles.avatarText}>{item.name.charAt(0).toUpperCase()}</Text>
+              </View>
+            )}
+            <View style={styles.onlineBadgeDot} />
+          </View>
+
           <View style={styles.cardInfo}>
             <View style={styles.nameRow}>
               <Text style={styles.cardName}>{item.name}</Text>
               <View style={[styles.badge, isSupplier ? styles.badgeSupplier : styles.badgeBuyer]}>
                 <Text style={styles.badgeText}>
-                  {isSupplier ? (lang === 'hi' ? '📥 सप्लायर (4 घर)' : '📥 Sourcing') : (lang === 'hi' ? '📤 ग्राहक' : '📤 Customer')}
+                  {isSupplier ? (lang === 'hi' ? '📥 सप्लायर' : '📥 Sourcing') : (lang === 'hi' ? '📤 ग्राहक' : '📤 Customer')}
                 </Text>
               </View>
             </View>
@@ -434,6 +451,43 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+  },
+  avatarContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 12,
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
+  avatarFallback: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  onlineBadgeDot: {
+    position: 'absolute',
+    bottom: 1,
+    right: 1,
+    width: 11,
+    height: 11,
+    borderRadius: 5.5,
+    backgroundColor: '#10B981',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   cardInfo: {
     flex: 1,

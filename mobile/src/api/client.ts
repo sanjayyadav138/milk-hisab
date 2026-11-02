@@ -141,6 +141,32 @@ export async function raiseDisputeApi(customerId: number, logId: number, reason:
   });
 }
 
+export async function fetchVendorDisputesApi(status?: string) {
+  const q = status ? `?status=${status}` : '';
+  return request<any[]>(`/portal/vendor/disputes${q}`);
+}
+
+export async function resolveDisputeApi(logId: number, resolvedQuantity: number, resolutionNote?: string) {
+  return request<any>('/portal/vendor/resolve-dispute', {
+    method: 'PUT',
+    body: JSON.stringify({
+      log_id: logId,
+      resolved_quantity: resolvedQuantity,
+      resolution_note: resolutionNote || 'मात्रा सुधार स्वीकृत',
+    }),
+  });
+}
+
+export async function rejectDisputeApi(logId: number, rejectionNote?: string) {
+  return request<any>('/portal/vendor/reject-dispute', {
+    method: 'PUT',
+    body: JSON.stringify({
+      log_id: logId,
+      rejection_note: rejectionNote || 'आपत्ति अस्वीकृत',
+    }),
+  });
+}
+
 export async function skipMilkDateApi(customerId: number, date: string, reason?: string) {
   return request<any>(`/portal/customer/${customerId}/skip-date`, {
     method: 'POST',

@@ -14,7 +14,7 @@ import MonthlySlipModal from '../components/MonthlySlipModal';
 const { width } = Dimensions.get('window');
 
 interface NetflixDashboardHomeScreenProps {
-  onNavigateTab?: (tab: 'DAILY' | 'CUSTOMERS' | 'PORTAL') => void;
+  onNavigateTab?: (tab: 'DAILY' | 'CUSTOMERS' | 'PORTAL' | 'DISPUTES') => void;
 }
 
 export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDashboardHomeScreenProps) {
@@ -298,7 +298,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
             </View>
 
             <TouchableOpacity 
-              onPress={() => setDisputeModalVisible(true)}
+              onPress={() => onNavigateTab ? onNavigateTab('DISPUTES') : setDisputeModalVisible(true)}
               style={styles.disputeResolveBtn}
               activeOpacity={0.85}
             >
@@ -409,20 +409,20 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
               </Text>
             </TouchableOpacity>
 
-            {/* Quick Action 5: Dispute Center */}
+            {/* Quick Action 5: Dispute Center (Navigates to Full Page) */}
             <TouchableOpacity 
-              onPress={() => setDisputeModalVisible(true)}
-              style={[styles.quickActionCard, { borderColor: '#F43F5E' }]}
+              onPress={() => onNavigateTab ? onNavigateTab('DISPUTES') : setDisputeModalVisible(true)}
+              style={[styles.quickActionCard, { borderColor: '#F59E0B' }]}
               activeOpacity={0.8}
             >
-              <View style={[styles.actionIconBadge, { backgroundColor: 'rgba(244, 63, 94, 0.12)' }]}>
+              <View style={[styles.actionIconBadge, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
                 <Text style={styles.actionIconText}>⚖️</Text>
               </View>
               <Text style={styles.actionTitle}>
-                {lang === 'hi' ? 'आपत्ति समाधान' : 'Dispute Center'}
+                {lang === 'hi' ? 'आपत्ति केंद्र' : 'Dispute Center'}
               </Text>
               <Text style={styles.actionDesc}>
-                {lang === 'hi' ? '0 विवाद गारंटी' : 'Transparent audit'}
+                {lang === 'hi' ? 'सभी आपत्तियां देखें' : 'Audit & manage queries'}
               </Text>
             </TouchableOpacity>
 
@@ -1013,7 +1013,8 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
             } else if (cmd.action === 'skip') {
               setSkipModalVisible(true);
             } else if (cmd.action === 'dispute') {
-              setDisputeModalVisible(true);
+              if (onNavigateTab) onNavigateTab('DISPUTES');
+              else setDisputeModalVisible(true);
             } else if (cmd.action === 'message') {
               setNewChatText(cmd.raw_text);
               setChatModalVisible(true);

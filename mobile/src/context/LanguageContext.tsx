@@ -1,5 +1,8 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TRANSLATIONS, Language } from '../constants/translations';
+
+const LANG_STORAGE_KEY = '@milk_hisab_language_pref';
 
 interface LanguageContextType {
   lang: Language;
@@ -16,10 +19,33 @@ const LanguageContext = createContext<LanguageContextType>({
 });
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [lang, setLang] = useState<Language>('hi');
+  const [lang, setLangState] = useState<Language>('hi');
+
+  // Load cached language preference on app startup
+  useEffect(() => {
+    const loadCachedLanguage = async () => {
+      try {
+        const cached = await AsyncStorage.getItem(LANG_STORAGE_KEY);
+        if (cached === 'hi' || cached === 'en') {
+          setLangState(cached);
+        }
+      } catch (err) {
+        console.warn('Could not read cached language', err);
+      }
+    };
+    loadCachedLanguage();
+  }, []);
+
+  const setLang = (newLang: Language) => {
+    setLangState(newLang);
+    AsyncStorage.setItem(LANG_STORAGE_KEY, newLang).catch((err) => {
+      console.warn('Could not cache language', err);
+    });
+  };
 
   const toggleLang = () => {
-    setLang((prev) => (prev === 'hi' ? 'en' : 'hi'));
+    const nextLang: Language = lang === 'hi' ? 'en' : 'hi';
+    setLang(nextLang);
   };
 
   const t = (key: keyof typeof TRANSLATIONS.en): string => {

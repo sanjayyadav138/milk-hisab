@@ -12,6 +12,7 @@ import NetflixDashboardHomeScreen from './src/screens/NetflixDashboardHomeScreen
 import DailyChecklistScreen from './src/screens/vendor/DailyChecklistScreen';
 import CustomersScreen from './src/screens/vendor/CustomersScreen';
 import CustomerPortalScreen from './src/screens/customer/CustomerPortalScreen';
+import DisputeCenterScreen from './src/screens/DisputeCenterScreen';
 
 function MainNavigator() {
   const { auth, logout } = useAuth();
@@ -25,11 +26,11 @@ function MainNavigator() {
   const [selectedRole, setSelectedRole] = useState<'vendor' | 'customer'>('vendor');
   const [selectedMode, setSelectedMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
 
-  // Navigation State for Vendor Tabs: 'HOME' | 'DAILY' | 'CUSTOMERS'
-  const [vendorTab, setVendorTab] = useState<'HOME' | 'DAILY' | 'CUSTOMERS'>('HOME');
+  // Navigation State for Vendor Tabs: 'HOME' | 'DAILY' | 'CUSTOMERS' | 'DISPUTES'
+  const [vendorTab, setVendorTab] = useState<'HOME' | 'DAILY' | 'CUSTOMERS' | 'DISPUTES'>('HOME');
 
-  // Navigation State for Customer Tabs: 'HOME' | 'PORTAL'
-  const [customerTab, setCustomerTab] = useState<'HOME' | 'PORTAL'>('HOME');
+  // Navigation State for Customer Tabs: 'HOME' | 'PORTAL' | 'DISPUTES'
+  const [customerTab, setCustomerTab] = useState<'HOME' | 'PORTAL' | 'DISPUTES'>('HOME');
 
   // 1. Initial 1.8-second cinematic Splash Screen (Seamless full-screen milk texture)
   if (isSplash) {
@@ -64,7 +65,7 @@ function MainNavigator() {
     );
   }
 
-  // 3. Customer Role: Dashboard + Full Monthly Ledger
+  // 3. Customer Role: Dashboard + Full Monthly Ledger + Dispute Center
   if (auth.role === 'customer') {
     return (
       <SafeAreaView style={styles.appContainer}>
@@ -72,11 +73,15 @@ function MainNavigator() {
           {customerTab === 'HOME' ? (
             <NetflixDashboardHomeScreen 
               onNavigateTab={(tab) => {
-                if (tab === 'PORTAL' || tab === 'DAILY') {
+                if (tab === 'DISPUTES') {
+                  setCustomerTab('DISPUTES');
+                } else if (tab === 'PORTAL' || tab === 'DAILY') {
                   setCustomerTab('PORTAL');
                 }
               }} 
             />
+          ) : customerTab === 'DISPUTES' ? (
+            <DisputeCenterScreen onGoBack={() => setCustomerTab('HOME')} />
           ) : (
             <CustomerPortalScreen />
           )}
@@ -110,11 +115,11 @@ function MainNavigator() {
     );
   }
 
-  // 4. Vendor Role: Dashboard + Daily Logs + Customers
+  // 4. Vendor Role: Dashboard + Daily Logs + Customers + Dispute Center
   return (
     <SafeAreaView style={styles.appContainer}>
       {/* Top Header Bar for secondary tabs (Daily & Customers) */}
-      {vendorTab !== 'HOME' && (
+      {vendorTab !== 'HOME' && vendorTab !== 'DISPUTES' && (
         <View style={styles.topHeader}>
           <View style={styles.brandRow}>
             <Image 
@@ -150,12 +155,14 @@ function MainNavigator() {
           <NetflixDashboardHomeScreen 
             onNavigateTab={(tab) => {
               if (tab === 'CUSTOMERS') setVendorTab('CUSTOMERS');
+              else if (tab === 'DISPUTES') setVendorTab('DISPUTES');
               else setVendorTab('DAILY');
             }} 
           />
         )}
         {vendorTab === 'DAILY' && <DailyChecklistScreen />}
         {vendorTab === 'CUSTOMERS' && <CustomersScreen />}
+        {vendorTab === 'DISPUTES' && <DisputeCenterScreen onGoBack={() => setVendorTab('HOME')} />}
       </View>
 
       {/* Clean White Bottom Navigation Bar with Deep Dairy Blue (#1E3A8A) Active Tabs */}

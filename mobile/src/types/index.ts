@@ -14,6 +14,7 @@ export interface Customer {
 export interface DailyLogItem {
   customer_id: number;
   customer_name: string;
+  name?: string;
   address?: string;
   default_quantity: number;
   milk_type: string;

@@ -3,6 +3,7 @@ import {
   StyleSheet, View, Text, TouchableOpacity, FlatList, 
   ActivityIndicator, SafeAreaView, Modal, TextInput, Linking, Alert, Image 
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { fetchCustomerDashboardApi, raiseDisputeApi, skipMilkDateApi } from '../../api/client';
 import { CustomerDashboardData } from '../../types';
 import { useAuth } from '../../context/AuthContext';
@@ -169,6 +170,12 @@ export default function CustomerPortalScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <LinearGradient
+        colors={['#EBFDF0', '#F4FBF6', '#FFFFFF']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+      />
       {/* Top Banner Card with Official Logo & Language Toggle */}
       <View style={styles.headerCard}>
         <Image 

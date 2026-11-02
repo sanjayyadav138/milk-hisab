@@ -186,12 +186,18 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
         </View>
       </View>
 
-      {/* MAIN DASHBOARD SCROLL CONTENT */}
-      <ScrollView 
-        style={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+      {/* MAIN DASHBOARD SCROLL CONTENT WITH SOFT DAIRY GRADIENT BACKGROUND */}
+      <LinearGradient
+        colors={['#EBFDF0', '#F4FBF6', '#FFFFFF']}
+        style={styles.scrollGradientContainer}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
       >
+        <ScrollView 
+          style={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
         {/* ========================================================
             HERO FEATURED BANNER (Cow Pasture Landscape + Strong Dark Overlay)
             ======================================================== */}
@@ -770,6 +776,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
           </Text>
         </View>
       </ScrollView>
+    </LinearGradient>
 
       {/* ========================================================
           USER PROFILE MODAL (External Modular Component)
@@ -1159,9 +1166,12 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#FFFFFF',
   },
+  scrollGradientContainer: {
+    flex: 1,
+  },
   scrollContainer: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'transparent',
   },
   scrollContent: {
     paddingBottom: 36,

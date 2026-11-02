@@ -42,7 +42,11 @@ function MainNavigator() {
         <View style={styles.screenContent}>
           {customerTab === 'HOME' ? (
             <NetflixDashboardHomeScreen 
-              onNavigateTab={(tab) => setCustomerTab(tab === 'PORTAL' ? 'PORTAL' : 'HOME')} 
+              onNavigateTab={(tab) => {
+                if (tab === 'PORTAL' || tab === 'DAILY') {
+                  setCustomerTab('PORTAL');
+                }
+              }} 
             />
           ) : (
             <CustomerPortalScreen />

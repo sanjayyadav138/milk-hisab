@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import VoiceAssistantModal from '../components/VoiceAssistantModal';
 import ProfileModal from '../components/ProfileModal';
+import MonthlySlipModal from '../components/MonthlySlipModal';
 
 const { width } = Dimensions.get('window');
 
@@ -26,6 +27,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
   const [skipModalVisible, setSkipModalVisible] = useState(false);
   const [disputeModalVisible, setDisputeModalVisible] = useState(false);
   const [chatModalVisible, setChatModalVisible] = useState(false);
+  const [slipModalVisible, setSlipModalVisible] = useState(false);
 
   // Skip Delivery State
   const [selectedSkipDate, setSelectedSkipDate] = useState('Tomorrow (30 Oct)');
@@ -244,7 +246,13 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
             {/* Action Buttons (Strictly Deep Dairy Blue #1E3A8A & Crisp Sky Blue, NO RED) */}
             <View style={styles.heroButtonsRow}>
               <TouchableOpacity 
-                onPress={() => onNavigateTab ? onNavigateTab('DAILY') : null}
+                onPress={() => {
+                  if (isVendor) {
+                    if (onNavigateTab) onNavigateTab('DAILY');
+                  } else {
+                    setSlipModalVisible(true);
+                  }
+                }}
                 style={styles.heroPrimaryBtn}
                 activeOpacity={0.85}
               >
@@ -259,7 +267,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
                 activeOpacity={0.85}
               >
                 <Text style={styles.heroSecondaryBtnText}>
-                  🎙️ {lang === 'hi' ? 'आवाज़ से भरें' : 'Voice AI'}
+                  🎙️ {isVendor ? (lang === 'hi' ? 'आवाज़ से भरें' : 'Voice AI') : (lang === 'hi' ? 'बोलकर अनुरोध' : 'Voice AI')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -313,24 +321,34 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalListPadding}
           >
-            {/* Quick Action 1: Log Daily Entry */}
+            {/* Quick Action 1: Log Daily Entry (Vendor) OR View Monthly Slip (Customer) */}
             <TouchableOpacity 
-              onPress={() => onNavigateTab ? onNavigateTab('DAILY') : null}
+              onPress={() => {
+                if (isVendor) {
+                  if (onNavigateTab) onNavigateTab('DAILY');
+                } else {
+                  setSlipModalVisible(true);
+                }
+              }}
               style={[styles.quickActionCard, { borderColor: '#1E3A8A' }]}
               activeOpacity={0.8}
             >
               <View style={[styles.actionIconBadge, { backgroundColor: 'rgba(30, 58, 138, 0.12)' }]}>
-                <Text style={styles.actionIconText}>📝</Text>
+                <Text style={styles.actionIconText}>{isVendor ? '📝' : '🧾'}</Text>
               </View>
               <Text style={styles.actionTitle}>
-                {lang === 'hi' ? 'दूध एंट्री भरें' : 'Log Daily Entry'}
+                {isVendor 
+                  ? (lang === 'hi' ? 'दूध एंट्री भरें' : 'Log Daily Entry')
+                  : (lang === 'hi' ? 'मासिक पर्ची' : 'Monthly Slip')}
               </Text>
               <Text style={styles.actionDesc}>
-                {lang === 'hi' ? '10 सेकंड में हिसाब' : 'Record milk volume'}
+                {isVendor 
+                  ? (lang === 'hi' ? '10 सेकंड में हिसाब' : 'Record milk volume')
+                  : (lang === 'hi' ? 'सत्यापित बिल देखें' : 'View verified bill')}
               </Text>
             </TouchableOpacity>
 
-            {/* Quick Action 2: Voice AI Assistant */}
+            {/* Quick Action 2: Voice AI Assistant (Role-Specific) */}
             <TouchableOpacity 
               onPress={() => setVoiceModalVisible(true)}
               style={[styles.quickActionCard, { borderColor: '#38BDF8' }]}
@@ -340,10 +358,14 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
                 <Text style={styles.actionIconText}>🎙️</Text>
               </View>
               <Text style={styles.actionTitle}>
-                {lang === 'hi' ? 'बोलकर भरें' : 'Voice Assistant'}
+                {isVendor
+                  ? (lang === 'hi' ? 'बोलकर भरें' : 'Voice Assistant')
+                  : (lang === 'hi' ? 'बोलकर अनुरोध' : 'Voice AI')}
               </Text>
               <Text style={styles.actionDesc}>
-                {lang === 'hi' ? 'देसी आवाज़ से एंट्री' : 'Hands-free voice entry'}
+                {isVendor
+                  ? (lang === 'hi' ? 'देसी आवाज़ से एंट्री' : 'Hands-free voice entry')
+                  : (lang === 'hi' ? 'छुट्टी, एक्स्ट्रा दूध, बिल' : 'Skip, Extra Milk, Bill')}
               </Text>
             </TouchableOpacity>
 
@@ -582,7 +604,11 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
             contentContainerStyle={styles.horizontalListPadding}
           >
             {/* Bill Card 1: October 2026 Running */}
-            <View style={styles.billCard}>
+            <TouchableOpacity 
+              style={styles.billCard}
+              onPress={() => setSlipModalVisible(true)}
+              activeOpacity={0.9}
+            >
               <View style={styles.billHeader}>
                 <Text style={styles.billMonthTitle}>
                   {lang === 'hi' ? 'अक्टूबर 2026 (चालू माह)' : 'October 2026 (Running)'}
@@ -617,22 +643,23 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
                 </Text>
 
                 <TouchableOpacity 
-                  onPress={() => Alert.alert(
-                    lang === 'hi' ? 'WhatsApp बिल पर्ची' : 'WhatsApp Slip',
-                    lang === 'hi' ? 'अक्टूबर माह का सत्यापित हिसाब पत्र WhatsApp पर शेयर करने हेतु तैयार है।' : 'October verified monthly slip is ready for WhatsApp sharing.'
-                  )}
+                  onPress={() => setSlipModalVisible(true)}
                   style={styles.billActionBtn}
                   activeOpacity={0.8}
                 >
                   <Text style={styles.billActionBtnText}>
-                    📲 {lang === 'hi' ? 'WhatsApp पर्ची' : 'Share Bill'}
+                    🧾 {lang === 'hi' ? 'मासिक पर्ची देखें' : 'View Slip'}
                   </Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </TouchableOpacity>
 
             {/* Bill Card 2: Pending Dues Alert */}
-            <View style={[styles.billCard, { borderColor: '#F59E0B' }]}>
+            <TouchableOpacity 
+              style={[styles.billCard, { borderColor: '#F59E0B' }]}
+              onPress={() => setSlipModalVisible(true)}
+              activeOpacity={0.9}
+            >
               <View style={styles.billHeader}>
                 <Text style={styles.billMonthTitle}>
                   {lang === 'hi' ? 'पिछला बकाया बिल' : 'Pending Ledger Balance'}
@@ -667,22 +694,23 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
                 </Text>
 
                 <TouchableOpacity 
-                  onPress={() => Alert.alert(
-                    lang === 'hi' ? 'UPI भुगतान' : 'UPI Payment',
-                    lang === 'hi' ? '₹850 के लिए UPI QR कोड लोड हो रहा है...' : 'Opening direct UPI payment gateway for ₹850...'
-                  )}
+                  onPress={() => setSlipModalVisible(true)}
                   style={[styles.billActionBtn, { backgroundColor: '#F59E0B' }]}
                   activeOpacity={0.8}
                 >
                   <Text style={[styles.billActionBtnText, { color: '#0F172A' }]}>
-                    ⚡ {lang === 'hi' ? 'UPI से भरें' : 'Pay via UPI'}
+                    ⚡ {lang === 'hi' ? 'पर्ची व UPI' : 'Slip & Pay'}
                   </Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </TouchableOpacity>
 
             {/* Bill Card 3: September Completed */}
-            <View style={styles.billCard}>
+            <TouchableOpacity 
+              style={styles.billCard}
+              onPress={() => setSlipModalVisible(true)}
+              activeOpacity={0.9}
+            >
               <View style={styles.billHeader}>
                 <Text style={styles.billMonthTitle}>
                   {lang === 'hi' ? 'सितम्बर 2026 (पूर्ण)' : 'September 2026'}
@@ -717,19 +745,16 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
                 </Text>
 
                 <TouchableOpacity 
-                  onPress={() => Alert.alert(
-                    lang === 'hi' ? 'रसीद पर्ची' : 'Receipt Slip',
-                    lang === 'hi' ? 'सितम्बर 2026 की डिजिटल रसीद PDF तैयार है।' : 'September 2026 verified receipt slip is ready.'
-                  )}
+                  onPress={() => setSlipModalVisible(true)}
                   style={styles.billActionBtn}
                   activeOpacity={0.8}
                 >
                   <Text style={styles.billActionBtnText}>
-                    🧾 {lang === 'hi' ? 'रसीद देखें' : 'View Slip'}
+                    🧾 {lang === 'hi' ? 'रसीद पर्ची' : 'View Slip'}
                   </Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </TouchableOpacity>
           </ScrollView>
         </View>
 
@@ -968,17 +993,76 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
         </View>
       </Modal>
 
-      {/* VOICE ASSISTANT MODAL */}
+      {/* VOICE ASSISTANT MODAL (ROLE SENSITIVE) */}
       <VoiceAssistantModal 
         visible={voiceModalVisible}
         onClose={() => setVoiceModalVisible(false)}
+        role={isVendor ? 'vendor' : 'customer'}
         onApplyCommand={(cmd) => {
-          Alert.alert(
-            lang === 'hi' ? 'आवाज़ से एंट्री दर्ज' : 'Voice Command Applied',
-            lang === 'hi' 
-              ? `आवाज़ पहचान: "${cmd.raw_text}" -> ${cmd.action}` 
-              : `Voice parsed: "${cmd.raw_text}" -> ${cmd.action}`
-          );
+          if (!isVendor) {
+            // Customer Voice Command Handlers
+            if (cmd.action === 'view_bill' || cmd.action === 'slip') {
+              setSlipModalVisible(true);
+            } else if (cmd.action === 'skip') {
+              setSkipModalVisible(true);
+            } else if (cmd.action === 'dispute') {
+              setDisputeModalVisible(true);
+            } else if (cmd.action === 'message') {
+              setNewChatText(cmd.raw_text);
+              setChatModalVisible(true);
+            } else if (cmd.action === 'extra_milk') {
+              const qty = cmd.extracted_quantity || 1.0;
+              const autoMsg = lang === 'hi' 
+                ? `नमस्ते भैया, कल मुझे ${qty}L अतिरिक्त दूध चाहिए।`
+                : `Hello, please deliver ${qty}L extra milk tomorrow.`;
+              setChatMessages(prev => [
+                ...prev,
+                {
+                  id: Date.now(),
+                  sender: 'customer',
+                  senderName: userName,
+                  text: autoMsg,
+                  time: 'Just now',
+                }
+              ]);
+              Alert.alert(
+                lang === 'hi' ? 'अतिरिक्त दूध अनुरोध भेजा गया' : 'Extra Milk Request Sent',
+                lang === 'hi' 
+                  ? `कल के लिए ${qty} लीटर अतिरिक्त दूध का संदेश दूधिए को चैट में दर्ज कर दिया गया है!`
+                  : `Request for ${qty}L extra milk has been recorded in your chat with the vendor!`
+              );
+            } else {
+              Alert.alert(
+                lang === 'hi' ? 'अनुरोध प्राप्त' : 'Request Processed',
+                `"${cmd.raw_text}"`
+              );
+            }
+          } else {
+            Alert.alert(
+              lang === 'hi' ? 'आवाज़ से एंट्री दर्ज' : 'Voice Command Applied',
+              lang === 'hi' 
+                ? `आवाज़ पहचान: "${cmd.raw_text}" -> ${cmd.action}` 
+                : `Voice parsed: "${cmd.raw_text}" -> ${cmd.action}`
+            );
+          }
+        }}
+      />
+
+      {/* MONTHLY SLIP MODAL (HIGH CONTRAST VERIFIED BILL VOUCHER) */}
+      <MonthlySlipModal 
+        visible={slipModalVisible}
+        onClose={() => setSlipModalVisible(false)}
+        onOpenFullLedger={() => {
+          if (onNavigateTab) onNavigateTab('PORTAL');
+        }}
+        billData={{
+          month: lang === 'hi' ? 'अक्टूबर 2026' : 'October 2026',
+          totalLiters: 45.0,
+          ratePerLiter: 60,
+          totalAmount: 2700,
+          deliveredDays: 30,
+          skippedDays: 1,
+          status: 'Settled',
         }}
       />
     </SafeAreaView>

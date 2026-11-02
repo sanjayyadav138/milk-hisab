@@ -11,12 +11,18 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      }
-    },
-    "preview-simulator": {
-      "distribution": "internal",
+      },
       "ios": {
         "simulator": true
+      }
+    },
+    "preview-device": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "simulator": false
       }
     },
     "production": {

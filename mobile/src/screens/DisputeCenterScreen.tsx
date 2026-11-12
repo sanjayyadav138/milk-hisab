@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, View, Text, TouchableOpacity, FlatList, 
   ActivityIndicator, SafeAreaView, Alert, TextInput, Modal, RefreshControl,
-  ScrollView, KeyboardAvoidingView, Platform
+  ScrollView, KeyboardAvoidingView, Platform, StatusBar as RNStatusBar
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -380,7 +380,7 @@ export default function DisputeCenterScreen({ onGoBack }: DisputeCenterScreenPro
     setDisputes(prev => [newDisputeObj, ...prev]);
 
     try {
-      await raiseDisputeApi(currentCustomerId, newLogId, newReason.trim(), validActQty);
+      await raiseDisputeApi(currentCustomerId, newLogId, newReason.trim(), validActQty, newDisputeDate);
     } catch (err) {
       console.log('Raise dispute API sync:', err);
     }
@@ -1047,6 +1047,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+    paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 28) : 0,
   },
   topHeader: {
     flexDirection: 'row',

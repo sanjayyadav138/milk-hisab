@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { 
   StyleSheet, View, Text, TouchableOpacity, Image, 
-  SafeAreaView, Dimensions, ScrollView 
+  SafeAreaView, Dimensions, ScrollView, Platform, StatusBar as RNStatusBar 
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLanguage } from '../context/LanguageContext';
@@ -177,6 +177,7 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+    paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 28) : 0,
   },
   topHeader: {
     flexDirection: 'row',

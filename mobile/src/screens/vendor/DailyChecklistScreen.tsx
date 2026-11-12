@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   StyleSheet, View, Text, TouchableOpacity, FlatList, 
-  ActivityIndicator, SafeAreaView, Alert, Image 
+  ActivityIndicator, SafeAreaView, Alert, Image, Platform, StatusBar as RNStatusBar 
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { fetchDayChecklistApi, submitBatchLogsApi } from '../../api/client';
@@ -394,6 +394,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
     position: 'relative',
+    paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 28) : 0,
   },
   ambientWatermark: {
     position: 'absolute',

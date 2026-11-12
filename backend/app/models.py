@@ -91,6 +91,7 @@ class CustomerMessage(Base):
     sender_name = Column(String(100), nullable=False)
     sender_role = Column(String(20), default="customer")  # "customer" or "vendor"
     message = Column(Text, nullable=False)
+    is_read = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     customer = relationship("Customer", back_populates="messages")

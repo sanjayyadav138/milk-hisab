@@ -38,6 +38,11 @@ def run_migrations():
             cursor.execute("ALTER TABLE customers ADD COLUMN customer_type VARCHAR(20) DEFAULT 'BUYER'")
         if "email" not in cust_cols:
             cursor.execute("ALTER TABLE customers ADD COLUMN email VARCHAR(100)")
+
+        # 3. customer_messages table columns
+        msg_cols = {row[1] for row in cursor.execute("PRAGMA table_info(customer_messages)").fetchall()}
+        if "is_read" not in msg_cols:
+            cursor.execute("ALTER TABLE customer_messages ADD COLUMN is_read BOOLEAN DEFAULT 0")
             
         raw_conn.commit()
         cursor.close()

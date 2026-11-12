@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { 
-  StyleSheet, View, Text, TouchableOpacity, SafeAreaView, Image 
+  StyleSheet, View, Text, TouchableOpacity, SafeAreaView, Image, Platform, StatusBar as RNStatusBar 
 } from 'react-native';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { LanguageProvider, useLanguage } from './src/context/LanguageContext';
@@ -219,6 +219,7 @@ const styles = StyleSheet.create({
   appContainer: {
     flex: 1,
     backgroundColor: '#FFFFFF', // Solid Pure White Safe Area to fix iPhone Notch issues
+    paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 28) : 0,
   },
   topHeader: {
     flexDirection: 'row',

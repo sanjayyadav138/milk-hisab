@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, View, Text, TouchableOpacity, FlatList, 
-  ActivityIndicator, SafeAreaView, Modal, TextInput, Linking, Alert, Image 
+  ActivityIndicator, SafeAreaView, Modal, TextInput, Linking, Alert, Image,
+  Platform, StatusBar as RNStatusBar, ScrollView 
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { fetchCustomerDashboardApi, raiseDisputeApi, skipMilkDateApi } from '../../api/client';
@@ -14,6 +15,9 @@ export default function CustomerPortalScreen() {
   const { lang, toggleLang, t } = useLanguage();
   const [data, setData] = useState<CustomerDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Vendor selection state (for customers with multiple suppliers)
+  const [selectedVendorCustomerId, setSelectedVendorCustomerId] = useState<number | null>(null);
 
   // Dispute modal state
   const [disputingLog, setDisputingLog] = useState<any | null>(null);
@@ -29,16 +33,20 @@ export default function CustomerPortalScreen() {
   const [submittingSkip, setSubmittingSkip] = useState(false);
 
   useEffect(() => {
-    if (auth.customer?.id) {
-      loadDashboard(auth.customer.id);
+    const custId = selectedVendorCustomerId || auth.customer?.id;
+    if (custId) {
+      loadDashboard(custId);
     }
-  }, [auth.customer?.id]);
+  }, [auth.customer?.id, selectedVendorCustomerId]);
 
   const loadDashboard = async (customerId: number) => {
     setLoading(true);
     try {
       const res = await fetchCustomerDashboardApi(customerId);
       setData(res);
+      if (!selectedVendorCustomerId && res.customer?.id) {
+        setSelectedVendorCustomerId(res.customer.id);
+      }
     } catch (err: any) {
       Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', err.message || (lang === 'hi' ? 'खाता लोड नहीं हुआ' : 'Could not load account details'));
     } finally {
@@ -72,18 +80,20 @@ export default function CustomerPortalScreen() {
       return;
     }
 
+    const targetCustomerId = selectedVendorCustomerId || auth.customer.id;
     setSubmittingDispute(true);
     try {
       await raiseDisputeApi(
-        auth.customer.id,
+        targetCustomerId,
         disputingLog.id,
         disputeReason.trim(),
-        parseFloat(disputeQty) || 1.0
+        parseFloat(disputeQty) || 1.0,
+        disputingLog.date
       );
       setDisputingLog(null);
       setDisputeReason('');
       Alert.alert(lang === 'hi' ? 'सफल' : 'Success', lang === 'hi' ? 'आपकी आपत्ति दूधिया को भेज दी गई है!' : 'Delivery dispute submitted to vendor!');
-      loadDashboard(auth.customer.id);
+      loadDashboard(targetCustomerId);
     } catch (err: any) {
       Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', err.message || 'Error sending dispute');
     } finally {
@@ -93,13 +103,14 @@ export default function CustomerPortalScreen() {
 
   const handleSkipSubmit = async () => {
     if (!auth.customer) return;
+    const targetCustomerId = selectedVendorCustomerId || auth.customer.id;
     setSubmittingSkip(true);
     try {
-      await skipMilkDateApi(auth.customer.id, skipDate, skipReason.trim() || undefined);
+      await skipMilkDateApi(targetCustomerId, skipDate, skipReason.trim() || undefined, 'customer');
       setIsSkipModalOpen(false);
       setSkipReason('');
       Alert.alert(lang === 'hi' ? 'सफल' : 'Success', lang === 'hi' ? `तारीख ${skipDate} के लिए छुट्टी दर्ज हो गई है!` : `Delivery skip scheduled for ${skipDate}!`);
-      loadDashboard(auth.customer.id);
+      loadDashboard(targetCustomerId);
     } catch (err: any) {
       Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', err.message || 'Error scheduling skip');
     } finally {
@@ -340,8 +351,70 @@ export default function CustomerPortalScreen() {
               📅 {lang === 'hi' ? 'भविष्य की छुट्टी दर्ज करें' : 'Schedule Future Milk Skip'}
             </Text>
             <Text style={styles.modalSub}>
-              {lang === 'hi' ? 'जिस दिन दूध नहीं चाहिए, वह तारीख लिखें (YYYY-MM-DD):' : 'Enter date to pause delivery (YYYY-MM-DD):'}
+              {lang === 'hi' 
+                ? 'जिस दिन दूध नहीं चाहिए, वह तारीख व दूधिया चुनें:' 
+                : 'Select vendor and date to pause delivery:'}
             </Text>
+
+            {/* Vendor Selector (if customer has multiple vendors/dairies) */}
+            {data.linked_vendors && data.linked_vendors.length > 0 && (
+              <View style={{ marginBottom: 12 }}>
+                <Text style={styles.inputLabel}>
+                  {lang === 'hi' ? 'दूधिया / डेयरी चुनें:' : 'Select Vendor / Dairy:'}
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.vendorPillScroll}>
+                  {data.linked_vendors.map((v) => {
+                    const isSelected = (selectedVendorCustomerId || auth.customer?.id) === v.customer_id;
+                    return (
+                      <TouchableOpacity
+                        key={v.customer_id}
+                        onPress={() => setSelectedVendorCustomerId(v.customer_id)}
+                        style={[
+                          styles.vendorSelectPill,
+                          isSelected && styles.vendorSelectPillActive
+                        ]}
+                      >
+                        <Text style={[styles.vendorSelectPillText, isSelected && styles.vendorSelectPillTextActive]}>
+                          {isSelected ? '✓ ' : ''}{v.business_name || v.vendor_name} ({v.milk_type})
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Dynamic Date Selection Pills */}
+            <Text style={styles.inputLabel}>
+              {lang === 'hi' ? 'तारीख चुनें (भविष्य की तारीखें):' : 'Select Date (Future Dates Only):'}
+            </Text>
+            <View style={styles.dateChipsRow}>
+              {[1, 2, 3].map(daysAhead => {
+                const d = new Date(Date.now() + daysAhead * 86400000);
+                const iso = d.toISOString().split('T')[0];
+                const label = daysAhead === 1 ? (lang === 'hi' ? 'कल' : 'Tomorrow') :
+                              daysAhead === 2 ? (lang === 'hi' ? 'परसों' : 'Day After') :
+                              (lang === 'hi' ? '3 दिन बाद' : 'In 3 Days');
+                const isSelected = skipDate === iso;
+                return (
+                  <TouchableOpacity
+                    key={iso}
+                    onPress={() => setSkipDate(iso)}
+                    style={[
+                      styles.dateChip,
+                      isSelected && styles.dateChipActive
+                    ]}
+                  >
+                    <Text style={[styles.dateChipLabel, isSelected && styles.dateChipLabelActive]}>
+                      {label}
+                    </Text>
+                    <Text style={[styles.dateChipDate, isSelected && styles.dateChipDateActive]}>
+                      {iso.slice(5)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
 
             <TextInput 
               style={styles.modalInput} 
@@ -379,6 +452,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
+    paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 28) : 0,
   },
   headerCard: {
     backgroundColor: '#1e3a8a',
@@ -710,5 +784,69 @@ const styles = StyleSheet.create({
   modalSaveText: {
     color: '#ffffff',
     fontWeight: 'bold',
+  },
+  vendorPillScroll: {
+    flexDirection: 'row',
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  vendorSelectPill: {
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+  },
+  vendorSelectPillActive: {
+    backgroundColor: '#eff6ff',
+    borderColor: '#2563eb',
+  },
+  vendorSelectPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  vendorSelectPillTextActive: {
+    color: '#2563eb',
+    fontWeight: '800',
+  },
+  dateChipsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 10,
+  },
+  dateChip: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 12,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  dateChipActive: {
+    backgroundColor: '#eff6ff',
+    borderColor: '#2563eb',
+    borderWidth: 2,
+  },
+  dateChipLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  dateChipLabelActive: {
+    color: '#2563eb',
+    fontWeight: '900',
+  },
+  dateChipDate: {
+    fontSize: 10,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  dateChipDateActive: {
+    color: '#1d4ed8',
+    fontWeight: '700',
   },
 });

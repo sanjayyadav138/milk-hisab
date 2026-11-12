@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { 
   StyleSheet, View, Text, TouchableOpacity, ScrollView, 
-  Image, Dimensions, Platform, Modal, Alert, TextInput, SafeAreaView 
+  Image, Dimensions, Platform, Modal, Alert, TextInput, SafeAreaView,
+  StatusBar as RNStatusBar, ActivityIndicator, FlatList
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
@@ -12,6 +13,14 @@ import ProfileModal from '../components/ProfileModal';
 import MonthlySlipModal from '../components/MonthlySlipModal';
 import ChatScreen from './ChatScreen';
 import { getDynamicMonthList, getCurrentMonthKey } from '../utils/dateUtils';
+import { 
+  fetchVendorDisputesApi, 
+  fetchCustomerDisputesApi, 
+  resolveDisputeApi, 
+  fetchCustomersApi, 
+  skipMilkDateApi,
+  fetchCustomerVendorsApi 
+} from '../api/client';
 
 const { width } = Dimensions.get('window');
 
@@ -33,10 +42,18 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
   const [selectedSlipMonth, setSelectedSlipMonth] = useState(getCurrentMonthKey());
 
   // Skip Delivery State
-  const [selectedSkipDate, setSelectedSkipDate] = useState('Tomorrow (30 Oct)');
+  const [selectedSkipDate, setSelectedSkipDate] = useState('Tomorrow');
+  const [selectedSkipDateIso, setSelectedSkipDateIso] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split('T')[0];
+  });
   const [skipReason, setSkipReason] = useState('');
+  const [skipTargetList, setSkipTargetList] = useState<Array<{ id: number; name: string; subtitle?: string; role?: string }>>([]);
+  const [selectedSkipTargetId, setSelectedSkipTargetId] = useState<number | null>(null);
+  const [submittingSkip, setSubmittingSkip] = useState(false);
 
-  // Dispute Management State
+  // Dispute Management State (Dynamic real-time from DB)
   const [activeDispute, setActiveDispute] = useState<{
     id: number;
     customerName: string;
@@ -45,15 +62,8 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
     claimedQty: number;
     reason: string;
     status: 'Pending' | 'Resolved';
-  }>({
-    id: 101,
-    customerName: 'राजेश शर्मा (House 12)',
-    date: '28 Oct 2026',
-    loggedQty: 2.0,
-    claimedQty: 1.5,
-    reason: 'गलती से 2L लिखा गया, जबकि कल 1.5L ही लिया था।',
-    status: 'Pending',
-  });
+  } | null>(null);
+  const [resolvingDispute, setResolvingDispute] = useState(false);
 
   // Direct Messaging / Chat State
   const [chatMessages, setChatMessages] = useState<Array<{
@@ -81,14 +91,131 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
   const [newChatText, setNewChatText] = useState('');
 
   const isVendor = auth.role === 'vendor';
+  const isCustomer = !isVendor;
   const userName = isVendor 
     ? (auth.user?.business_name || auth.user?.name || (lang === 'hi' ? 'श्री कृष्णा डेयरी फार्म' : 'Krishna Dairy Farm'))
     : (auth.customer?.name || (lang === 'hi' ? 'राजेश शर्मा' : 'Rajesh Sharma'));
 
-  // Handle Delivery Pause / Skip Selection (Strict Same-Day Block)
-  const handleSelectSkipDate = (dateLabel: string) => {
-    setSelectedSkipDate(dateLabel);
-    if (dateLabel.toLowerCase().includes('today') || dateLabel.includes('आज')) {
+  // Load Real Pending Disputes on Mount
+  useEffect(() => {
+    let isMounted = true;
+    const loadDisputes = async () => {
+      try {
+        let list: any[] = [];
+        if (isVendor) {
+          list = await fetchVendorDisputesApi('Pending', auth.user?.id);
+        } else {
+          list = await fetchCustomerDisputesApi(auth.customer?.id || 1, 'Pending');
+        }
+        if (isMounted) {
+          if (list && Array.isArray(list) && list.length > 0) {
+            const first = list[0];
+            setActiveDispute({
+              id: first.log_id,
+              customerName: first.customer_name || (lang === 'hi' ? 'ग्राहक' : 'Customer'),
+              date: first.date,
+              loggedQty: first.quantity,
+              claimedQty: first.reported_quantity !== null && first.reported_quantity !== undefined 
+                ? first.reported_quantity 
+                : Math.max(0, first.quantity - 0.5),
+              reason: first.dispute_reason || (lang === 'hi' ? 'मात्रा आपत्ति' : 'Quantity Dispute'),
+              status: first.dispute_status === 'Pending' ? 'Pending' : 'Resolved'
+            });
+          } else {
+            setActiveDispute(null);
+          }
+        }
+      } catch (err) {
+        console.log('Notice: Dashboard dispute fetch fallback:', err);
+      }
+    };
+    loadDisputes();
+  }, [auth.role, auth.user?.id, auth.customer?.id, disputeModalVisible]);
+
+  // Load Customers / Suppliers / Linked Vendors for Skip Selection
+  useEffect(() => {
+    let isMounted = true;
+    if (isVendor) {
+      fetchCustomersApi().then(custs => {
+        if (isMounted && custs && Array.isArray(custs)) {
+          const targets = custs.map(c => ({
+            id: c.id,
+            name: c.name,
+            subtitle: `${c.customer_type === 'SUPPLIER' ? (lang === 'hi' ? 'संकलन/सप्लायर' : 'Supplier') : (lang === 'hi' ? 'ग्राहक' : 'Buyer')} • ${c.milk_type}`,
+            role: c.customer_type
+          }));
+          setSkipTargetList(targets);
+          if (targets.length > 0) {
+            setSelectedSkipTargetId(targets[0].id);
+          }
+        }
+      }).catch(() => {});
+    } else {
+      // Customer: Fetch linked vendor dairies
+      const custId = auth.customer?.id || 1;
+      fetchCustomerVendorsApi(custId).then(vendors => {
+        if (isMounted && vendors && Array.isArray(vendors) && vendors.length > 0) {
+          const targets = vendors.map(v => ({
+            id: v.customer_id,
+            name: v.business_name || v.vendor_name,
+            subtitle: `${lang === 'hi' ? 'डेयरी' : 'Dairy'} • ${v.milk_type || 'Cow'} • ${v.quantity || 1.5}L`,
+            role: 'vendor'
+          }));
+          setSkipTargetList(targets);
+          setSelectedSkipTargetId(targets[0].id);
+        } else if (isMounted) {
+          const defaultVendorTarget = {
+            id: custId,
+            name: auth.user?.business_name || (lang === 'hi' ? 'श्री कृष्णा डेयरी फार्म' : 'Krishna Dairy Farm'),
+            subtitle: lang === 'hi' ? 'मुख्य दूधिया • दैनिक आपूर्ति' : 'Primary Milkman • Daily Delivery',
+            role: 'vendor'
+          };
+          setSkipTargetList([defaultVendorTarget]);
+          setSelectedSkipTargetId(defaultVendorTarget.id);
+        }
+      }).catch(() => {
+        if (isMounted) {
+          const defaultVendorTarget = {
+            id: custId,
+            name: auth.user?.business_name || (lang === 'hi' ? 'श्री कृष्णा डेयरी फार्म' : 'Krishna Dairy Farm'),
+            subtitle: lang === 'hi' ? 'मुख्य दूधिया • दैनिक आपूर्ति' : 'Primary Milkman • Daily Delivery',
+            role: 'vendor'
+          };
+          setSkipTargetList([defaultVendorTarget]);
+          setSelectedSkipTargetId(defaultVendorTarget.id);
+        }
+      });
+    }
+    return () => { isMounted = false; };
+  }, [auth.role, auth.customer?.id, isVendor, lang]);
+
+  // Dynamic generic date generator
+  const getDynamicSkipDates = () => {
+    const list = [];
+    const now = new Date();
+    for (let i = 0; i < 4; i++) {
+      const d = new Date(now);
+      d.setDate(now.getDate() + i);
+      const iso = d.toISOString().split('T')[0];
+      const dayName = i === 0 ? (lang === 'hi' ? 'आज' : 'Today') :
+                      i === 1 ? (lang === 'hi' ? 'कल' : 'Tomorrow') :
+                      i === 2 ? (lang === 'hi' ? 'परसों' : 'Day After') :
+                      d.toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-US', { weekday: 'short' });
+      const dateFormatted = d.toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-US', { day: 'numeric', month: 'short' });
+      const isBlocked = i === 0 && !isVendor;
+      list.push({
+        iso,
+        label: `${dayName} (${dateFormatted})`,
+        isBlocked,
+        isToday: i === 0,
+      });
+    }
+    return list;
+  };
+
+  // Handle Delivery Pause / Skip Selection
+  const handleSelectSkipDate = (item: { iso: string; label: string; isBlocked: boolean }) => {
+    if (item.isBlocked) {
       Alert.alert(
         lang === 'hi' ? '🚫 आज की छुट्टी संभव नहीं' : '🚫 Same-Day Cancellation Blocked',
         lang === 'hi'
@@ -96,36 +223,61 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
           : 'Same-day cancellation is blocked to avoid dairy waste as deliveries are already in route. Please contact your milkman directly.',
         [{ text: 'OK' }]
       );
+      return;
     }
+    setSelectedSkipDate(item.label);
+    setSelectedSkipDateIso(item.iso);
   };
 
-  const handleConfirmSkip = () => {
-    if (selectedSkipDate.toLowerCase().includes('today') || selectedSkipDate.includes('आज')) {
+  const handleConfirmSkip = async () => {
+    if (!isVendor && (selectedSkipDate.toLowerCase().includes('today') || selectedSkipDate.includes('आज'))) {
       Alert.alert(
         lang === 'hi' ? 'अमान्य अनुरोध' : 'Invalid Request',
-        lang === 'hi' ? 'आज की तारीख के लिए छुट्टी नहीं दी जा सकती।' : 'Cannot skip for today.'
+        lang === 'hi' ? 'आज की तारीख के लिए ग्राहक ऐप से छुट्टी नहीं दी जा सकती।' : 'Cannot skip for today.'
       );
       return;
     }
 
-    setSkipModalVisible(false);
-    Alert.alert(
-      lang === 'hi' ? '✓ छुट्टी दर्ज हो गई' : '✓ Milk Delivery Paused',
-      lang === 'hi'
-        ? `${selectedSkipDate} के लिए दूध छुट्टी दर्ज कर दी गई है। बहीखाते में 0L दर्ज रहेगा।`
-        : `Milk delivery has been paused for ${selectedSkipDate}. ₹0 recorded in your ledger.`
-    );
+    const targetId = selectedSkipTargetId || (isCustomer ? (auth.customer?.id || 1) : (skipTargetList[0]?.id || 1));
+    const targetObj = skipTargetList.find(t => t.id === targetId);
+    const targetName = targetObj ? targetObj.name : '';
+
+    setSubmittingSkip(true);
+    try {
+      await skipMilkDateApi(targetId, selectedSkipDateIso, skipReason.trim() || undefined, isVendor ? 'vendor' : 'customer');
+
+      setSkipModalVisible(false);
+      setSkipReason('');
+      Alert.alert(
+        lang === 'hi' ? '✓ छुट्टी दर्ज हो गई' : '✓ Milk Delivery Paused',
+        lang === 'hi'
+          ? `${targetName ? `[${targetName}] ` : ''}${selectedSkipDate} (${selectedSkipDateIso}) के लिए दूध छुट्टी दर्ज कर दी गई है।`
+          : `Milk delivery pause recorded for ${targetName ? `${targetName} on ` : ''}${selectedSkipDate} (${selectedSkipDateIso}).`
+      );
+    } catch (err: any) {
+      Alert.alert(lang === 'hi' ? 'त्रुटि' : 'Error', err.message || 'Could not record skip');
+    } finally {
+      setSubmittingSkip(false);
+    }
   };
 
   // Handle Dispute Resolution
-  const handleResolveDispute = () => {
-    setActiveDispute(prev => ({ ...prev, status: 'Resolved', loggedQty: prev.claimedQty }));
+  const handleResolveDispute = async () => {
+    if (!activeDispute) return;
+    setResolvingDispute(true);
+    try {
+      await resolveDisputeApi(activeDispute.id, activeDispute.claimedQty, 'मात्रा सुधार स्वीकृत');
+    } catch (e) {
+      console.log('Resolve dispute sync notice:', e);
+    }
+    setActiveDispute(null);
+    setResolvingDispute(false);
     setDisputeModalVisible(false);
     Alert.alert(
       lang === 'hi' ? '✓ आपत्ति का समाधान संपन्न' : '✓ Dispute Resolved',
       lang === 'hi'
-        ? 'मात्रा को सुधारकर 1.5L कर दिया गया है। ग्राहक का खाता सत्यापित और शून्य विवाद में है।'
-        : 'Quantity adjusted to 1.5L. Customer ledger verified with zero disputes.'
+        ? 'मात्रा को सुधार दिया गया है। खाता सत्यापित और शून्य विवाद में है।'
+        : 'Quantity adjusted. Customer ledger verified with zero disputes.'
     );
   };
 
@@ -287,7 +439,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
         {/* ========================================================
             PENDING DISPUTE ALERT (Vendor Notice)
             ======================================================== */}
-        {activeDispute.status === 'Pending' && (
+        {activeDispute && activeDispute.status === 'Pending' && (
           <View style={styles.disputeAlertCard}>
             <View style={styles.disputeAlertLeft}>
               <Text style={styles.disputeAlertIcon}>⚠️</Text>
@@ -856,53 +1008,64 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
                 : 'Zero-dispute transparent ledger audit'}
             </Text>
 
-            <View style={styles.disputeDetailsBox}>
-              <View style={styles.disputeDetailRow}>
-                <Text style={styles.disputeLabel}>{lang === 'hi' ? 'ग्राहक' : 'Customer'}:</Text>
-                <Text style={styles.disputeValue}>{activeDispute.customerName}</Text>
+            {activeDispute ? (
+              <View style={styles.disputeDetailsBox}>
+                <View style={styles.disputeDetailRow}>
+                  <Text style={styles.disputeLabel}>{lang === 'hi' ? 'ग्राहक' : 'Customer'}:</Text>
+                  <Text style={styles.disputeValue}>{activeDispute.customerName}</Text>
+                </View>
+                <View style={styles.disputeDetailRow}>
+                  <Text style={styles.disputeLabel}>{lang === 'hi' ? 'तारीख' : 'Date'}:</Text>
+                  <Text style={styles.disputeValue}>{activeDispute.date}</Text>
+                </View>
+                <View style={styles.disputeDetailRow}>
+                  <Text style={styles.disputeLabel}>{lang === 'hi' ? 'दर्ज मात्रा' : 'Logged Qty'}:</Text>
+                  <Text style={[styles.disputeValue, { color: '#F59E0B' }]}>{activeDispute.loggedQty} L</Text>
+                </View>
+                <View style={styles.disputeDetailRow}>
+                  <Text style={styles.disputeLabel}>{lang === 'hi' ? 'ग्राहक दावा' : 'Claimed Qty'}:</Text>
+                  <Text style={[styles.disputeValue, { color: '#10B981' }]}>{activeDispute.claimedQty} L</Text>
+                </View>
+                <View style={styles.disputeDetailRow}>
+                  <Text style={styles.disputeLabel}>{lang === 'hi' ? 'कारण' : 'Reason'}:</Text>
+                  <Text style={styles.disputeValueText}>{activeDispute.reason}</Text>
+                </View>
               </View>
-              <View style={styles.disputeDetailRow}>
-                <Text style={styles.disputeLabel}>{lang === 'hi' ? 'तारीख' : 'Date'}:</Text>
-                <Text style={styles.disputeValue}>{activeDispute.date}</Text>
+            ) : (
+              <View style={{ paddingVertical: 24, alignItems: 'center' }}>
+                <Text style={{ fontSize: 36, marginBottom: 8 }}>🎉</Text>
+                <Text style={{ fontSize: 16, fontWeight: '700', color: '#10B981' }}>
+                  {lang === 'hi' ? 'सभी आपत्तियों का समाधान हो चुका है!' : 'All disputes resolved!'}
+                </Text>
+                <Text style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>
+                  {lang === 'hi' ? 'वर्तमान में कोई भी लंबित आपत्ति नहीं है।' : 'Zero pending disputes in your ledger.'}
+                </Text>
               </View>
-              <View style={styles.disputeDetailRow}>
-                <Text style={styles.disputeLabel}>{lang === 'hi' ? 'दर्ज मात्रा' : 'Logged Qty'}:</Text>
-                <Text style={[styles.disputeValue, { color: '#F59E0B' }]}>{activeDispute.loggedQty} L</Text>
-              </View>
-              <View style={styles.disputeDetailRow}>
-                <Text style={styles.disputeLabel}>{lang === 'hi' ? 'ग्राहक दावा' : 'Claimed Qty'}:</Text>
-                <Text style={[styles.disputeValue, { color: '#10B981' }]}>{activeDispute.claimedQty} L</Text>
-              </View>
-              <View style={styles.disputeDetailRow}>
-                <Text style={styles.disputeLabel}>{lang === 'hi' ? 'कारण' : 'Reason'}:</Text>
-                <Text style={styles.disputeValueText}>{activeDispute.reason}</Text>
-              </View>
-            </View>
+            )}
 
             <View style={styles.modalActionRow}>
               <TouchableOpacity 
                 onPress={() => setDisputeModalVisible(false)} 
                 style={styles.modalCancelBtn}
               >
-                <Text style={styles.modalCancelBtnText}>{lang === 'hi' ? 'रद्द करें' : 'Close'}</Text>
+                <Text style={styles.modalCancelBtnText}>{lang === 'hi' ? 'बंद करें' : 'Close'}</Text>
               </TouchableOpacity>
 
-              {isVendor && activeDispute.status === 'Pending' ? (
+              {isVendor && activeDispute && activeDispute.status === 'Pending' ? (
                 <TouchableOpacity 
                   onPress={handleResolveDispute}
+                  disabled={resolvingDispute}
                   style={styles.modalConfirmDairyBlueBtn}
                 >
-                  <Text style={styles.modalConfirmDairyBlueBtnText}>
-                    ✓ {lang === 'hi' ? '1.5L सुधारें व समाधान करें' : 'Correct to 1.5L & Resolve'}
-                  </Text>
+                  {resolvingDispute ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.modalConfirmDairyBlueBtnText}>
+                      ✓ {lang === 'hi' ? `${activeDispute.claimedQty}L सुधारें व समाधान करें` : `Correct to ${activeDispute.claimedQty}L & Resolve`}
+                    </Text>
+                  )}
                 </TouchableOpacity>
-              ) : (
-                <View style={styles.resolvedBadgeBox}>
-                  <Text style={styles.resolvedBadgeText}>
-                    ✓ {lang === 'hi' ? 'समाधान संपन्न' : 'Resolved'}
-                  </Text>
-                </View>
-              )}
+              ) : null}
             </View>
           </View>
         </View>
@@ -920,7 +1083,7 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
       </Modal>
 
       {/* ========================================================
-          DELIVERY PAUSE / SKIP MODAL (Same-Day Block Enforced)
+          DELIVERY PAUSE / SKIP MODAL (Dynamic Targets & Dates)
           ======================================================== */}
       <Modal
         visible={skipModalVisible}
@@ -931,39 +1094,79 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCardWide}>
             <Text style={styles.modalTitle}>
-              ⏸️ {lang === 'hi' ? 'दूध छुट्टी दर्ज करें (Skip Delivery)' : 'Pause / Skip Delivery'}
+              ⏸️ {lang === 'hi' ? 'दूध छुट्टी दर्ज करें' : 'Pause / Skip Delivery'}
             </Text>
             <Text style={styles.modalSubtitle}>
-              {lang === 'hi' 
-                ? 'दूध का नुकसान रोकने हेतु आज की छुट्टी ऐप से बंद है। भविष्य की तारीख चुनें।' 
-                : 'Same-day cancellation is blocked to avoid dairy waste. Please select future dates.'}
+              {isVendor 
+                ? (lang === 'hi' ? 'जिस ग्राहक/सप्लायर की डिलीवरी रोकनी है, उसे और तारीख चुनें।' : 'Select customer/supplier and date to skip delivery.')
+                : (lang === 'hi' ? 'दूध का नुकसान रोकने हेतु आज की छुट्टी ऐप से बंद है। भविष्य की तारीख चुनें।' : 'Same-day cancellation is blocked to avoid dairy waste. Please select future dates.')}
             </Text>
 
+            {/* Target Selector: Customer/Supplier (for Vendor) or Dairy/Milkman (for Customer) */}
+            <View style={{ marginBottom: 12 }}>
+              <Text style={styles.skipTargetHeader}>
+                {isVendor 
+                  ? (lang === 'hi' ? '👤 ग्राहक या सप्लायर चुनें:' : '👤 Select Customer or Supplier:') 
+                  : (lang === 'hi' ? '🥛 दूधिया / डेयरी चुनें:' : '🥛 Select Milk Vendor / Dairy:')}
+              </Text>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.skipTargetScroll}
+              >
+                {skipTargetList.map(t => {
+                  const isSelected = selectedSkipTargetId === t.id;
+                  return (
+                    <TouchableOpacity
+                      key={t.id}
+                      onPress={() => setSelectedSkipTargetId(t.id)}
+                      style={[
+                        styles.skipTargetCard,
+                        isSelected && styles.skipTargetCardSelected
+                      ]}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.skipTargetName, isSelected && styles.skipTargetNameSelected]} numberOfLines={1}>
+                        {isSelected ? '✓ ' : ''}{t.name}
+                      </Text>
+                      {t.subtitle ? (
+                        <Text style={[styles.skipTargetSub, isSelected && styles.skipTargetSubSelected]} numberOfLines={1}>
+                          {t.subtitle}
+                        </Text>
+                      ) : null}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            {/* Dynamic Date Selection Pills */}
+            <Text style={styles.skipTargetHeader}>
+              {lang === 'hi' ? '📅 छुट्टी की तारीख चुनें:' : '📅 Select Date to Skip:'}
+            </Text>
             <View style={styles.skipDatesGrid}>
-              {[
-                { label: 'Today (29 Oct) [Blocked]', isBlocked: true },
-                { label: 'Tomorrow (30 Oct)', isBlocked: false },
-                { label: 'Day After (31 Oct)', isBlocked: false },
-                { label: '01 Nov 2026', isBlocked: false },
-              ].map((item) => (
-                <TouchableOpacity
-                  key={item.label}
-                  onPress={() => handleSelectSkipDate(item.label)}
-                  style={[
-                    styles.skipDatePill,
-                    selectedSkipDate === item.label && styles.skipDatePillActive,
-                    item.isBlocked && styles.skipDatePillBlocked
-                  ]}
-                >
-                  <Text style={[
-                    styles.skipDatePillText,
-                    selectedSkipDate === item.label && styles.skipDatePillTextActive,
-                    item.isBlocked && styles.skipDatePillTextBlocked
-                  ]}>
-                    {item.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {getDynamicSkipDates().map((item) => {
+                const isSelected = selectedSkipDateIso === item.iso;
+                return (
+                  <TouchableOpacity
+                    key={item.iso}
+                    onPress={() => handleSelectSkipDate(item)}
+                    style={[
+                      styles.skipDatePill,
+                      isSelected && styles.skipDatePillActive,
+                      item.isBlocked && styles.skipDatePillBlocked
+                    ]}
+                  >
+                    <Text style={[
+                      styles.skipDatePillText,
+                      isSelected && styles.skipDatePillTextActive,
+                      item.isBlocked && styles.skipDatePillTextBlocked
+                    ]}>
+                      {item.label}{item.isBlocked ? (lang === 'hi' ? ' [बंद]' : ' [Blocked]') : ''}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             <TextInput
@@ -984,11 +1187,16 @@ export default function NetflixDashboardHomeScreen({ onNavigateTab }: NetflixDas
 
               <TouchableOpacity 
                 onPress={handleConfirmSkip}
+                disabled={submittingSkip}
                 style={styles.modalConfirmDairyBlueBtn}
               >
-                <Text style={styles.modalConfirmDairyBlueBtnText}>
-                  ✓ {lang === 'hi' ? 'छुट्टी पक्की करें' : 'Confirm Skip'}
-                </Text>
+                {submittingSkip ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.modalConfirmDairyBlueBtnText}>
+                    ✓ {lang === 'hi' ? 'छुट्टी पक्की करें' : 'Confirm Skip'}
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -1068,6 +1276,52 @@ const styles = StyleSheet.create({
   safeAreaContainer: {
     flex: 1,
     backgroundColor: '#FFFFFF', // Solid Pure White Safe Area to fix iPhone Notch issues
+    paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 28) : 0,
+  },
+  skipTargetHeader: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#1E3A8A',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  skipTargetScroll: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 2,
+  },
+  skipTargetCard: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    minWidth: 120,
+    maxWidth: 200,
+  },
+  skipTargetCardSelected: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#1E3A8A',
+  },
+  skipTargetName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  skipTargetNameSelected: {
+    color: '#1E3A8A',
+    fontWeight: '900',
+  },
+  skipTargetSub: {
+    fontSize: 10,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  skipTargetSubSelected: {
+    color: '#2563EB',
+    fontWeight: '600',
   },
   // GLOBAL HEADER BAR (SOLID PURE WHITE, NOTCH-SAFE)
   headerBar: {

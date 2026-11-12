@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, View, Text, TextInput, TouchableOpacity, 
-  FlatList, ActivityIndicator, SafeAreaView, Modal, Linking, Alert, Image, Share 
+  FlatList, ActivityIndicator, SafeAreaView, Modal, Linking, Alert, Image, Share, Platform, StatusBar as RNStatusBar 
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { fetchCustomersApi, createCustomerApi } from '../../api/client';
@@ -381,6 +381,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
+    paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 28) : 0,
   },
   topSection: {
     backgroundColor: '#ffffff',

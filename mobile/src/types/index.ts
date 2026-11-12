@@ -66,6 +66,16 @@ export interface CustomerDashboardData {
     business_name: string;
     upi_id?: string;
   };
+  linked_vendors?: Array<{
+    customer_id: number;
+    vendor_id: number;
+    vendor_name: string;
+    business_name: string;
+    phone: string;
+    milk_type: string;
+    quantity: number;
+    price_per_liter?: number;
+  }>;
   month_summary: {
     total_liters: number;
     total_amount: number;

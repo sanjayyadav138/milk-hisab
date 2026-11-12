@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, View, Text, TouchableOpacity, FlatList, 
   TextInput, ActivityIndicator, SafeAreaView, KeyboardAvoidingView, 
-  Platform, Linking, Image, ScrollView, Alert 
+  Platform, Linking, Image, ScrollView, Alert, StatusBar as RNStatusBar 
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
@@ -10,7 +10,8 @@ import {
   fetchCustomerMessagesApi, 
   vendorReplyMessageApi, 
   customerSendMessageApi,
-  searchUserByPhoneApi 
+  searchUserByPhoneApi,
+  markMessagesReadApi 
 } from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
@@ -115,16 +116,26 @@ export default function ChatScreen({ onGoBack }: ChatScreenProps) {
   ];
 
   const [threads, setThreads] = useState<ConversationThread[]>(baselineThreads);
+  const [readThreadIds, setReadThreadIds] = useState<Set<number>>(new Set());
 
   const loadMessages = async () => {
     try {
       if (isVendor) {
         const data = await fetchVendorMessagesApi(currentVendorId);
         if (data && Array.isArray(data) && data.length > 0) {
-          setThreads(data);
+          const sanitized = data.map((t: ConversationThread) => {
+            if ((activeThread && activeThread.customer_id === t.customer_id) || readThreadIds.has(t.customer_id)) {
+              return { ...t, unread_count: 0 };
+            }
+            return t;
+          });
+          setThreads(sanitized);
           if (activeThread) {
-            const updated = data.find((t: ConversationThread) => t.customer_id === activeThread.customer_id);
-            if (updated) setActiveThread(updated);
+            const updated = sanitized.find((t: ConversationThread) => t.customer_id === activeThread.customer_id);
+            if (updated) {
+              setActiveThread(updated);
+              markMessagesReadApi(activeThread.customer_id).catch(() => {});
+            }
           }
         }
       } else {
@@ -176,7 +187,11 @@ export default function ChatScreen({ onGoBack }: ChatScreenProps) {
   const handleOpenConversation = (thread: ConversationThread) => {
     const updated = { ...thread, unread_count: 0 };
     setActiveThread(updated);
+    setReadThreadIds(prev => new Set(prev).add(thread.customer_id));
     setThreads(prev => prev.map(t => t.customer_id === thread.customer_id ? updated : t));
+    markMessagesReadApi(thread.customer_id).catch(err => {
+      console.log('markMessagesReadApi error:', err);
+    });
   };
 
   // Search User By Phone
@@ -642,6 +657,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+    paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 28) : 0,
   },
   topHeader: {
     flexDirection: 'row',

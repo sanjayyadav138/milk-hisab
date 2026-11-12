@@ -106,7 +106,8 @@ class ForgotPinRequest(BaseModel):
     role: str  # "vendor" or "customer"
 class DisputeCreateRequest(BaseModel):
 
-    log_id: int
+    log_id: Optional[int] = None
+    date: Optional[str] = None
     reason: str
     actual_quantity: Optional[float] = None
 class ResolveDisputeRequest(BaseModel):
@@ -122,6 +123,7 @@ class SkipDateRequest(BaseModel):
 
     date: str  # YYYY-MM-DD
     reason: Optional[str] = None
+    role: Optional[str] = "customer" # "vendor" or "customer"
 class VendorReplyMessageRequest(BaseModel):
 
     customer_id: int
@@ -620,6 +622,35 @@ def get_customer_dashboard(customer_id: int, month_year: Optional[str] = None, s
             sel_reported_qty = float(sel_log.notes.split(":", 2)[1])
         except Exception:
             pass
+
+    # Find all vendor relationships linked to this customer phone
+    linked_vendors = []
+    if customer.phone:
+        all_cust_recs = db.query(Customer).filter(Customer.phone == customer.phone).all()
+        for c_rec in all_cust_recs:
+            v_user = db.query(User).filter(User.id == c_rec.vendor_id).first()
+            linked_vendors.append({
+                "customer_id": c_rec.id,
+                "vendor_id": c_rec.vendor_id,
+                "vendor_name": v_user.name if v_user else "दूधिया",
+                "business_name": v_user.business_name if v_user else (v_user.name if v_user else "डेयरी"),
+                "phone": v_user.phone if v_user else "",
+                "milk_type": c_rec.milk_type,
+                "quantity": c_rec.default_quantity,
+                "price_per_liter": c_rec.price_per_liter
+            })
+    if not linked_vendors:
+        linked_vendors = [{
+            "customer_id": customer.id,
+            "vendor_id": customer.vendor_id,
+            "vendor_name": vendor.name if vendor else "दूधिया",
+            "business_name": vendor.business_name if vendor else "डेयरी",
+            "phone": vendor.phone if vendor else "",
+            "milk_type": customer.milk_type,
+            "quantity": customer.default_quantity,
+            "price_per_liter": customer.price_per_liter
+        }]
+
     return {
         "customer": {
             "id": customer.id,
@@ -639,6 +670,7 @@ def get_customer_dashboard(customer_id: int, month_year: Optional[str] = None, s
             "upi_id": vendor.upi_id if vendor else "9971880670@upi",
             "avatar_url": vendor.avatar_url if vendor else None
         },
+        "linked_vendors": linked_vendors,
         "month_summary": {
             "month_year": month_year,
             "total_liters": total_liters,
@@ -676,6 +708,27 @@ def get_customer_dashboard(customer_id: int, month_year: Optional[str] = None, s
             } for l in logs
         ]
     }
+
+@router.get("/customer/{customer_id}/vendors")
+def get_customer_vendors(customer_id: int, db: Session = Depends(get_db)):
+    customer = db.query(Customer).filter(Customer.id == customer_id).first()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    all_cust_recs = db.query(Customer).filter(Customer.phone == customer.phone).all() if customer.phone else [customer]
+    result = []
+    for c_rec in all_cust_recs:
+        v_user = db.query(User).filter(User.id == c_rec.vendor_id).first()
+        result.append({
+            "customer_id": c_rec.id,
+            "vendor_id": c_rec.vendor_id,
+            "vendor_name": v_user.name if v_user else "दूधिया",
+            "business_name": v_user.business_name if v_user else (v_user.name if v_user else "डेयरी"),
+            "phone": v_user.phone if v_user else "",
+            "milk_type": c_rec.milk_type,
+            "quantity": c_rec.default_quantity,
+            "price_per_liter": c_rec.price_per_liter
+        })
+    return result
 @router.get("/customer/{customer_id}/subusers")
 def get_subusers(customer_id: int, db: Session = Depends(get_db)):
 
@@ -721,33 +774,65 @@ def send_message(customer_id: int, req: MessageCreate, db: Session = Depends(get
 
 @router.post("/customer/{customer_id}/raise-dispute")
 def raise_dispute(customer_id: int, req: DisputeCreateRequest, db: Session = Depends(get_db)):
-
-    log = db.query(DailyLog).filter(DailyLog.id == req.log_id, DailyLog.customer_id == customer_id).first()
-    if not log:
-        raise HTTPException(status_code=404, detail="Delivery log entry not found")
     customer = db.query(Customer).filter(Customer.id == customer_id).first()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
     vendor_id = customer.vendor_id if (customer and customer.vendor_id) else 1
     cust_name = customer.name if customer else "ग्राहक"
-    log.dispute_status = "Pending"
+
+    # Try finding log by log_id (if valid DB id, not large client timestamp)
+    log = None
+    if req.log_id and req.log_id < 1000000000:
+        log = db.query(DailyLog).filter(DailyLog.id == req.log_id, DailyLog.customer_id == customer_id).first()
+
+    # Determine target date
+    target_date = datetime.date.today()
+    if req.date:
+        try:
+            target_date = datetime.date.fromisoformat(req.date.strip())
+        except Exception:
+            pass
+
+    if not log:
+        log = db.query(DailyLog).filter(DailyLog.customer_id == customer_id, DailyLog.date == target_date).first()
+
     claimed_str = f" (दावा: {req.actual_quantity}L)" if req.actual_quantity is not None else ""
-    log.dispute_reason = f"{req.reason.strip()}{claimed_str}"
-    log.status = "Disputed"
-    if req.actual_quantity is not None:
-        log.notes = f"CUSTOMER_REPORTED:{req.actual_quantity}:{req.reason.strip()}"
+    if not log:
+        # Create a new dispute log in SQLite
+        log = DailyLog(
+            customer_id=customer_id,
+            date=target_date,
+            quantity_delivered=customer.default_quantity or 1.5,
+            status="Disputed",
+            dispute_status="Pending",
+            dispute_reason=f"{req.reason.strip()}{claimed_str}",
+            notes=f"CUSTOMER_REPORTED:{req.actual_quantity if req.actual_quantity is not None else 1.0}:{req.reason.strip()}"
+        )
+        db.add(log)
+    else:
+        log.dispute_status = "Pending"
+        log.dispute_reason = f"{req.reason.strip()}{claimed_str}"
+        log.status = "Disputed"
+        if req.actual_quantity is not None:
+            log.notes = f"CUSTOMER_REPORTED:{req.actual_quantity}:{req.reason.strip()}"
+
+    db.commit()
+    db.refresh(log)
+
     # Automated notification message to Vendor (Vice Versa Notification)
     try:
         claimed_info = f"{req.actual_quantity}L" if req.actual_quantity is not None else "अलग मात्रा"
         notify_msg = CustomerMessage(
             customer_id=customer_id,
-            vendor_id=vendor_id,
-            sender="CUSTOMER",
+            sender_name=cust_name,
+            sender_role="customer",
             message=f"⚠️ दूध मात्रा आपत्ति ({log.date.isoformat()}): {cust_name} ने दर्ज {log.quantity_delivered}L के बदले {claimed_info} बताया। कारण: {req.reason.strip()}"
         )
         db.add(notify_msg)
+        db.commit()
     except Exception as e:
         print("Could not create customer dispute message:", e)
-    db.commit()
-    db.refresh(log)
+
     return {
         "message": "Dispute query raised successfully",
         "log": {
@@ -874,36 +959,9 @@ def get_vendor_disputes(
         c_ids = [c.id for c in db.query(Customer).filter(Customer.vendor_id == vendor_id).all()]
         if c_ids:
             query = query.filter(DailyLog.customer_id.in_(c_ids))
+        else:
+            return []
     logs = query.order_by(DailyLog.date.desc()).all()
-
-    # If completely empty, auto-seed realistic disputes for immediate demonstration
-    if not logs:
-        cust = db.query(Customer).first()
-        cust_id = cust.id if cust else 1
-        today = datetime.date.today()
-        seed_data = [
-            (today - datetime.timedelta(days=1), 2.0, "Disputed", "Pending", "भैया कल केवल 1.5L दूध मिला था, पर्ची में 2.0L लिखा है।", "CUSTOMER_REPORTED:1.5:मात्रा 0.5L अधिक दर्ज"),
-            (today - datetime.timedelta(days=2), 1.0, "Disputed", "Pending", "2 दिन पहले हम बाहर थे, छुट्टी दर्ज होनी थी।", "CUSTOMER_REPORTED:0.0:छुट्टी पर थे"),
-            (today - datetime.timedelta(days=5), 2.5, "Resolved", "Resolved", "3.0L के स्थान पर 2.5L दूध मिला था।", "सुलझाया गया: 2.5L (मात्रा सुधार स्वीकृत)"),
-            (today - datetime.timedelta(days=8), 2.0, "Delivered", "Rejected", "1L कम दूध मिला", "अस्वीकृत: वितरण रजिस्टर से मिलान सत्यापित")
-        ]
-        for d_date, d_qty, d_status, d_disp, d_reason, d_notes in seed_data:
-            s_log = DailyLog(
-                customer_id=cust_id,
-                date=d_date,
-                quantity_delivered=d_qty,
-                status=d_status,
-                dispute_status=d_disp,
-                dispute_reason=d_reason,
-                notes=d_notes
-            )
-            db.add(s_log)
-        db.commit()
-        # Re-query
-        query = db.query(DailyLog).filter(DailyLog.dispute_status.isnot(None), DailyLog.dispute_status != "None")
-        if status and status.upper() != "ALL":
-            query = query.filter(DailyLog.dispute_status == status)
-        logs = query.order_by(DailyLog.date.desc()).all()
 
     results = []
     for l in logs:
@@ -942,10 +1000,11 @@ def customer_skip_date(customer_id: int, req: SkipDateRequest, db: Session = Dep
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
     today = datetime.date.today()
-    if skip_date <= today:
+    is_vendor_action = getattr(req, 'role', 'customer') == 'vendor'
+    if skip_date < today or (skip_date == today and not is_vendor_action):
         raise HTTPException(
             status_code=400,
-            detail="आज के दिन या पुरानी तारीख की छुट्टी ऐप से नहीं हो सकती क्योंकि सप्लाई शुरू हो चुकी है। कृपया सीधे दूधिया से संपर्क करें।"
+            detail="आज के दिन या पुरानी तारीख की छुट्टी ग्राहक ऐप से नहीं हो सकती क्योंकि सप्लाई शुरू हो चुकी है। कृपया सीधे दूधिया से संपर्क करें।"
         )
     # Check if a log entry already exists for this future date
     existing_log = db.query(DailyLog).filter(
@@ -979,7 +1038,7 @@ def get_vendor_messages(vendor_id: Optional[int] = None, db: Session = Depends(g
     threads = []
     for c in customers:
         msgs = db.query(CustomerMessage).filter(CustomerMessage.customer_id == c.id).order_by(CustomerMessage.created_at.asc()).all()
-        unread_count = sum(1 for m in msgs if m.sender_role == "customer")
+        unread_count = sum(1 for m in msgs if m.sender_role == "customer" and not getattr(m, "is_read", False))
         last_msg = msgs[-1] if msgs else None
         threads.append({
             "customer_id": c.id,
@@ -1027,6 +1086,15 @@ def vendor_send_message(req: VendorReplyMessageRequest, db: Session = Depends(ge
         "message": msg.message,
         "created_at": msg.created_at.isoformat()
     }
+
+@router.post("/customer/{customer_id}/messages/mark-read")
+def mark_customer_messages_read(customer_id: int, db: Session = Depends(get_db)):
+    db.query(CustomerMessage).filter(
+        CustomerMessage.customer_id == customer_id,
+        CustomerMessage.is_read == False
+    ).update({"is_read": True})
+    db.commit()
+    return {"success": True, "message": "Messages marked as read"}
 # --- Module 10: Location-Based Milkman Discovery & Milk Requests ---
 
 @router.get("/vendors/search")

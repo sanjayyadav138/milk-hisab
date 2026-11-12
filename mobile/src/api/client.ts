@@ -130,11 +130,12 @@ export async function fetchCustomerDashboardApi(customerId: number) {
   return request<CustomerDashboardData>(`/portal/customer/${customerId}/dashboard`);
 }
 
-export async function raiseDisputeApi(customerId: number, logId: number, reason: string, actualQuantity: number) {
+export async function raiseDisputeApi(customerId: number, logId: number, reason: string, actualQuantity: number, date?: string) {
   return request<any>(`/portal/customer/${customerId}/raise-dispute`, {
     method: 'POST',
     body: JSON.stringify({
       log_id: logId,
+      date,
       reason,
       actual_quantity: actualQuantity,
     }),
@@ -218,12 +219,32 @@ export async function rejectDisputeApi(logId: number, rejectionNote?: string) {
   });
 }
 
-export async function skipMilkDateApi(customerId: number, date: string, reason?: string) {
+export async function markMessagesReadApi(customerId: number) {
+  return request<{ success: boolean; message: string }>(`/portal/customer/${customerId}/messages/mark-read`, {
+    method: 'POST',
+  });
+}
+
+export async function fetchCustomerVendorsApi(customerId: number) {
+  return request<Array<{
+    customer_id: number;
+    vendor_id: number;
+    vendor_name: string;
+    business_name: string;
+    phone: string;
+    milk_type: string;
+    quantity: number;
+    price_per_liter: number;
+  }>>(`/portal/customer/${customerId}/vendors`);
+}
+
+export async function skipMilkDateApi(customerId: number, date: string, reason?: string, role: 'vendor' | 'customer' = 'customer') {
   return request<any>(`/portal/customer/${customerId}/skip-date`, {
     method: 'POST',
     body: JSON.stringify({
       date,
       reason: reason || 'Scheduled via mobile app',
+      role,
     }),
   });
 }

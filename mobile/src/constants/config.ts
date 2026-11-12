@@ -1,6 +1,6 @@
 export const CONFIG = {
-  // Production Backend on AWS EC2 (milkhisab.in resolves to 16.176.65.41)
-  API_BASE_URL: 'http://milkhisab.in/api',
+  // Production Backend on AWS EC2 (milkhisab.in with verified SSL)
+  API_BASE_URL: 'https://milkhisab.in/api',
   
   // Storage keys for offline persistence & session caching
   STORAGE_KEYS: {
